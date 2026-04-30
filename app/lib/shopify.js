@@ -79,3 +79,57 @@ export async function shopifyAdminFetch(endpoint, options = {}) {
   }
   return json;
 }
+
+export async function getProducts() {
+  const query = `
+    query {
+      products(first: 20) {
+        edges {
+          node {
+            id
+            title
+            handle
+            featuredImage {
+              url
+              altText
+            }
+            variants(first: 20) {
+              edges {
+                node {
+                  id
+                  title
+                  availableForSale
+                  price {
+                    amount
+                    currencyCode
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+  const data = await shopifyStorefrontFetch(query);
+  return (
+    data?.products?.edges?.map(({ node }) => ({
+      id: node.id,
+      title: node.title,
+      handle: node.handle,
+      featuredImage: node.featuredImage
+        ? {
+            url: node.featuredImage.url,
+            altText: node.featuredImage.altText,
+          }
+        : null,
+      variants: node.variants.edges.map(({ node: v }) => ({
+        id: v.id,
+        title: v.title,
+        availableForSale: v.availableForSale,
+        price: v.price.amount,
+        currencyCode: v.price.currencyCode,
+      })),
+    })) || []
+  );
+}
