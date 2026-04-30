@@ -328,27 +328,39 @@ export default function CustomizerPage() {
             disabled={!variantId}
             className="w-full rounded bg-white px-4 py-3 font-semibold text-black hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-40"
             onClick={() => {
-              // Handler for cart handoff
-              const params = new URLSearchParams(window.location.search);
-              const variant = params.get("variant");
-              const product = params.get("product");
-              if (!variant) {
+              // New handler: hidden form POST to Shopify
+              const searchParams = new URLSearchParams(window.location.search);
+              const variantIdParam = searchParams.get("variant");
+              const productHandle = searchParams.get("product");
+              if (!variantIdParam) {
                 alert("Missing Shopify variant ID.");
                 return;
               }
-              // Prepare preview image and customization data
               saveCurrentView();
+              const uploadedDesignUrl = ""; // Set if you have an uploaded design URL
               const previewImageUrl = getCanvas()?.toDataURL({ format: "png", quality: 1, multiplier: 2 }) || "";
               const customizationData = viewsRef.current;
-              const cartUrl = new URL("https://yourdtfplug.com/cart/add");
-              cartUrl.searchParams.set("id", normalizeVariantId(variant));
-              cartUrl.searchParams.set("quantity", String(quantity));
-              cartUrl.searchParams.set("return_to", "/cart");
-              cartUrl.searchParams.set("properties[Product Handle]", product || "");
-              cartUrl.searchParams.set("properties[Design URL]", ""); // Set to uploaded design URL if available
-              cartUrl.searchParams.set("properties[Preview Image]", previewImageUrl);
-              cartUrl.searchParams.set("properties[Customization]", JSON.stringify(customizationData || {}));
-              window.location.href = cartUrl.toString();
+              const form = document.createElement("form");
+              form.method = "POST";
+              form.action = "https://yourdtfplug.com/cart/add";
+              const fields = {
+                id: normalizeVariantId(variantIdParam),
+                quantity: String(quantity),
+                "properties[Product Handle]": productHandle || "",
+                "properties[Design URL]": uploadedDesignUrl || "",
+                "properties[Preview]": previewImageUrl || "",
+                "properties[Customization]": JSON.stringify(customizationData || {}),
+                return_to: "/cart",
+              };
+              Object.entries(fields).forEach(([name, value]) => {
+                const input = document.createElement("input");
+                input.type = "hidden";
+                input.name = name;
+                input.value = value;
+                form.appendChild(input);
+              });
+              document.body.appendChild(form);
+              form.submit();
             }}
           >
             Add Custom Design to Cart
