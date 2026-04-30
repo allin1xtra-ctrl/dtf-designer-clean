@@ -1,0 +1,714 @@
+{% liquid
+  assign apparel_url = section.settings.custom_drip_url | default: '/collections/custom-drip'
+  assign transfer_url = section.settings.custom_transfers_url | default: '/products/custom-transfers'
+  assign premade_transfer_url = section.settings.premade_transfers_url | default: '/products/pre-made-transfers'
+  assign gang_sheet_url = section.settings.gang_sheets_url | default: '/products/gang-sheets'
+  assign starter_pack_url = section.settings.starter_packs_url | default: '/products/starter-packs'
+  assign transfer_joiner = '?'
+  if transfer_url contains '?'
+    assign transfer_joiner = '&'
+  endif
+  assign upload_url = transfer_url | append: transfer_joiner | append: 'dtf_mode=transfer&upload=1#dtf-designer'
+%}
+
+{{ 'dtf-pro-theme.css' | asset_url | stylesheet_tag }}
+
+<style>
+  #shopify-section-{{ section.id }} .dtf-designer-section {
+    margin: 20px auto 32px;
+    padding: clamp(16px, 2.2vw, 22px);
+    background: #ffffff;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
+    border-radius: 22px;
+    box-shadow: 0 14px 35px rgba(15, 23, 42, 0.08);
+  }
+
+  #shopify-section-{{ section.id }} .dtf-designer-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.7fr);
+    gap: 18px;
+    align-items: start;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-designer-main {
+    min-width: 0;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-hero-kicker,
+  #shopify-section-{{ section.id }} .dtf-side-kicker {
+    margin: 0 0 10px;
+    color: #2563eb;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-designer-head h2,
+  #shopify-section-{{ section.id }} .dtf-side-card h3 {
+    margin: 0 0 12px;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-designer-head p,
+  #shopify-section-{{ section.id }} .dtf-side-card p,
+  #shopify-section-{{ section.id }} .dtf-side-card li,
+  #shopify-section-{{ section.id }} .dtf-side-card span {
+    color: inherit;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-trust-strip,
+  #shopify-section-{{ section.id }} .dtf-launch-row {
+    display: grid;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-trust-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  #shopify-section-{{ section.id }} .dtf-trust-pill {
+    padding: 10px 12px;
+    border-radius: 999px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    text-align: center;
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-cta-cluster {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 20px 0 18px;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 18px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 800;
+    transition: transform 0.22s ease, box-shadow 0.22s ease, opacity 0.22s ease;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-button:hover,
+  #shopify-section-{{ section.id }} .dtf-launch-card:hover,
+  #shopify-section-{{ section.id }} .dtf-mobile-sticky-button:hover {
+    transform: translateY(-2px);
+  }
+
+  #shopify-section-{{ section.id }} .dtf-button-primary {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #ffffff;
+    border: 1px solid transparent;
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.18);
+  }
+
+  #shopify-section-{{ section.id }} .dtf-button-secondary {
+    background: #0f172a;
+    color: #ffffff;
+    border: 1px solid #0f172a;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-launch-row {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  #shopify-section-{{ section.id }} .dtf-launch-card {
+    display: block;
+    padding: 14px 16px;
+    background: linear-gradient(180deg, #f8fafc, #eef2ff);
+    border: 1px solid #dbeafe;
+    border-radius: 18px;
+    color: #0f172a;
+    text-decoration: none;
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-launch-card:hover {
+    border-color: #93c5fd;
+    box-shadow: 0 12px 24px rgba(37, 99, 235, 0.12);
+  }
+
+  #shopify-section-{{ section.id }} .dtf-launch-card-highlight {
+    background: linear-gradient(180deg, #fff7ed, #ffedd5);
+    border-color: #fdba74;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-launch-card-media {
+    margin: -14px -16px 12px;
+    overflow: hidden;
+    border-bottom: 1px solid rgba(219, 234, 254, 0.9);
+  }
+
+  #shopify-section-{{ section.id }} .dtf-launch-card-media img {
+    display: block;
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-launch-card strong {
+    display: block;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-launch-card span {
+    display: block;
+    margin-top: 4px;
+    opacity: 0.85;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-designer-mount {
+    margin-top: 16px;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-designer-sidebar {
+    display: grid;
+    gap: 14px;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-side-card {
+    padding: 18px;
+    border-radius: 18px;
+    background: linear-gradient(180deg, #0f172a, #172554);
+    color: #ffffff;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-check-list {
+    padding-left: 18px;
+    margin: 0;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-step-list {
+    margin: 0;
+    padding-left: 18px;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-mobile-sticky-bar {
+    display: none;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-mobile-sticky-button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 10px 12px;
+    border-radius: 999px;
+    text-align: center;
+    text-decoration: none;
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #0f172a;
+    background: #ffffff;
+    border: 1px solid #dbeafe;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  }
+
+  #shopify-section-{{ section.id }} .dtf-mobile-sticky-primary {
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    color: #ffffff;
+    border-color: transparent;
+  }
+
+  @media (max-width: 989px) {
+    #shopify-section-{{ section.id }} .dtf-designer-grid,
+    #shopify-section-{{ section.id }} .dtf-trust-strip {
+      grid-template-columns: 1fr;
+    }
+
+    #shopify-section-{{ section.id }} .dtf-mobile-sticky-bar {
+      position: sticky;
+      bottom: 12px;
+      z-index: 20;
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+      padding: 8px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+      backdrop-filter: blur(12px);
+    }
+  }
+</style>
+
+<section class="dtf-designer-section page-width">
+  <div class="dtf-designer-grid">
+    <div class="dtf-designer-main">
+      <div class="dtf-designer-head">
+        <div>
+          <p class="dtf-hero-kicker">DESIGNER EMBED</p>
+          <h2>{{ section.settings.heading }}</h2>
+          <p>{{ section.settings.subtext }}</p>
+        </div>
+      </div>
+
+      <div class="dtf-trust-strip" role="list">
+        <div class="dtf-trust-pill" role="listitem">{{ section.settings.trust_badge_one }}</div>
+        <div class="dtf-trust-pill" role="listitem">{{ section.settings.trust_badge_two }}</div>
+        <div class="dtf-trust-pill" role="listitem">{{ section.settings.trust_badge_three }}</div>
+      </div>
+
+      <div class="dtf-cta-cluster">
+        <a href="{{ gang_sheet_url }}" class="dtf-button dtf-button-primary">{{ section.settings.gang_sheet_label }}</a>
+        <a href="{{ starter_pack_url }}" class="dtf-button dtf-button-secondary">{{ section.settings.starter_pack_label }}</a>
+      </div>
+
+      <div class="dtf-launch-row">
+        <a href="{{ apparel_url }}" class="dtf-launch-card">
+          {% if section.settings.custom_drip_image != blank %}
+            <div class="dtf-launch-card-media">
+              {{ section.settings.custom_drip_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Custom Drip collection' }}
+            </div>
+          {% endif %}
+          <strong>Custom Drip collection</strong>
+          <span>Send shoppers into your full apparel collection</span>
+        </a>
+        <a href="{{ premade_transfer_url }}" class="dtf-launch-card">
+          {% if section.settings.premade_transfers_image != blank %}
+            <div class="dtf-launch-card-media">
+              {{ section.settings.premade_transfers_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Pre-made transfers' }}
+            </div>
+          {% endif %}
+          <strong>Pre-made transfers</strong>
+          <span>Send shoppers to your ready-to-press designs</span>
+        </a>
+        <a href="{{ transfer_url }}" class="dtf-launch-card">
+          {% if section.settings.custom_transfers_image != blank %}
+            <div class="dtf-launch-card-media">
+              {{ section.settings.custom_transfers_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Custom transfers' }}
+            </div>
+          {% endif %}
+          <strong>Custom transfers</strong>
+          <span>Open the live custom transfer designer flow</span>
+        </a>
+        <a href="{{ gang_sheet_url }}" class="dtf-launch-card dtf-launch-card-highlight">
+          {% if section.settings.gang_sheets_image != blank %}
+            <div class="dtf-launch-card-media">
+              {{ section.settings.gang_sheets_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Gang sheets' }}
+            </div>
+          {% endif %}
+          <strong>Gang sheets</strong>
+          <span>Start a sheet-based custom order with one click</span>
+        </a>
+        <a href="{{ starter_pack_url }}" class="dtf-launch-card dtf-launch-card-highlight">
+          {% if section.settings.starter_packs_image != blank %}
+            <div class="dtf-launch-card-media">
+              {{ section.settings.starter_packs_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Starter packs' }}
+            </div>
+          {% endif %}
+          <strong>Starter packs</strong>
+          <span>Guide new buyers into an easy first order bundle</span>
+        </a>
+        <a href="{{ upload_url }}" class="dtf-launch-card">
+          {% if section.settings.upload_order_image != blank %}
+            <div class="dtf-launch-card-media">
+              {{ section.settings.upload_order_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Upload and order' }}
+            </div>
+          {% endif %}
+          <strong>Upload and order</strong>
+          <span>Jump straight into the custom transfers upload flow</span>
+        </a>
+      </div>
+
+      <div
+        id="dtf-designer-{{ section.id }}"
+        class="dtf-designer-mount"
+        data-product-id="{{ product.id | default: '' }}"
+        data-variant-id="{{ product.selected_or_first_available_variant.id | default: '' }}"
+        data-product-title="{{ product.title | default: '' | escape }}"
+        data-product-image="{% if product.featured_image %}{{ product.featured_image | image_url: width: 1400 }}{% endif %}"
+        data-designer-url="{{ section.settings.designer_url | escape }}"
+        data-app-version="2026-04-15-3"
+        data-default-mode="{{ request.params.dtf_mode | default: section.settings.default_mode }}"
+        data-start-upload="{{ request.params.upload | default: '0' }}"
+        data-redirect-to-cart="{{ section.settings.redirect_to_cart }}"
+      ></div>
+
+      <noscript>
+        <p>Please enable JavaScript to use the DTF designer.</p>
+      </noscript>
+    </div>
+
+    <aside class="dtf-designer-sidebar">
+      <div class="dtf-side-card">
+        <p class="dtf-side-kicker">WHY THIS LAYOUT CONVERTS</p>
+        <h3>{{ section.settings.sidebar_heading }}</h3>
+        <ul class="dtf-check-list" role="list">
+          <li>{{ section.settings.sidebar_point_one }}</li>
+          <li>{{ section.settings.sidebar_point_two }}</li>
+          <li>{{ section.settings.sidebar_point_three }}</li>
+          <li>{{ section.settings.sidebar_point_four }}</li>
+        </ul>
+      </div>
+
+      <div class="dtf-side-card">
+        <p class="dtf-side-kicker">HOW IT WORKS</p>
+        <ol class="dtf-step-list">
+          <li><strong>Choose your order path.</strong><span>Pick apparel, transfers, or fast upload.</span></li>
+          <li><strong>Customize your product.</strong><span>Add artwork, colors, sizes, and options.</span></li>
+          <li><strong>Send it to Shopify cart.</strong><span>Checkout happens in your existing store flow.</span></li>
+        </ol>
+      </div>
+    </aside>
+  </div>
+
+  {% if section.settings.enable_mobile_sticky_bar %}
+    <div class="dtf-mobile-sticky-bar" aria-label="Quick order shortcuts">
+      <a href="{{ gang_sheet_url }}" class="dtf-mobile-sticky-button dtf-mobile-sticky-primary">
+        {{ section.settings.mobile_gang_sheet_label }}
+      </a>
+      <a href="{{ starter_pack_url }}" class="dtf-mobile-sticky-button">
+        {{ section.settings.mobile_starter_pack_label }}
+      </a>
+      <a href="{{ apparel_url }}" class="dtf-mobile-sticky-button">
+        {{ section.settings.mobile_apparel_label }}
+      </a>
+    </div>
+  {% endif %}
+</section>
+
+<script>
+  (function () {
+    var mount = document.getElementById('dtf-designer-{{ section.id }}');
+    if (!mount) return;
+    if (mount.dataset.dtfInitialized === 'true') return;
+    mount.dataset.dtfInitialized = 'true';
+
+    var designerUrl = (mount.dataset.designerUrl || '').replace(/\/$/, '');
+    if (!designerUrl) return;
+
+    function normalizeVariantId(value) {
+      if (value == null) return '';
+      var normalized = String(value).trim();
+      if (!normalized || normalized === 'undefined' || normalized === 'null' || normalized === 'NaN') return '';
+      var match = normalized.match(/(?:^|\/)(\d+)(?:\D*)$/);
+      if (match) return match[1];
+      return /^\d+$/.test(normalized) ? normalized : '';
+    }
+
+    function getRootPath() {
+      return (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) || '/';
+    }
+
+    function getCurrentVariantId() {
+      var productForm = mount.closest('form[action*="/cart/add"]') || document.querySelector('form[action*="/cart/add"]');
+      return normalizeVariantId(
+        productForm?.querySelector('input[name="id"]:checked')?.value ||
+        productForm?.querySelector('input[name="id"]')?.value ||
+        productForm?.querySelector('select[name="id"]')?.value ||
+        document.querySelector('form[action*="/cart/add"] [name="id"]')?.value ||
+        document.querySelector('select[name="id"]')?.value ||
+        document.querySelector('input[name="id"]:checked')?.value ||
+        document.querySelector('input[name="id"]')?.value ||
+        new URLSearchParams(window.location.search).get('variant') ||
+        mount.dataset.variantId ||
+        ''
+      );
+    }
+
+    function getCurrentProductImage() {
+      return (
+        mount.dataset.productImage ||
+        document.querySelector('[data-product-media-wrapper]:not([hidden]) img')?.currentSrc ||
+        document.querySelector('.product__media img')?.currentSrc ||
+        ''
+      );
+    }
+
+    function getProductTitle() {
+      return (
+        mount.dataset.productTitle ||
+        document.querySelector('h1')?.textContent?.trim() ||
+        document.title.replace(/\s*[|:-].*$/, '') ||
+        'Custom product'
+      );
+    }
+
+    function sanitizeProperties(properties) {
+      var clean = {};
+      Object.entries(properties || {}).forEach(function (entry) {
+        var key = entry[0];
+        var value = entry[1];
+        if (value == null || value === '') return;
+        clean[String(key).slice(0, 255)] = String(value).slice(0, 255);
+      });
+      return clean;
+    }
+
+    function openCartUi(redirectToCart) {
+      document.documentElement.dispatchEvent(new CustomEvent('cart:refresh'));
+      document.documentElement.dispatchEvent(new CustomEvent('cart:open'));
+      document.dispatchEvent(new CustomEvent('cart:refresh'));
+      document.dispatchEvent(new CustomEvent('cart:open'));
+
+      if (redirectToCart) {
+        window.location.href = getRootPath() + 'cart';
+        return;
+      }
+
+      window.setTimeout(function () {
+        var cartDrawerOpen = document.querySelector('cart-drawer-component dialog[open], .cart-drawer.active, .drawer.active, .is-open.cart-drawer');
+        if (!cartDrawerOpen) {
+          window.alert('Added to cart. Open the cart icon to review your item.');
+        }
+      }, 350);
+    }
+
+    async function parseCartResponse(response) {
+      var text = await response.text();
+      try {
+        return text ? JSON.parse(text) : {};
+      } catch (error) {
+        return { message: text };
+      }
+    }
+
+    async function addItemToCart(item) {
+      var cartPath = getRootPath() + 'cart/add.js';
+
+      try {
+        var ajaxResponse = await fetch(cartPath, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify({ items: [item] })
+        });
+
+        var ajaxData = await parseCartResponse(ajaxResponse);
+        if (!ajaxResponse.ok) {
+          throw new Error(ajaxData.description || ajaxData.message || 'Shopify cart request failed.');
+        }
+        return ajaxData;
+      } catch (ajaxError) {
+        var formData = new FormData();
+        formData.append('id', String(item.id));
+        formData.append('quantity', String(item.quantity || 1));
+
+        Object.entries(item.properties || {}).forEach(function (entry) {
+          formData.append('properties[' + entry[0] + ']', String(entry[1]));
+        });
+
+        var formResponse = await fetch(cartPath, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          credentials: 'same-origin',
+          body: formData
+        });
+
+        var formDataResponse = await parseCartResponse(formResponse);
+        if (!formResponse.ok) {
+          throw new Error(formDataResponse.description || formDataResponse.message || 'Cart form request failed.');
+        }
+
+        return formDataResponse;
+      }
+    }
+
+    function initEmbeddedDesigner() {
+      var redirectToCart = mount.dataset.redirectToCart !== 'false';
+      var variantId = getCurrentVariantId() || normalizeVariantId(mount.dataset.variantId);
+      var productImage = getCurrentProductImage();
+      var productTitle = getProductTitle();
+      var productId = mount.dataset.productId || '';
+      var launchMode = (mount.dataset.defaultMode || 'apparel').toLowerCase() === 'transfer' ? 'transfer' : 'apparel';
+      var startUpload = mount.dataset.startUpload === '1' || mount.dataset.startUpload === 'true';
+
+      if (!variantId) {
+        console.error('NO VARIANT FOUND', {
+          mountVariantId: mount.dataset.variantId || '',
+          productId: productId || ''
+        });
+      }
+
+      var iframe = document.createElement('iframe');
+      var url = new URL(designerUrl, window.location.origin);
+      var designerOrigin = url.origin;
+
+      if (productId) url.searchParams.set('product', productId);
+      if (variantId) url.searchParams.set('variant', variantId);
+      if (productImage) url.searchParams.set('image', productImage);
+      if (productTitle) url.searchParams.set('title', productTitle);
+      if (launchMode) url.searchParams.set('mode', launchMode);
+      if (startUpload) url.searchParams.set('upload', '1');
+      url.searchParams.set('source', 'shopify-theme');
+      url.searchParams.set('v', mount.dataset.appVersion || '2026-04-15-4');
+
+      iframe.src = url.toString();
+      iframe.style.width = '100%';
+      iframe.style.height = '900px';
+      iframe.style.border = 'none';
+      iframe.style.borderRadius = '12px';
+      iframe.loading = 'lazy';
+
+      function postContext() {
+        iframe.contentWindow?.postMessage({
+          type: 'dtf:shopify-context',
+          payload: {
+            productId: productId,
+            variantId: getCurrentVariantId() || variantId || normalizeVariantId(mount.dataset.variantId),
+            productImage: getCurrentProductImage(),
+            productTitle: getProductTitle()
+          }
+        }, designerOrigin);
+      }
+
+      function onMessage(event) {
+        if (event.source !== iframe.contentWindow) return;
+        if (event.origin && event.origin !== designerOrigin) {
+          console.warn('DTF origin mismatch detected, accepting iframe message anyway.', {
+            expectedOrigin: designerOrigin,
+            receivedOrigin: event.origin
+          });
+        }
+
+        var message = event.data || {};
+
+        if (message.type === 'dtf:resize' && message.payload && message.payload.height) {
+          iframe.style.height = Math.max(700, Number(message.payload.height)) + 'px';
+          return;
+        }
+
+        if (message.type !== 'dtf:add-to-cart') return;
+
+        var payload = message.payload || {};
+        var variantId = normalizeVariantId(
+          payload.variantId ||
+          getCurrentVariantId() ||
+          mount.dataset.variantId
+        );
+
+        if (!variantId) {
+          console.warn('DTF cart blocked: missing variant ID', {
+            mountVariantId: mount.dataset.variantId || '',
+            payload: payload
+          });
+          iframe.contentWindow?.postMessage({
+            type: 'dtf:cart-error',
+            payload: { message: 'Please select a product variant before adding to cart.' }
+          }, designerOrigin);
+          window.alert('Please select a product variant before adding to cart.');
+          return;
+        }
+
+        console.log('DTF CART DEBUG:', {
+          variantId: variantId,
+          payload: payload
+        });
+
+        var numericVariantId = Number(variantId);
+        if (!Number.isFinite(numericVariantId) || numericVariantId <= 0) {
+          iframe.contentWindow?.postMessage({
+            type: 'dtf:cart-error',
+            payload: { message: 'Please select a valid product variant before adding to cart.' }
+          }, designerOrigin);
+          window.alert('Please select a valid product variant before adding to cart.');
+          return;
+        }
+
+        var item = {
+          id: numericVariantId,
+          quantity: Math.max(1, Number(payload.quantity) || 1),
+          properties: sanitizeProperties(payload.properties || {})
+        };
+
+        addItemToCart(item)
+          .then(function (cart) {
+            iframe.contentWindow?.postMessage({ type: 'dtf:cart-success', payload: cart }, designerOrigin);
+            openCartUi(redirectToCart);
+          })
+          .catch(function (error) {
+            iframe.contentWindow?.postMessage({
+              type: 'dtf:cart-error',
+              payload: { message: error instanceof Error ? error.message : 'Unable to add item to cart.' }
+            }, designerOrigin);
+            console.error('DTF add-to-cart error:', error);
+          });
+      }
+
+      iframe.addEventListener('load', postContext);
+      window.addEventListener('message', onMessage);
+      window.addEventListener('change', postContext);
+
+      mount.innerHTML = '';
+      mount.appendChild(iframe);
+    }
+
+    initEmbeddedDesigner();
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "DTF product designer",
+  "tag": "section",
+  "class": "section",
+  "limit": 1,
+  "enabled_on": {
+    "templates": ["product"]
+  },
+  "settings": [
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Create your order with a premium designer flow" },
+    { "type": "textarea", "id": "subtext", "label": "Subtext", "default": "Give shoppers a polished transfer-company experience with quick launch choices, trust content, and a designer that adds straight to Shopify cart." },
+    { "type": "text", "id": "designer_url", "label": "Designer app URL", "default": "https://dtf-designer-clean.vercel.app" },
+    { "type": "url", "id": "custom_drip_url", "label": "Custom Drip collection URL" },
+    { "type": "url", "id": "custom_transfers_url", "label": "Custom Transfers designer product URL" },
+    { "type": "url", "id": "premade_transfers_url", "label": "Pre-made Transfers product URL" },
+    { "type": "url", "id": "gang_sheets_url", "label": "Gang Sheets product URL" },
+    { "type": "url", "id": "starter_packs_url", "label": "Starter Packs product URL" },
+    { "type": "image_picker", "id": "custom_drip_image", "label": "Custom Drip lifestyle image" },
+    { "type": "image_picker", "id": "premade_transfers_image", "label": "Pre-made Transfers lifestyle image" },
+    { "type": "image_picker", "id": "custom_transfers_image", "label": "Custom Transfers lifestyle image" },
+    { "type": "image_picker", "id": "gang_sheets_image", "label": "Gang Sheets lifestyle image" },
+    { "type": "image_picker", "id": "starter_packs_image", "label": "Starter Packs lifestyle image" },
+    { "type": "image_picker", "id": "upload_order_image", "label": "Upload and order lifestyle image" },
+    { "type": "text", "id": "trust_badge_one", "label": "Trust badge 1", "default": "Fast turnaround" },
+    { "type": "text", "id": "trust_badge_two", "label": "Trust badge 2", "default": "Live product preview" },
+    { "type": "text", "id": "trust_badge_three", "label": "Trust badge 3", "default": "Secure Shopify checkout" },
+    { "type": "text", "id": "gang_sheet_label", "label": "Gang sheet button label", "default": "Start gang sheets" },
+    { "type": "text", "id": "starter_pack_label", "label": "Starter pack button label", "default": "Shop starter packs" },
+    { "type": "checkbox", "id": "enable_mobile_sticky_bar", "label": "Enable sticky mobile order bar", "default": true },
+    { "type": "text", "id": "mobile_gang_sheet_label", "label": "Mobile gang sheet label", "default": "Gang Sheets" },
+    { "type": "text", "id": "mobile_starter_pack_label", "label": "Mobile starter pack label", "default": "Starter Packs" },
+    { "type": "text", "id": "mobile_apparel_label", "label": "Mobile apparel label", "default": "Custom Drip" },
+    { "type": "text", "id": "sidebar_heading", "label": "Sidebar heading", "default": "Built for high-intent shoppers" },
+    { "type": "text", "id": "sidebar_point_one", "label": "Sidebar point 1", "default": "Instant entry into your design or upload flow" },
+    { "type": "text", "id": "sidebar_point_two", "label": "Sidebar point 2", "default": "Clear order paths for transfers and apparel" },
+    { "type": "text", "id": "sidebar_point_three", "label": "Sidebar point 3", "default": "Premium trust signals around the buying area" },
+    { "type": "text", "id": "sidebar_point_four", "label": "Sidebar point 4", "default": "Cart handoff stays inside Shopify" },
+    {
+      "type": "select",
+      "id": "default_mode",
+      "label": "Default launch mode",
+      "default": "apparel",
+      "options": [
+        { "value": "apparel", "label": "Apparel" },
+        { "value": "transfer", "label": "DTF transfer" }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "redirect_to_cart",
+      "label": "Open cart after add",
+      "default": "false",
+      "options": [
+        { "value": "true", "label": "Yes" },
+        { "value": "false", "label": "No" }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "DTF product designer" }
+  ]
+}
+{% endschema %}

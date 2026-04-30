@@ -1,0 +1,234 @@
+{% liquid
+  assign apparel_url = section.settings.custom_drip_url | default: '/collections/custom-drip'
+  assign transfer_url = section.settings.custom_transfers_url | default: '/products/custom-transfers'
+  assign premade_transfer_url = section.settings.premade_transfers_url | default: '/products/pre-made-transfers'
+  assign gang_sheet_url = section.settings.gang_sheets_url | default: '/products/gang-sheets'
+  assign starter_pack_url = section.settings.starter_packs_url | default: '/products/starter-packs'
+  assign transfer_joiner = '?'
+  if transfer_url contains '?'
+    assign transfer_joiner = '&'
+  endif
+  assign customize_url = apparel_url
+  assign upload_url = transfer_url | append: transfer_joiner | append: 'dtf_mode=transfer&upload=1#dtf-designer'
+%}
+
+{{ 'dtf-pro-theme.css' | asset_url | stylesheet_tag }}
+
+<style>
+  #shopify-section-{{ section.id }} .dtf-hero-section,
+  #shopify-section-{{ section.id }} .dtf-value-section,
+  #shopify-section-{{ section.id }} .dtf-faq-section,
+  #shopify-section-{{ section.id }} .dtf-video-section,
+  #shopify-section-{{ section.id }} .dtf-process-section {
+    margin: 20px auto 32px;
+    padding: clamp(18px, 2.5vw, 28px);
+    background: #ffffff;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
+    border-radius: 22px;
+    box-shadow: 0 14px 35px rgba(15, 23, 42, 0.08);
+  }
+  #shopify-section-{{ section.id }} .dtf-hero-shell,
+  #shopify-section-{{ section.id }} .dtf-faq-grid,
+  #shopify-section-{{ section.id }} .dtf-video-shell {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 18px;
+    align-items: start;
+  }
+  #shopify-section-{{ section.id }} .dtf-value-grid,
+  #shopify-section-{{ section.id }} .dtf-process-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+  }
+  #shopify-section-{{ section.id }} .dtf-hero-card,
+  #shopify-section-{{ section.id }} .dtf-value-card,
+  #shopify-section-{{ section.id }} .dtf-video-frame,
+  #shopify-section-{{ section.id }} .dtf-process-card,
+  #shopify-section-{{ section.id }} .dtf-inline-cta,
+  #shopify-section-{{ section.id }} .dtf-faq-item {
+    background: linear-gradient(180deg, #f8fafc, #eef2ff);
+    border: 1px solid #dbeafe;
+    border-radius: 18px;
+    padding: 16px;
+  }
+  #shopify-section-{{ section.id }} .dtf-section-kicker,
+  #shopify-section-{{ section.id }} .dtf-hero-kicker {
+    margin: 0 0 8px;
+    color: #2563eb;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+  }
+  #shopify-section-{{ section.id }} .dtf-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 18px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 800;
+    margin-right: 10px;
+    margin-top: 10px;
+  }
+  #shopify-section-{{ section.id }} .dtf-button-primary {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #ffffff;
+  }
+  #shopify-section-{{ section.id }} .dtf-button-secondary {
+    background: #0f172a;
+    color: #ffffff;
+  }
+  #shopify-section-{{ section.id }} .dtf-hero-actions,
+  #shopify-section-{{ section.id }} .dtf-order-rail {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  #shopify-section-{{ section.id }} .dtf-order-card {
+    display: block;
+    text-decoration: none;
+    color: #0f172a;
+    background: #ffffff;
+    border: 1px solid #dbeafe;
+    border-radius: 14px;
+    padding: 12px;
+    min-width: 150px;
+  }
+  #shopify-section-{{ section.id }} .dtf-order-title,
+  #shopify-section-{{ section.id }} .dtf-process-number,
+  #shopify-section-{{ section.id }} .dtf-value-icon,
+  #shopify-section-{{ section.id }} .dtf-chip {
+    font-weight: 800;
+    color: #1d4ed8;
+  }
+  #shopify-section-{{ section.id }} .dtf-hero-image,
+  #shopify-section-{{ section.id }} .dtf-theme-video {
+    display: block;
+    width: 100%;
+    border-radius: 16px;
+  }
+  #shopify-section-{{ section.id }} .dtf-inline-cta,
+  #shopify-section-{{ section.id }} .dtf-process-footer {
+    margin-top: 16px;
+  }
+  #shopify-section-{{ section.id }} .dtf-faq-list {
+    display: grid;
+    gap: 12px;
+  }
+  #shopify-section-{{ section.id }} .dtf-faq-item summary {
+    cursor: pointer;
+    font-weight: 700;
+  }
+</style>
+
+<section class="dtf-hero-section" style="--dtf-hero-overlay: {{ section.settings.overlay_opacity | divided_by: 100.0 }};">
+  <div class="dtf-hero-shell page-width">
+    <div class="dtf-hero-copy">
+      {% if section.settings.kicker != blank %}
+        <p class="dtf-hero-kicker">{{ section.settings.kicker }}</p>
+      {% endif %}
+
+      <h1>{{ section.settings.heading }}</h1>
+      <div class="dtf-hero-text rte">{{ section.settings.text }}</div>
+
+      <div class="dtf-hero-actions">
+        <a href="{{ customize_url }}" class="dtf-button dtf-button-primary">
+          {{ section.settings.customize_label }}
+        </a>
+        <a href="{{ upload_url }}" class="dtf-button dtf-button-secondary">
+          {{ section.settings.upload_label }}
+        </a>
+      </div>
+
+      <div class="dtf-hero-stats" role="list">
+        <div class="dtf-stat-card" role="listitem">
+          <strong>{{ section.settings.stat_one_value }}</strong>
+          <span>{{ section.settings.stat_one_label }}</span>
+        </div>
+        <div class="dtf-stat-card" role="listitem">
+          <strong>{{ section.settings.stat_two_value }}</strong>
+          <span>{{ section.settings.stat_two_label }}</span>
+        </div>
+        <div class="dtf-stat-card" role="listitem">
+          <strong>{{ section.settings.stat_three_value }}</strong>
+          <span>{{ section.settings.stat_three_label }}</span>
+        </div>
+      </div>
+
+      <ul class="dtf-hero-points" role="list">
+        <li>{{ section.settings.point_one }}</li>
+        <li>{{ section.settings.point_two }}</li>
+        <li>{{ section.settings.point_three }}</li>
+      </ul>
+    </div>
+
+    <div class="dtf-hero-card">
+      {% if section.settings.hero_image != blank %}
+        {{ section.settings.hero_image | image_url: width: 1200 | image_tag: class: 'dtf-hero-image', loading: 'lazy', alt: section.settings.heading }}
+      {% else %}
+        <div class="dtf-hero-placeholder">
+          <div class="dtf-chip">DTF Designer Pro</div>
+          <strong>Launch fast custom transfer and apparel orders from one premium product page.</strong>
+        </div>
+      {% endif %}
+
+      <div class="dtf-order-rail">
+        <a href="{{ customize_url }}" class="dtf-order-card">
+          <span class="dtf-order-title">Custom Drip</span>
+          <small>Browse your apparel collection</small>
+        </a>
+        <a href="{{ premade_transfer_url }}" class="dtf-order-card">
+          <span class="dtf-order-title">Pre-made transfers</span>
+          <small>Shop ready-to-press transfer designs</small>
+        </a>
+        <a href="{{ transfer_url }}" class="dtf-order-card">
+          <span class="dtf-order-title">Custom transfers</span>
+          <small>Open the live custom designer product</small>
+        </a>
+        <a href="{{ gang_sheet_url }}" class="dtf-order-card">
+          <span class="dtf-order-title">Gang sheets</span>
+          <small>Start a sheet-based order flow</small>
+        </a>
+        <a href="{{ starter_pack_url }}" class="dtf-order-card">
+          <span class="dtf-order-title">Starter packs</span>
+          <small>Guide new customers into an easy first buy</small>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "DTF Pro hero",
+  "settings": [
+    { "type": "text", "id": "kicker", "label": "Kicker", "default": "YOUR FAVORITE DTF PLUG" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Shop Custom Drip, Custom Transfers, Gang Sheets, and Starter Packs from one premium storefront" },
+    { "type": "richtext", "id": "text", "label": "Text", "default": "<p>Give Flora a polished custom-print experience with clean entry points for apparel, transfers, gang sheets, and starter packs.</p>" },
+    { "type": "url", "id": "custom_drip_url", "label": "Custom Drip collection URL" },
+    { "type": "url", "id": "custom_transfers_url", "label": "Custom Transfers designer product URL" },
+    { "type": "url", "id": "premade_transfers_url", "label": "Pre-made Transfers product URL" },
+    { "type": "url", "id": "gang_sheets_url", "label": "Gang Sheets product URL" },
+    { "type": "url", "id": "starter_packs_url", "label": "Starter Packs product URL" },
+    { "type": "text", "id": "customize_label", "label": "Customize button label", "default": "Shop Custom Drip" },
+    { "type": "text", "id": "upload_label", "label": "Upload button label", "default": "Shop Custom Transfers" },
+    { "type": "image_picker", "id": "hero_image", "label": "Hero image" },
+    { "type": "text", "id": "stat_one_value", "label": "Stat 1 value", "default": "24–48 hr" },
+    { "type": "text", "id": "stat_one_label", "label": "Stat 1 label", "default": "Typical production" },
+    { "type": "text", "id": "stat_two_value", "label": "Stat 2 value", "default": "No setup" },
+    { "type": "text", "id": "stat_two_label", "label": "Stat 2 label", "default": "Easy custom ordering" },
+    { "type": "text", "id": "stat_three_value", "label": "Stat 3 value", "default": "Live preview" },
+    { "type": "text", "id": "stat_three_label", "label": "Stat 3 label", "default": "Designer-first experience" },
+    { "type": "text", "id": "point_one", "label": "Point 1", "default": "Bold color and retail-ready detail" },
+    { "type": "text", "id": "point_two", "label": "Point 2", "default": "Original storefront flow built for conversions" },
+    { "type": "text", "id": "point_three", "label": "Point 3", "default": "Cart-ready orders sent straight into Shopify" },
+    { "type": "range", "id": "overlay_opacity", "label": "Overlay opacity", "min": 0, "max": 70, "step": 5, "default": 20, "unit": "%" }
+  ],
+  "presets": [
+    { "name": "DTF Pro hero" }
+  ]
+}
+{% endschema %}

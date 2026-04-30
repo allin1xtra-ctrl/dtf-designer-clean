@@ -1,0 +1,365 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "hero": {
+      "type": "hero-banner",
+      "settings": {
+        "eyebrow": "Your Favorite DTF Plug",
+        "heading": "Custom DTF Transfers Made Simple",
+        "text": "<p>Upload. Print. Press. Done.</p>",
+        "hero_image": "shopify://shop_images/hero-banner_19629971-6588-4b79-afbd-2371a685ce5c.png",
+        "primary_label": "Start Customizing",
+        "primary_link": "/apps/dtf-designer-pro-2",
+        "secondary_label": "No minimums • Fast turnaround • Premium quality",
+        "secondary_link": "shopify://policies/shipping-policy",
+        "stat_1_number": "300 DPI",
+        "stat_1_label": "Print-ready",
+        "stat_2_number": "Fast",
+        "stat_2_label": "Fulfillment flow",
+        "stat_3_number": "Pro",
+        "stat_3_label": "Storefront layout"
+      }
+    },
+    "collections": {
+      "type": "collections-grid",
+      "blocks": {
+        "card_1": {
+          "type": "card",
+          "settings": {
+            "collection": "dtf-transfers-by-size",
+            "title": "DTF Transfers By Size",
+            "text": "Upload-ready transfer orders for businesses, brands, and events."
+          }
+        },
+        "card_2": {
+          "type": "card",
+          "settings": {
+            "collection": "gang-sheets",
+            "title": "Gang Sheets",
+            "text": "Perfect for batching multiple designs into one print workflow."
+          }
+        },
+        "card_3": {
+          "type": "card",
+          "settings": {
+            "collection": "custom-apparel",
+            "title": "Custom Apparel",
+            "text": "T-shirts, hoodies, jerseys, and more for custom branding."
+          }
+        },
+        "card_4": {
+          "type": "card",
+          "settings": {
+            "collection": "blank-apparel",
+            "title": "Blank Apparel",
+            "text": "Quick-order graphics ready for your next press run."
+          }
+        }
+      },
+      "block_order": [
+        "card_1",
+        "card_2",
+        "card_3",
+        "card_4"
+      ],
+      "settings": {
+        "eyebrow": "Collections",
+        "heading": "Start with the categories customers care about most",
+        "text": "Swap in your real collection links and Shopify-ready product images."
+      }
+    },
+    "blocks_FTCEwT": {
+      "type": "_blocks",
+      "blocks": {
+        "ai_gen_block_2d42a60_jYAyb9": {
+          "type": "ai_gen_block_2d42a60",
+          "settings": {
+            "headline": "Save More When You Print More",
+            "tier_1_enabled": true,
+            "tier_1_spend": "Spend $50+",
+            "tier_1_discount": "5% OFF",
+            "tier_2_enabled": true,
+            "tier_2_spend": "$100+",
+            "tier_2_discount": "10% OFF",
+            "tier_3_enabled": true,
+            "tier_3_spend": "$200+",
+            "tier_3_discount": "15% OFF",
+            "tier_4_enabled": true,
+            "tier_4_spend": "$500+",
+            "tier_4_discount": "20% OFF",
+            "show_cta": true,
+            "cta_text": "Start Customizing",
+            "cta_link": "shopify://collections/all",
+            "background_color": "#0b0b0b",
+            "headline_color": "#ffffff",
+            "tier_text_color": "#cccccc",
+            "accent_color_1": "#40c4ff",
+            "accent_color_2": "#b2ff59",
+            "button_bg_color": "#ff1744",
+            "button_hover_bg_color": "#d50000",
+            "button_text_color": "#ffffff",
+            "glow_color": "#ff1744",
+            "headline_size": 36,
+            "tier_text_size": 16,
+            "button_text_size": 16,
+            "padding_vertical": 40,
+            "content_gap": 20,
+            "button_padding_vertical": 14,
+            "button_padding_horizontal": 32,
+            "button_border_radius": 6,
+            "glow_intensity": 16
+          },
+          "blocks": {}
+        }
+      },
+      "block_order": [
+        "ai_gen_block_2d42a60_jYAyb9"
+      ],
+      "name": "Discount tier banner",
+      "settings": {}
+    },
+    "steps": {
+      "type": "process-steps",
+      "blocks": {
+        "step_1": {
+          "type": "step",
+          "settings": {
+            "title": "Upload or choose artwork",
+            "text": "Customers send a logo, design, or print file."
+          }
+        },
+        "step_2": {
+          "type": "step",
+          "settings": {
+            "title": "Select product options",
+            "text": "Size, quantity, apparel type, or transfer format."
+          }
+        },
+        "step_3": {
+          "type": "step",
+          "settings": {
+            "title": "Production starts",
+            "text": "You prepare, print, and quality-check the order."
+          }
+        },
+        "step_4": {
+          "type": "step",
+          "settings": {
+            "title": "Ship or press",
+            "text": "Complete the workflow and deliver a premium result."
+          }
+        }
+      },
+      "block_order": [
+        "step_1",
+        "step_2",
+        "step_3",
+        "step_4"
+      ],
+      "settings": {
+        "eyebrow": "Workflow",
+        "heading": "Clear process section for your homepage or product pages",
+        "text": "This works well under a hero image to guide first-time buyers."
+      }
+    },
+    "customizer": {
+      "type": "customizer-cta",
+      "settings": {
+        "eyebrow": "Customizer",
+        "heading": "Connect this section to your DTF Designer Pro flow",
+        "text": "Use it as the bridge between your theme and your custom product builder or upload workflow.",
+        "button_label": "Start Customizing",
+        "button_link": "/apps/dtf-designer-pro-2",
+        "side_title": "Built for front, back, sleeves, and neck tag customization",
+        "side_text": "Ideal if you want to keep building toward a full storefront customizer experience."
+      }
+    },
+    "177687516527f9538c": {
+      "type": "_blocks",
+      "blocks": {
+        "ai_gen_block_6ec844d_WwbNHQ": {
+          "type": "ai_gen_block_6ec844d",
+          "settings": {
+            "tier_1_threshold": 50,
+            "tier_1_discount": 5,
+            "tier_2_threshold": 100,
+            "tier_2_discount": 10,
+            "tier_3_threshold": 200,
+            "tier_3_discount": 15,
+            "tier_4_threshold": 500,
+            "tier_4_discount": 20,
+            "tier_5_threshold": 1000,
+            "tier_5_discount": 25,
+            "desktop_width_percent": 100,
+            "background_color": "#1a1a1a",
+            "text_color": "#ffffff",
+            "highlight_color": "#39ff14",
+            "progress_bar_color": "#16c2ff",
+            "progress_bg_color": "#333333",
+            "tier_text_color": "#cccccc",
+            "padding": 20,
+            "border_radius": 8,
+            "progress_bar_height": 10,
+            "progress_bar_radius": 10,
+            "glow_intensity": 10,
+            "message_font_size": 18,
+            "tier_font_size": 12,
+            "show_tier_labels": true
+          },
+          "blocks": {}
+        },
+        "ai_gen_block_2d42a60_edRjcf": {
+          "type": "ai_gen_block_2d42a60",
+          "disabled": true,
+          "settings": {
+            "headline": "Save More When You Print More",
+            "tier_1_enabled": true,
+            "tier_1_spend": "Spend $50+",
+            "tier_1_discount": "5% OFF",
+            "tier_2_enabled": true,
+            "tier_2_spend": "$100+",
+            "tier_2_discount": "10% OFF",
+            "tier_3_enabled": true,
+            "tier_3_spend": "$200+",
+            "tier_3_discount": "15% OFF",
+            "tier_4_enabled": true,
+            "tier_4_spend": "$500+",
+            "tier_4_discount": "20% OFF",
+            "show_cta": true,
+            "cta_text": "Start Customizing",
+            "cta_link": "",
+            "background_color": "#0b0b0b",
+            "headline_color": "#ffffff",
+            "tier_text_color": "#cccccc",
+            "accent_color_1": "#40c4ff",
+            "accent_color_2": "#b2ff59",
+            "button_bg_color": "#ff1744",
+            "button_hover_bg_color": "#d50000",
+            "button_text_color": "#ffffff",
+            "glow_color": "#ff1744",
+            "headline_size": 36,
+            "tier_text_size": 16,
+            "button_text_size": 16,
+            "padding_vertical": 40,
+            "content_gap": 20,
+            "button_padding_vertical": 14,
+            "button_padding_horizontal": 32,
+            "button_border_radius": 6,
+            "glow_intensity": 16
+          },
+          "blocks": {}
+        },
+        "ai_gen_block_da7c4d7_gHteL6": {
+          "type": "ai_gen_block_da7c4d7",
+          "settings": {
+            "desktop_width_percent": 100,
+            "mobile_layout": "scroll",
+            "padding": 30,
+            "border_radius": 12,
+            "badge_gap": 16,
+            "background_color": "#0a0f1a",
+            "border_color": "#1a2332",
+            "badge_background": "#0f1621",
+            "badge_border_color": "#16c2ff",
+            "badge_text_color": "#ffffff",
+            "glow_color": "#16c2ff",
+            "badge_border_radius": 8,
+            "icon_size": 32,
+            "badge_text_size": 14,
+            "badge_1_enabled": true,
+            "badge_1_icon": "✅",
+            "badge_1_text": "No Minimum Orders",
+            "badge_2_enabled": true,
+            "badge_2_icon": "⚡",
+            "badge_2_text": "Fast 24–48 Hour Turnaround",
+            "badge_3_enabled": true,
+            "badge_3_icon": "🎨",
+            "badge_3_text": "Vibrant Full-Color Prints",
+            "badge_4_enabled": true,
+            "badge_4_icon": "🔥",
+            "badge_4_text": "Premium DTF Quality",
+            "show_urgency": true,
+            "urgency_text": "Orders placed today start production within 24 hours",
+            "urgency_text_size": 14,
+            "urgency_bg_color": "#39ff14",
+            "urgency_accent_color": "#39ff14",
+            "urgency_text_color": "#ffffff",
+            "show_file_note": true,
+            "file_note_text": "300 DPI recommended • PNG / JPG / PDF • Transparent background preferred",
+            "file_note_size": 12,
+            "file_note_color": "#8899aa"
+          },
+          "blocks": {}
+        },
+        "ai_gen_block_dc16140_qfTYWW": {
+          "type": "ai_gen_block_dc16140",
+          "settings": {
+            "button_text": "Start Customizing",
+            "customizer_url": "",
+            "show_icon": true,
+            "desktop_width_percent": 100,
+            "button_bg_color": "#ff1493",
+            "button_hover_bg_color": "#16c2ff",
+            "button_text_color": "#ffffff",
+            "button_hover_text_color": "#ffffff",
+            "glow_color": "#ff1493",
+            "glow_intensity": 20,
+            "font_size": 18,
+            "icon_size": 24,
+            "button_padding": 18,
+            "border_radius": 8
+          },
+          "blocks": {}
+        }
+      },
+      "block_order": [
+        "ai_gen_block_6ec844d_WwbNHQ",
+        "ai_gen_block_2d42a60_edRjcf",
+        "ai_gen_block_da7c4d7_gHteL6",
+        "ai_gen_block_dc16140_qfTYWW"
+      ],
+      "settings": {}
+    },
+    "1776877953528e64f7": {
+      "type": "_blocks",
+      "settings": {}
+    },
+    "17768781582e954209": {
+      "type": "_blocks",
+      "settings": {}
+    },
+    "1776879506864dde96": {
+      "type": "_blocks",
+      "settings": {}
+    },
+    "1776916850df82e2f3": {
+      "type": "_blocks",
+      "settings": {}
+    },
+    "1776916889468b9187": {
+      "type": "_blocks",
+      "settings": {}
+    }
+  },
+  "order": [
+    "hero",
+    "collections",
+    "blocks_FTCEwT",
+    "steps",
+    "customizer",
+    "177687516527f9538c",
+    "1776877953528e64f7",
+    "17768781582e954209",
+    "1776879506864dde96",
+    "1776916850df82e2f3",
+    "1776916889468b9187"
+  ]
+}

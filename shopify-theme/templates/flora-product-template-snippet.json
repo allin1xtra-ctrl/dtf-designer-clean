@@ -1,0 +1,33 @@
+{
+  "instructions": "Merge this snippet into your Flora product.json template or assign the product.dtf template in Shopify so the animated pro sections and image-ready cards are used.",
+  "section_to_add": {
+    "dtf_pro_hero": {
+      "type": "dtf-pro-hero",
+      "settings": {}
+    },
+    "dtf_pro_benefits": {
+      "type": "dtf-pro-benefits",
+      "settings": {}
+    },
+    "dtf_product_designer": {
+      "type": "dtf-product-designer-pro",
+      "settings": {
+        "heading": "Create your order with a premium designer flow",
+        "subtext": "Give shoppers a polished transfer-company experience with quick launch choices, trust content, and a designer that adds straight to Shopify cart."
+      }
+    },
+    "dtf_pro_process": {
+      "type": "dtf-pro-process",
+      "settings": {}
+    },
+    "dtf_pro_video": {
+      "type": "dtf-pro-video",
+      "settings": {}
+    },
+    "dtf_pro_faq": {
+      "type": "dtf-pro-faq",
+      "settings": {}
+    }
+  },
+  "order_append": ["dtf_pro_hero", "dtf_pro_benefits", "dtf_product_designer", "dtf_pro_process", "dtf_pro_video", "dtf_pro_faq"]
+}

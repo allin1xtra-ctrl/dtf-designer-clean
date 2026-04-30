@@ -1,0 +1,13 @@
+{
+  "instructions": "Merge this snippet into your Flora product.json template or add the section in the Shopify Theme Editor.",
+  "section_to_add": {
+    "dtf_product_designer": {
+      "type": "dtf-product-designer",
+      "settings": {
+        "heading": "Create your order with a premium designer flow",
+        "subtext": "Give shoppers a polished transfer-company experience with quick launch choices, trust content, and a designer that adds straight to Shopify cart."
+      }
+    }
+  },
+  "order_append": ["dtf_product_designer"]
+}

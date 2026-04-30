@@ -1,0 +1,196 @@
+{% comment %}
+Premium DTF Transfers by Size Grid Section
+- Neon/glow borders, hover effects, on-brand style
+- Update variant IDs in the 'sizes' array below
+- Place this file in sections/ (e.g., sections/dtf-transfers-by-size.liquid)
+- Add to your theme via the theme editor
+{% endcomment %}
+
+</style>
+<style>
+.dtf-size-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 2rem;
+  margin: 3rem 0;
+}
+.dtf-size-card {
+  background: #18181b;
+  border-radius: 1.5rem;
+  border: 2px solid #00fff7;
+  box-shadow: 0 0 16px #00fff7, 0 0 0 #fff0;
+  transition: box-shadow 0.2s, border-color 0.2s, filter 0.3s;
+  padding: 2rem 1.5rem 1.5rem 1.5rem;
+  text-align: center;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  filter: drop-shadow(0 0 8px #00fff7cc);
+}
+.dtf-size-card:hover {
+  box-shadow: 0 0 32px #00fff7, 0 0 0 #fff0;
+  border-color: #fff200;
+  filter: drop-shadow(0 0 24px #fff200cc);
+}
+.dtf-size-card .dtf-size-label {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.03em;
+}
+.dtf-size-card .dtf-badge {
+  display: inline-block;
+  background: linear-gradient(90deg, #fff200 0%, #00fff7 100%);
+  color: #18181b;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border-radius: 0.5rem;
+  padding: 0.2rem 0.7rem;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+  box-shadow: 0 0 8px #fff20099;
+}
+.dtf-size-card .dtf-size-dimensions {
+  font-size: 1.1rem;
+  color: #00fff7;
+  margin-bottom: 0.5rem;
+}
+.dtf-size-card .dtf-size-desc {
+  font-size: 1rem;
+  color: #b3b3b3;
+  margin-bottom: 1.2rem;
+}
+.dtf-size-card .dtf-size-mockup {
+  display: none;
+  margin: 0 auto 1rem auto;
+  max-width: 120px;
+  border-radius: 0.5rem;
+  box-shadow: 0 0 8px #00fff744;
+  background: #222;
+}
+.dtf-size-card:hover .dtf-size-mockup {
+  display: block;
+  animation: fadeIn 0.4s;
+}
+/* Tooltip style refined */
+.dtf-size-card .dtf-tooltip {
+  display: none;
+  position: absolute;
+  left: 50%;
+  top: 60px;
+  transform: translateX(-50%);
+  background: #18181b;
+  color: #fff200;
+  padding: 0.8rem 1.3rem;
+  border-radius: 0.9rem;
+  font-size: 1.05rem;
+  box-shadow: 0 4px 24px #00fff7cc;
+  z-index: 20;
+  white-space: nowrap;
+  pointer-events: none;
+  border: 1.5px solid #00fff7;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.dtf-size-card:hover .dtf-tooltip {
+  display: block;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.dtf-size-card:hover .dtf-size-mockup {
+  display: block;
+  animation: fadeIn 0.7s ease;
+}
+.dtf-size-card .dtf-size-btn {
+  display: block;
+  width: 100%;
+  background: linear-gradient(90deg, #00fff7 0%, #fff200 100%);
+  color: #18181b;
+  font-weight: 700;
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.75rem 0;
+  font-size: 1.1rem;
+  margin-top: 1rem;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  text-decoration: none;
+}
+.dtf-size-card .dtf-size-btn:hover {
+  background: linear-gradient(90deg, #fff200 0%, #00fff7 100%);
+  color: #18181b;
+}
+</style>
+</style>
+
+<div class="dtf-size-grid">
+  {% assign size_cards =
+    'LEFT CHEST~3" x 3" to 4" x 6"~Perfect for logos and small branding placements.~47701867430062~Select Size|
+     POCKET SIZE~4" x 4" to 5" x 5"~Clean compact prints for subtle placements.~47701867462830~Select Size|
+     YOUTH SIZE~6" x 6" to 8" x 8"~Scaled for youth apparel and smaller designs.~47701867495598~Select Size|
+     STANDARD FRONT~10" x 10" to 11" x 11"~Most popular size for center chest prints.~47701867593902~Select Size|
+     FULL FRONT~11" x 14" to 12" x 12"~Larger prints for bold graphics.~47701867364526~Select Size|
+     OVERSIZED~12" x 16" and up~Streetwear-style large format prints.~47701867626670~Select Size|
+    GANG SHEETS~Multiple designs, one sheet~Multiple designs on one sheet — best value.~\/products\/dtf-gang-sheet-builder-build-your-own-sheet~Build Sheet'
+     | split: '|' %}
+  {% for card_str in size_cards %}
+    {% assign card = card_str | strip | split: '~' %}
+    <div class="dtf-size-card">
+      <div class="dtf-size-label">
+        {{ card[0] }}
+        {% if card[0] == 'STANDARD FRONT' %}
+          <span class="dtf-badge">Most Popular</span>
+        {% endif %}
+      </div>
+      <img class="dtf-size-mockup" src="/assets/mockup-{{ forloop.index0 }}.png" alt="Shirt mockup for {{ card[0] }}" />
+      <div class="dtf-tooltip">
+        {% case card[0] %}
+          {% when 'LEFT CHEST' %}<strong>Bulk Pricing:</strong><br>10+ <span style="color:#00fff7">$2.99/ea</span>, 50+ <span style="color:#fff200">$2.49/ea</span>
+          {% when 'POCKET SIZE' %}<strong>Bulk Pricing:</strong><br>10+ <span style="color:#00fff7">$3.49/ea</span>, 50+ <span style="color:#fff200">$2.99/ea</span>
+          {% when 'YOUTH SIZE' %}<strong>Bulk Pricing:</strong><br>10+ <span style="color:#00fff7">$3.99/ea</span>, 50+ <span style="color:#fff200">$3.49/ea</span>
+          {% when 'STANDARD FRONT' %}<strong>Bulk Pricing:</strong><br>10+ <span style="color:#00fff7">$4.99/ea</span>, 50+ <span style="color:#fff200">$4.49/ea</span>
+          {% when 'FULL FRONT' %}<strong>Bulk Pricing:</strong><br>10+ <span style="color:#00fff7">$5.99/ea</span>, 50+ <span style="color:#fff200">$5.49/ea</span>
+          {% when 'OVERSIZED' %}<strong>Bulk Pricing:</strong><br>10+ <span style="color:#00fff7">$6.99/ea</span>, 50+ <span style="color:#fff200">$6.49/ea</span>
+          {% when 'GANG SHEETS' %}<strong>Bulk Pricing:</strong><br>10+ <span style="color:#00fff7">$12.99/ea</span>, 50+ <span style="color:#fff200">$11.99/ea</span>
+        {% endcase %}
+      </div>
+      <div class="dtf-size-dimensions">{{ card[1] }}</div>
+      <div class="dtf-size-desc">{{ card[2] }}</div>
+      {% if card[0] == 'GANG SHEETS' %}
+        <a class="dtf-size-btn" href="{{ card[3] }}">{{ card[4] }}</a>
+      {% else %}
+        <a class="dtf-size-btn" href="/products/custom-dtf-transfers-by-size-your-favorite-dtf-plug?variant={{ card[3] }}">{{ card[4] }}</a>
+        <form method="post" action="/cart/add" style="margin-top:0.5rem;display:none;" class="dtf-add-cart-form">
+          <input type="hidden" name="id" value="{{ card[3] }}">
+          <input type="hidden" name="quantity" value="1">
+          <button type="submit" class="dtf-size-btn" style="background:#00fff7;color:#18181b;font-size:0.98rem;">Add to Cart</button>
+        </form>
+      {% endif %}
+      <script>
+        // Show Add to Cart button only on hover
+        document.addEventListener('DOMContentLoaded', function() {
+          var cards = document.querySelectorAll('.dtf-size-card');
+          cards.forEach(function(card) {
+            card.addEventListener('mouseenter', function() {
+              var form = card.querySelector('.dtf-add-cart-form');
+              if(form) form.style.display = 'block';
+            });
+            card.addEventListener('mouseleave', function() {
+              var form = card.querySelector('.dtf-add-cart-form');
+              if(form) form.style.display = 'none';
+            });
+          });
+        });
+      </script>
+    </div>
+    {% if customer and customer.orders_count > 0 %}
+      {% assign last_order = customer.orders[0] %}
+      {% assign last_line = last_order.line_items[0] %}
+      <div style="margin-top:1rem;">
+        <a class="dtf-size-btn" style="background:#fff200;color:#18181b;font-size:0.98rem;" href="/cart/add?id={{ last_line.variant_id }}&quantity=1">Reorder Last Size</a>
+      </div>
+    {% endif %}
+  {% endfor %}
+</div>

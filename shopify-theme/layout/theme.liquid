@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ shop.name }}</title>
+  <meta name="description" content="{{ shop.description | escape }}">
+  <meta property="og:title" content="{{ shop.name }}">
+  <meta property="og:description" content="{{ shop.description | escape }}">
+  <meta property="og:image" content="{{ shop.logo | image_url }}">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="{{ 'favicon.png' | asset_url }}">
+  {{ content_for_header }}
+  <link rel="stylesheet" href="{{ 'theme.css' | asset_url }}">
+</head>
+
+<body>
+  <!-- Announcement Bar -->
+  <div style="background:#00fff7;color:#18181b;text-align:center;padding:0.5rem 0;font-weight:700;letter-spacing:0.03em;">
+    🚚 Free shipping on orders $99+ | 🎨 Try our new DTF Designer Pro!
+  </div>
+
+  <!-- Sticky Header -->
+  <header style="position:sticky;top:0;z-index:1000;background:#18181b;padding:1rem 0 0.5rem 0;box-shadow:0 2px 12px #00fff733;">
+    <div style="max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;">
+      <a href="/" style="font-size:1.5rem;font-weight:900;color:#00fff7;text-decoration:none;">{{ shop.name }}</a>
+      <nav>
+        <a href="/collections/all" style="color:#fff;margin-right:2rem;">Shop</a>
+        <a href="/pages/customizer" style="color:#fff;margin-right:2rem;">Customizer</a>
+        <a href="/cart" style="color:#fff;">Cart</a>
+      </nav>
+    </div>
+  </header>
+
+
+  <!-- Accessibility: Skip to main content link -->
+  <a href="#main-content" style="position:absolute;left:-999px;top:auto;width:1px;height:1px;overflow:hidden;background:#fff200;color:#18181b;z-index:10000;">Skip to main content</a>
+
+
+  <main id="main-content">
+    {{ content_for_layout }}
+  </main>
+
+
+  <!-- DTF Designer Pro postMessage cart receiver + Cart Drawer Notification -->
+  <script>
+    window.addEventListener('message', function(event) {
+      // ✅ Always validate the origin for security!
+      if (event.origin !== 'https://your-real-dtf-app.com') return;
+      if (!event.data || event.data.type !== 'DTF_ADD_TO_CART') return;
+
+      const payload = event.data.data;
+
+      fetch('/cart/add.js', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(item => {
+        // Show cart drawer notification
+        var drawer = document.createElement('div');
+        drawer.innerHTML = '<div style="position:fixed;top:24px;right:24px;background:#18181b;color:#00fff7;padding:1.2rem 2rem;border-radius:1.2rem;box-shadow:0 4px 32px #00fff7cc;z-index:9999;font-size:1.2rem;font-weight:700;">✅ Added to cart! <a href=\"/cart\" style=\"color:#fff200;margin-left:1.5rem;text-decoration:underline;\">View Cart</a></div>';
+        document.body.appendChild(drawer.firstChild);
+        setTimeout(function(){
+          if(drawer.firstChild) drawer.firstChild.remove();
+        }, 3500);
+        document.dispatchEvent(new CustomEvent('cart:updated', { detail: item }));
+      })
+      .catch(err => {
+        console.error('❌ Cart add failed:', err);
+      });
+    });
+  </script>
+
+  <!-- Google Analytics (replace with your GA ID) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=UA-XXXXXXX-X"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'UA-XXXXXXX-X');
+  </script>
+
+  <!-- Facebook Pixel (replace with your Pixel ID) -->
+  <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', 'XXXXXXXXXXXXXXX');
+    fbq('track', 'PageView');
+  </script>
+  <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=XXXXXXXXXXXXXXX&ev=PageView&noscript=1"/></noscript>
+
+  <!-- Hotjar Tracking Code (replace with your Hotjar ID) -->
+  <script>
+    (function(h,o,t,j,a,r){
+        h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+        h._hjSettings={hjid:1234567,hjsv:6};
+        a=o.getElementsByTagName('head')[0];
+        r=o.createElement('script');r.async=1;
+        r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+        a.appendChild(r);
+    })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+  </script>
+
+  <!-- Klaviyo Signup Forms (replace with your public API key) -->
+  <script async type="text/javascript" src="https://static.klaviyo.com/onsite/js/klaviyo.js?company_id=YOUR_KLAVIYO_PUBLIC_KEY"></script>
+
+  <!-- Tidio Live Chat Widget (example, replace with your Tidio public key) -->
+  <script src="//code.tidio.co/yourtidioid.js" async></script>
+
+  {{ content_for_footer }}
+</body>
+</html>

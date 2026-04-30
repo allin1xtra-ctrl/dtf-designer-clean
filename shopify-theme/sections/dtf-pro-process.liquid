@@ -1,0 +1,95 @@
+{% liquid
+  assign product_url = section.settings.product_url | default: '/products/custom-dtf-designer'
+  assign query_joiner = '?'
+  if product_url contains '?'
+    assign query_joiner = '&'
+  endif
+  assign designer_url = product_url | append: query_joiner | append: 'dtf_mode=apparel#dtf-designer'
+%}
+
+<style>
+  #shopify-section-{{ section.id }} .dtf-process-section {
+    margin: 20px auto 32px;
+    padding: clamp(18px, 2.5vw, 28px);
+    background: #ffffff;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
+    border-radius: 22px;
+    box-shadow: 0 14px 35px rgba(15, 23, 42, 0.08);
+  }
+  #shopify-section-{{ section.id }} .dtf-section-kicker { margin: 0 0 8px; color: #2563eb; font-size: 12px; font-weight: 800; letter-spacing: 0.16em; }
+  #shopify-section-{{ section.id }} .dtf-process-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+  #shopify-section-{{ section.id }} .dtf-process-card { background: linear-gradient(180deg, #f8fafc, #eef2ff); border: 1px solid #dbeafe; border-radius: 18px; padding: 16px; }
+  #shopify-section-{{ section.id }} .dtf-process-number { font-weight: 800; color: #1d4ed8; display: inline-block; margin-bottom: 8px; }
+  #shopify-section-{{ section.id }} .dtf-button { display: inline-flex; align-items: center; justify-content: center; padding: 12px 18px; border-radius: 999px; text-decoration: none; font-weight: 800; margin-top: 10px; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; }
+  #shopify-section-{{ section.id }} .dtf-process-footer { margin-top: 16px; }
+</style>
+
+<section class="dtf-process-section page-width">
+  <div class="dtf-section-header">
+    <p class="dtf-section-kicker">{{ section.settings.kicker }}</p>
+    <h2>{{ section.settings.heading }}</h2>
+    <p>{{ section.settings.subtext }}</p>
+  </div>
+
+  <div class="dtf-process-grid">
+    {% if section.blocks.size > 0 %}
+      {% for block in section.blocks %}
+        <article class="dtf-process-card" {{ block.shopify_attributes }}>
+          <span class="dtf-process-number">{{ forloop.index }}</span>
+          <h3>{{ block.settings.title }}</h3>
+          <p>{{ block.settings.text }}</p>
+        </article>
+      {% endfor %}
+    {% else %}
+      <article class="dtf-process-card">
+        <span class="dtf-process-number">1</span>
+        <h3>Choose your order path</h3>
+        <p>Send shoppers into apparel mode, transfer mode, or a fast upload flow.</p>
+      </article>
+      <article class="dtf-process-card">
+        <span class="dtf-process-number">2</span>
+        <h3>Customize the details</h3>
+        <p>Let them pick colors, sizes, artwork placement, and other product options.</p>
+      </article>
+      <article class="dtf-process-card">
+        <span class="dtf-process-number">3</span>
+        <h3>Checkout in Shopify</h3>
+        <p>The final order moves right into your existing cart and payment flow.</p>
+      </article>
+    {% endif %}
+  </div>
+
+  <div class="dtf-process-footer">
+    <a href="{{ designer_url }}" class="dtf-button dtf-button-primary">{{ section.settings.cta_label }}</a>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "DTF Pro process",
+  "settings": [
+    { "type": "text", "id": "kicker", "label": "Kicker", "default": "HOW TO ORDER" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Move Flora shoppers from product choice to checkout in three clear steps" },
+    { "type": "textarea", "id": "subtext", "label": "Subtext", "default": "Keep the flow simple so buyers can pick Custom Drip, transfers, gang sheets, or starter packs without confusion." },
+    { "type": "url", "id": "product_url", "label": "Designer product URL" },
+    { "type": "text", "id": "cta_label", "label": "CTA label", "default": "Open the designer" }
+  ],
+  "blocks": [
+    {
+      "type": "step",
+      "name": "Step",
+      "settings": [
+        { "type": "text", "id": "title", "label": "Title", "default": "Upload or customize" },
+        { "type": "textarea", "id": "text", "label": "Text", "default": "Start from artwork you already have or build the product visually with the live designer." }
+      ]
+    }
+  ],
+  "max_blocks": 4,
+  "presets": [
+    {
+      "name": "DTF Pro process"
+    }
+  ]
+}
+{% endschema %}

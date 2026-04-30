@@ -1,0 +1,169 @@
+{% comment %}
+  main-product.liquid — Premium DTF Product Page
+  - Variant selector synced to Customize + ATC buttons
+  - Passes product_id + variant_id to /pages/customizer
+  - Reorder Last Design for logged-in customers
+{% endcomment %}
+
+{% assign current_variant = product.selected_or_first_available_variant %}
+
+<div class="dtf-product-section">
+
+  <h1 class="dtf-product-title">{{ product.title }}</h1>
+  <div class="dtf-product-description">{{ product.description }}</div>
+
+  <!-- Variant Selector -->
+  {%- if product.variants.size > 1 -%}
+    <label for="dtf-variant-select" style="color:#00fff7;font-weight:700;display:block;margin-bottom:0.5rem;">
+      Select Size:
+    </label>
+    <select id="dtf-variant-select" name="id" style="width:100%;padding:0.6rem 1rem;border-radius:0.75rem;background:#18181b;color:#fff;border:1.5px solid #00fff7;font-size:1rem;margin-bottom:1rem;">
+      {% for variant in product.variants %}
+        <option
+          value="{{ variant.id }}"
+          data-price="{{ variant.price | money }}"
+          {% if variant == current_variant %}selected{% endif %}
+          {% unless variant.available %}disabled{% endunless %}
+        >
+          {{ variant.title }}{% unless variant.available %} — Sold Out{% endunless %}
+        </option>
+      {% endfor %}
+    </select>
+  {%- else -%}
+    <input type="hidden" name="id" value="{{ product.variants.first.id }}">
+  {%- endif -%}
+
+  <!-- Price Display -->
+  <div id="dtf-price-display" style="font-size:1.4rem;font-weight:800;color:#fff200;margin-bottom:1rem;">
+    {{ current_variant.price | money }}
+  </div>
+
+  <!-- Add to Cart -->
+  <form id="dtf-add-to-cart-form" method="post" action="/cart/add">
+    <input type="hidden" name="id" id="dtf-atc-variant-id" value="{{ current_variant.id }}">
+    <input type="hidden" name="quantity" value="1">
+    <button type="submit" class="dtf-size-btn">⚡ Add to Cart</button>
+  </form>
+
+  <!-- Customize Button -->
+  <a
+    id="dtf-customize-btn"
+    class="dtf-size-btn"
+    style="background:#00fff7;color:#18181b;margin-top:0.75rem;"
+    href="/pages/customizer?product_id={{ product.id }}&variant_id={{ current_variant.id }}"
+  >
+    🎨 Customize & Upload Design
+  </a>
+
+  <!-- Reorder (logged-in customers only) -->
+  {% if customer and customer.orders_count > 0 %}
+    {% assign last_order = customer.orders.first %}
+    {% assign last_line  = last_order.line_items.first %}
+    {% assign artwork_url = last_line.properties | where: "name", "_Artwork URL" | map: "value" | first %}
+    <div style="margin-top:0.75rem;">
+      {% if artwork_url %}
+        <a class="dtf-size-btn" style="background:#fff200;color:#18181b;"
+           href="/pages/customizer?reorder=true&artwork={{ artwork_url | url_encode }}&variant={{ last_line.variant_id }}">
+          🔁 Reorder Last Design
+        </a>
+      {% else %}
+        <a class="dtf-size-btn" style="background:#fff200;color:#18181b;"
+           href="/cart/add?id={{ last_line.variant_id }}&quantity=1">
+          🔁 Reorder Last Size
+        </a>
+      {% endif %}
+    </div>
+  {% endif %}
+
+</div>
+
+<style>
+.dtf-product-section {
+  background: #18181b;
+  border-radius: 1.5rem;
+  border: 2px solid #00fff7;
+  box-shadow: 0 0 16px #00fff7;
+  padding: 2.5rem 2rem 2rem;
+  color: #fff;
+  margin: 2rem auto;
+  max-width: 540px;
+}
+.dtf-product-title {
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  color: #fff200;
+}
+.dtf-product-description {
+  font-size: 1.1rem;
+  color: #b3b3b3;
+  margin-bottom: 1.5rem;
+}
+.dtf-size-btn {
+  display: block;
+  width: 100%;
+  background: linear-gradient(90deg, #00fff7 0%, #fff200 100%);
+  color: #18181b;
+  font-weight: 700;
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.75rem 0;
+  font-size: 1.1rem;
+  margin-top: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  text-decoration: none;
+  text-align: center;
+}
+.dtf-size-btn:hover {
+  background: linear-gradient(90deg, #fff200 0%, #00fff7 100%);
+  color: #18181b;
+}
+@media (max-width: 640px) {
+  .dtf-product-section {
+    padding: 1.5rem 1rem 1.2rem;
+    margin: 1rem;
+    max-width: 100%;
+  }
+  .dtf-product-title { font-size: 1.5rem; }
+  .dtf-size-btn { font-size: 1rem; padding: 0.85rem 0; } /* larger tap target */
+}
+</style>
+
+<script>
+(function () {
+  var select       = document.getElementById('dtf-variant-select');
+  var atcInput     = document.getElementById('dtf-atc-variant-id');
+  var customizeBtn = document.getElementById('dtf-customize-btn');
+  var priceDisplay = document.getElementById('dtf-price-display');
+  var productId    = '{{ product.id }}';
+
+  if (!select) return;
+
+  select.addEventListener('change', function () {
+    var variantId = select.value;
+    var selectedOption = select.options[select.selectedIndex];
+
+    // ✅ Sync ATC form
+    if (atcInput) atcInput.value = variantId;
+
+    // ✅ Sync Customize button URL
+    if (customizeBtn) {
+      customizeBtn.href = '/pages/customizer?product_id=' + productId + '&variant_id=' + variantId;
+    }
+
+    // ✅ Update price display
+    if (priceDisplay && selectedOption.dataset.price) {
+      priceDisplay.textContent = selectedOption.dataset.price;
+    }
+  });
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Main product",
+  "settings": [],
+  "presets": [{ "name": "Main product" }]
+}
+{% endschema %}

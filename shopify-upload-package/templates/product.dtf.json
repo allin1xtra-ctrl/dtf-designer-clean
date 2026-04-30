@@ -1,0 +1,16 @@
+{
+  "sections": {
+    "main": {
+      "type": "main-product",
+      "settings": {}
+    },
+    "dtf_product_designer": {
+      "type": "dtf-product-designer",
+      "settings": {
+        "heading": "Create your order with a premium designer flow",
+        "subtext": "Give shoppers a polished transfer-company experience with quick launch choices, trust content, and a designer that adds straight to Shopify cart."
+      }
+    }
+  },
+  "order": ["main", "dtf_product_designer"]
+}

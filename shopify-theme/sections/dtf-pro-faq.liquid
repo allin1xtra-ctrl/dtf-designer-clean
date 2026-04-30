@@ -1,0 +1,93 @@
+{% liquid
+  assign product_url = section.settings.product_url | default: '/products/custom-dtf-designer'
+%}
+
+<style>
+  #shopify-section-{{ section.id }} .dtf-faq-section {
+    margin: 20px auto 32px;
+    padding: clamp(18px, 2.5vw, 28px);
+    background: #ffffff;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
+    border-radius: 22px;
+    box-shadow: 0 14px 35px rgba(15, 23, 42, 0.08);
+  }
+  #shopify-section-{{ section.id }} .dtf-faq-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+  #shopify-section-{{ section.id }} .dtf-section-kicker { margin: 0 0 8px; color: #2563eb; font-size: 12px; font-weight: 800; letter-spacing: 0.16em; }
+  #shopify-section-{{ section.id }} .dtf-faq-list { display: grid; gap: 12px; }
+  #shopify-section-{{ section.id }} .dtf-faq-item { background: linear-gradient(180deg, #f8fafc, #eef2ff); border: 1px solid #dbeafe; border-radius: 18px; padding: 16px; }
+  #shopify-section-{{ section.id }} .dtf-faq-item summary { cursor: pointer; font-weight: 700; }
+  #shopify-section-{{ section.id }} .dtf-button { display: inline-flex; align-items: center; justify-content: center; padding: 12px 18px; border-radius: 999px; text-decoration: none; font-weight: 800; margin-top: 10px; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; }
+</style>
+
+<section class="dtf-faq-section page-width">
+  <div class="dtf-faq-grid">
+    <div class="dtf-faq-copy">
+      <p class="dtf-section-kicker">{{ section.settings.kicker }}</p>
+      <h2>{{ section.settings.heading }}</h2>
+      <p>{{ section.settings.subtext }}</p>
+      <a href="{{ product_url }}" class="dtf-button dtf-button-primary">{{ section.settings.cta_label }}</a>
+    </div>
+
+    <div class="dtf-faq-list">
+      {% if section.blocks.size > 0 %}
+        {% for block in section.blocks %}
+          <details class="dtf-faq-item" {% if forloop.first %}open{% endif %} {{ block.shopify_attributes }}>
+            <summary>{{ block.settings.question }}</summary>
+            <div class="dtf-faq-answer rte">
+              <p>{{ block.settings.answer }}</p>
+            </div>
+          </details>
+        {% endfor %}
+      {% else %}
+        <details class="dtf-faq-item" open>
+          <summary>Can customers upload their own artwork?</summary>
+          <div class="dtf-faq-answer rte">
+            <p>Yes. The flow supports upload-first ordering as well as live customization on product pages.</p>
+          </div>
+        </details>
+        <details class="dtf-faq-item">
+          <summary>Does checkout stay on Shopify?</summary>
+          <div class="dtf-faq-answer rte">
+            <p>Yes. Orders are added to the Shopify cart so payment happens inside your normal storefront checkout.</p>
+          </div>
+        </details>
+        <details class="dtf-faq-item">
+          <summary>Can this work for more than shirts?</summary>
+          <div class="dtf-faq-answer rte">
+            <p>Yes. The designer supports multiple product templates, colors, sizes, and option combinations.</p>
+          </div>
+        </details>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "DTF Pro FAQ",
+  "settings": [
+    { "type": "text", "id": "kicker", "label": "Kicker", "default": "FREQUENTLY ASKED QUESTIONS" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Handle the final questions before customers place their order" },
+    { "type": "textarea", "id": "subtext", "label": "Subtext", "default": "Answer common questions about your Custom Drip collection, transfers, gang sheets, and starter packs right inside the Flora storefront." },
+    { "type": "url", "id": "product_url", "label": "Designer product URL" },
+    { "type": "text", "id": "cta_label", "label": "CTA button label", "default": "Shop custom orders" }
+  ],
+  "blocks": [
+    {
+      "type": "faq",
+      "name": "FAQ item",
+      "settings": [
+        { "type": "text", "id": "question", "label": "Question", "default": "How do I place a custom order?" },
+        { "type": "textarea", "id": "answer", "label": "Answer", "default": "Open the designer, upload your artwork or customize the product, then add it to your Shopify cart." }
+      ]
+    }
+  ],
+  "max_blocks": 8,
+  "presets": [
+    {
+      "name": "DTF Pro FAQ"
+    }
+  ]
+}
+{% endschema %}

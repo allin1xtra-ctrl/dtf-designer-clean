@@ -1,0 +1,23 @@
+{% liquid
+  assign dtf_preview_image = item.properties.preview_image | default: item.properties['Primary Preview']
+  assign dtf_design_file = item.properties.design_file | default: item.properties['Front Print File']
+%}
+
+{% if dtf_preview_image != blank %}
+  <div class="dtf-cart-preview" style="margin-top: 10px;">
+    <img
+      src="{{ dtf_preview_image | escape }}"
+      alt="{{ item.product.title | escape }} preview"
+      loading="lazy"
+      width="96"
+      height="96"
+      style="display:block;width:96px;height:96px;object-fit:cover;border-radius:12px;border:1px solid rgba(15,23,42,0.12);"
+    >
+  </div>
+{% endif %}
+
+{% if dtf_design_file != blank %}
+  <div style="margin-top: 8px; font-size: 12px;">
+    <a href="{{ dtf_design_file | escape }}" target="_blank" rel="noopener noreferrer">Open production file</a>
+  </div>
+{% endif %}

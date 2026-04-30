@@ -1,0 +1,111 @@
+{% liquid
+  assign apparel_url = section.settings.custom_drip_url | default: '/collections/custom-drip'
+%}
+
+{{ 'dtf-pro-theme.css' | asset_url | stylesheet_tag }}
+
+<section class="dtf-designer-section page-width">
+  <div class="dtf-designer-grid">
+    <div class="dtf-designer-main">
+      <div class="dtf-designer-head">
+        <div>
+          <p class="dtf-hero-kicker">APPAREL DESIGNER</p>
+          <h2>{{ section.settings.heading }}</h2>
+          <p>{{ section.settings.subtext }}</p>
+        </div>
+      </div>
+      <div class="dtf-cta-cluster">
+        <a href="{{ apparel_url }}" class="dtf-button dtf-button-primary">Start Custom Apparel</a>
+      </div>
+      <div id="apparel-designer-{{ section.id }}" class="dtf-designer-mount"
+        data-designer-url="{{ section.settings.designer_url | escape }}"
+        data-app-version="2026-04-15-3"
+        data-default-mode="apparel"
+        data-redirect-to-cart="{{ section.settings.redirect_to_cart }}"
+      ></div>
+      <noscript>
+        <p>Please enable JavaScript to use the Apparel designer.</p>
+      </noscript>
+    </div>
+    <aside class="dtf-designer-sidebar">
+      <div class="dtf-side-card">
+        <p class="dtf-side-kicker">WHY THIS LAYOUT CONVERTS</p>
+        <h3>{{ section.settings.sidebar_heading }}</h3>
+        <ul class="dtf-check-list" role="list">
+          <li>{{ section.settings.sidebar_point_one }}</li>
+          <li>{{ section.settings.sidebar_point_two }}</li>
+          <li>{{ section.settings.sidebar_point_three }}</li>
+          <li>{{ section.settings.sidebar_point_four }}</li>
+        </ul>
+      </div>
+      <div class="dtf-side-card">
+        <p class="dtf-side-kicker">HOW IT WORKS</p>
+        <ol class="dtf-step-list">
+          <li><strong>Choose your apparel.</strong><span>Pick your style, color, and size.</span></li>
+          <li><strong>Customize your product.</strong><span>Add artwork, text, and options.</span></li>
+          <li><strong>Send it to Shopify cart.</strong><span>Checkout happens in your existing store flow.</span></li>
+        </ol>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<script>
+  (function () {
+    var mount = document.getElementById('apparel-designer-{{ section.id }}');
+    if (!mount) return;
+    if (mount.dataset.dtfInitialized === 'true') return;
+    mount.dataset.dtfInitialized = 'true';
+    var designerUrl = (mount.dataset.designerUrl || '').replace(/\/$/, '');
+    if (!designerUrl) return;
+    var iframe = document.createElement('iframe');
+    var url = new URL(designerUrl, window.location.origin);
+    url.searchParams.set('mode', 'apparel');
+    url.searchParams.set('source', 'shopify-theme');
+    url.searchParams.set('v', mount.dataset.appVersion || '2026-04-15-3');
+    iframe.src = url.toString();
+    iframe.style.width = '100%';
+    iframe.style.height = '900px';
+    iframe.style.border = 'none';
+    iframe.style.borderRadius = '12px';
+    iframe.loading = 'lazy';
+    mount.innerHTML = '';
+    mount.appendChild(iframe);
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Apparel product designer",
+  "tag": "section",
+  "class": "section",
+  "limit": 1,
+  "enabled_on": {
+    "templates": ["product"]
+  },
+  "settings": [
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Create your custom apparel order" },
+    { "type": "textarea", "id": "subtext", "label": "Subtext", "default": "Design your apparel with our premium tools and send it straight to Shopify cart." },
+    { "type": "text", "id": "designer_url", "label": "Designer app URL", "default": "https://dtf-designer-clean.vercel.app" },
+    { "type": "url", "id": "custom_drip_url", "label": "Custom Drip collection URL" },
+    { "type": "text", "id": "sidebar_heading", "label": "Sidebar heading", "default": "Built for high-intent shoppers" },
+    { "type": "text", "id": "sidebar_point_one", "label": "Sidebar point 1", "default": "Instant entry into your design flow" },
+    { "type": "text", "id": "sidebar_point_two", "label": "Sidebar point 2", "default": "Clear order paths for apparel" },
+    { "type": "text", "id": "sidebar_point_three", "label": "Sidebar point 3", "default": "Premium trust signals around the buying area" },
+    { "type": "text", "id": "sidebar_point_four", "label": "Cart handoff stays inside Shopify" },
+    {
+      "type": "select",
+      "id": "redirect_to_cart",
+      "label": "Open cart after add",
+      "default": "false",
+      "options": [
+        { "value": "true", "label": "Yes" },
+        { "value": "false", "label": "No" }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "Apparel product designer" }
+  ]
+}
+{% endschema %}

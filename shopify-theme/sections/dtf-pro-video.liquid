@@ -1,0 +1,77 @@
+{% liquid
+  assign cta_url = section.settings.cta_url | default: '/collections/custom-drip'
+%}
+
+<style>
+  #shopify-section-{{ section.id }} .dtf-video-section {
+    margin: 20px auto 32px;
+    padding: clamp(18px, 2.5vw, 28px);
+    background: #ffffff;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
+    border-radius: 22px;
+    box-shadow: 0 14px 35px rgba(15, 23, 42, 0.08);
+  }
+  #shopify-section-{{ section.id }} .dtf-video-shell { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; align-items: start; }
+  #shopify-section-{{ section.id }} .dtf-section-kicker { margin: 0 0 8px; color: #2563eb; font-size: 12px; font-weight: 800; letter-spacing: 0.16em; }
+  #shopify-section-{{ section.id }} .dtf-video-frame { background: linear-gradient(180deg, #f8fafc, #eef2ff); border: 1px solid #dbeafe; border-radius: 18px; padding: 16px; }
+  #shopify-section-{{ section.id }} .dtf-theme-video { display: block; width: 100%; border-radius: 16px; }
+  #shopify-section-{{ section.id }} .dtf-video-points { padding-left: 18px; }
+  #shopify-section-{{ section.id }} .dtf-button { display: inline-flex; align-items: center; justify-content: center; padding: 12px 18px; border-radius: 999px; text-decoration: none; font-weight: 800; margin-top: 10px; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; }
+</style>
+
+<section class="dtf-video-section page-width">
+  <div class="dtf-video-shell">
+    <div class="dtf-video-copy">
+      {% if section.settings.kicker != blank %}
+        <p class="dtf-section-kicker">{{ section.settings.kicker }}</p>
+      {% endif %}
+
+      <h2>{{ section.settings.heading }}</h2>
+      <p>{{ section.settings.subtext }}</p>
+
+      <ul class="dtf-video-points" role="list">
+        <li>{{ section.settings.point_one }}</li>
+        <li>{{ section.settings.point_two }}</li>
+        <li>{{ section.settings.point_three }}</li>
+      </ul>
+
+      {% if section.settings.cta_label != blank %}
+        <a href="{{ cta_url }}" class="dtf-button dtf-button-primary">{{ section.settings.cta_label }}</a>
+      {% endif %}
+    </div>
+
+    <div class="dtf-video-frame">
+      {% if section.settings.shop_video != blank %}
+        {{ section.settings.shop_video | video_tag: controls: true, autoplay: false, loop: section.settings.enable_loop, muted: false, image_size: '1200x', class: 'dtf-theme-video' }}
+      {% else %}
+        <div class="dtf-video-placeholder">
+          <div class="dtf-chip">VIDEO READY</div>
+          <strong>Upload a promo video in the section settings.</strong>
+          <span>Use this area for product walkthroughs, gang sheet demos, or starter pack promos.</span>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "DTF Pro video",
+  "settings": [
+    { "type": "text", "id": "kicker", "label": "Kicker", "default": "WATCH THE PROCESS" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Upload a promo video directly into your Shopify theme" },
+    { "type": "textarea", "id": "subtext", "label": "Subtext", "default": "Use this Flora-friendly section for a brand video, gang sheet demo, transfer tutorial, or starter pack showcase." },
+    { "type": "video", "id": "shop_video", "label": "Upload video" },
+    { "type": "checkbox", "id": "enable_loop", "label": "Loop video", "default": false },
+    { "type": "text", "id": "point_one", "label": "Point 1", "default": "Show print quality and close-up details" },
+    { "type": "text", "id": "point_two", "label": "Point 2", "default": "Highlight gang sheets and starter pack offers" },
+    { "type": "text", "id": "point_three", "label": "Point 3", "default": "Keep shoppers engaged longer on the page" },
+    { "type": "url", "id": "cta_url", "label": "Button link" },
+    { "type": "text", "id": "cta_label", "label": "Button label", "default": "Shop now" }
+  ],
+  "presets": [
+    { "name": "DTF Pro video" }
+  ]
+}
+{% endschema %}
