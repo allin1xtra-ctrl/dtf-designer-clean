@@ -311,37 +311,10 @@ export default function CustomizerPage() {
           </button>
         </div>
 
-        <form
-          method="POST"
-          action={getShopifyCartAddUrl()}
-          onSubmit={() => prepareShopifyCart()}
-          className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4"
-        >
+        <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
           <h2 className="mb-2 text-lg font-semibold">Checkout</h2>
 
-          <input type="hidden" name="id" value={variantId} />
-          <input type="hidden" name="quantity" value={quantity} />
-
-          <input
-            type="hidden"
-            name="properties[_product_handle]"
-            value={productHandle}
-          />
-
-          <input
-            type="hidden"
-            name="properties[_preview_image]"
-            value={previewImage}
-          />
-
-          <input
-            type="hidden"
-            name="properties[_customization_data]"
-            value={JSON.stringify(viewsRef.current)}
-          />
-
           <label className="mb-2 block text-sm text-gray-300">Quantity</label>
-
           <input
             type="number"
             min="1"
@@ -351,9 +324,32 @@ export default function CustomizerPage() {
           />
 
           <button
-            type="submit"
+            type="button"
             disabled={!variantId}
             className="w-full rounded bg-white px-4 py-3 font-semibold text-black hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-40"
+            onClick={() => {
+              // Handler for cart handoff
+              const params = new URLSearchParams(window.location.search);
+              const variant = params.get("variant");
+              const product = params.get("product");
+              if (!variant) {
+                alert("Missing Shopify variant ID.");
+                return;
+              }
+              // Prepare preview image and customization data
+              saveCurrentView();
+              const previewImageUrl = getCanvas()?.toDataURL({ format: "png", quality: 1, multiplier: 2 }) || "";
+              const customizationData = viewsRef.current;
+              const cartUrl = new URL("https://yourdtfplug.com/cart/add");
+              cartUrl.searchParams.set("id", normalizeVariantId(variant));
+              cartUrl.searchParams.set("quantity", String(quantity));
+              cartUrl.searchParams.set("return_to", "/cart");
+              cartUrl.searchParams.set("properties[Product Handle]", product || "");
+              cartUrl.searchParams.set("properties[Design URL]", ""); // Set to uploaded design URL if available
+              cartUrl.searchParams.set("properties[Preview Image]", previewImageUrl);
+              cartUrl.searchParams.set("properties[Customization]", JSON.stringify(customizationData || {}));
+              window.location.href = cartUrl.toString();
+            }}
           >
             Add Custom Design to Cart
           </button>
@@ -364,7 +360,7 @@ export default function CustomizerPage() {
               Customize button.
             </p>
           )}
-        </form>
+        </div>
       </aside>
 
       <main className="flex flex-1 flex-col">
