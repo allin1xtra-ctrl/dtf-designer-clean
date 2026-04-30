@@ -4,14 +4,15 @@
   - Passes product_id + variant_id to /pages/customizer
   - Reorder Last Design for logged-in customers
 {% endcomment %}
-
-{% assign current_variant = product.selected_or_first_available_variant %}
-
-<div class="dtf-product-section">
-
-  <h1 class="dtf-product-title">{{ product.title }}</h1>
-  <div class="dtf-product-description">{{ product.description }}</div>
-
+  <a
+    id="dtf-customize-btn"
+    class="dtf-size-btn"
+    style="background:#00fff7;color:#18181b;margin-top:0.75rem;"
+    href="https://dtf-designer-clean.vercel.app/customizer?product={{ product.handle }}&variant={{ product.selected_or_first_available_variant.id }}"
+    target="_blank" rel="noopener"
+  >
+    ⚡ Start Customizing
+  </a>
   <!-- Variant Selector -->
   {%- if product.variants.size > 1 -%}
     <label for="dtf-variant-select" style="color:#00fff7;font-weight:700;display:block;margin-bottom:0.5rem;">
@@ -45,14 +46,27 @@
     <button type="submit" class="dtf-size-btn">⚡ Add to Cart</button>
   </form>
 
+    <!-- Start Customizing Button -->
+    <a
+      id="dtf-start-customizing-btn"
+      href="https://dtf-designer-clean.vercel.app/customizer?product={{ product.handle }}&variant={{ current_variant.id }}"
+      style="display:block;width:100%;margin-top:0.75rem;padding:1rem 0;border-radius:0.75rem;background:#18181b;color:#39ff14;font-weight:900;font-size:1.1rem;text-align:center;text-decoration:none;border:2.5px solid #39ff14;box-shadow:0 2px 12px #39ff1440;letter-spacing:0.03em;transition:background 0.18s,border 0.18s;"
+      target="_blank" rel="noopener"
+      onmouseover="this.style.background='#232323'"
+      onmouseout="this.style.background='#18181b'"
+    >
+      ⚡ Start Customizing
+    </a>
+
   <!-- Customize Button -->
   <a
     id="dtf-customize-btn"
     class="dtf-size-btn"
     style="background:#00fff7;color:#18181b;margin-top:0.75rem;"
-    href="/pages/customizer?product_id={{ product.id }}&variant_id={{ current_variant.id }}"
+    href="https://dtf-designer-clean.vercel.app/customizer?product={{ product.handle }}&variant={{ current_variant.id }}"
+    target="_blank" rel="noopener"
   >
-    🎨 Customize & Upload Design
+    ⚡ Start Customizing
   </a>
 
   <!-- Reorder (logged-in customers only) -->
@@ -63,7 +77,8 @@
     <div style="margin-top:0.75rem;">
       {% if artwork_url %}
         <a class="dtf-size-btn" style="background:#fff200;color:#18181b;"
-           href="/pages/customizer?reorder=true&artwork={{ artwork_url | url_encode }}&variant={{ last_line.variant_id }}">
+           href="https://dtf-designer-clean.vercel.app/customizer?reorder=true&artwork={{ artwork_url | url_encode }}&variant={{ last_line.variant_id }}"
+           target="_blank" rel="noopener">
           🔁 Reorder Last Design
         </a>
       {% else %}
@@ -135,6 +150,7 @@
   var select       = document.getElementById('dtf-variant-select');
   var atcInput     = document.getElementById('dtf-atc-variant-id');
   var customizeBtn = document.getElementById('dtf-customize-btn');
+  var productHandle = '{{ product.handle }}';
   var priceDisplay = document.getElementById('dtf-price-display');
   var productId    = '{{ product.id }}';
 
@@ -147,9 +163,9 @@
     // ✅ Sync ATC form
     if (atcInput) atcInput.value = variantId;
 
-    // ✅ Sync Customize button URL
+    // ✅ Sync Customize button URL (now external Vercel app)
     if (customizeBtn) {
-      customizeBtn.href = '/pages/customizer?product_id=' + productId + '&variant_id=' + variantId;
+      customizeBtn.href = 'https://dtf-designer-clean.vercel.app/customizer?product=' + productHandle + '&variant=' + variantId;
     }
 
     // ✅ Update price display
