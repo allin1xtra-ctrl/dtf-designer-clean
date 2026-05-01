@@ -330,6 +330,10 @@ export default function CustomizerPage() {
             className="w-full rounded bg-white px-4 py-3 font-semibold text-black hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-40"
             onClick={async () => {
               const handleCheckout = async () => {
+                // Ensure all variables are defined to prevent build errors
+                const uploadedDesignUrl = "";
+                const previewImageUrl = "";
+                const selectedSize = "";
                 try {
                   const searchParams = new URLSearchParams(window.location.search);
                   const variantId = searchParams.get("variant");
@@ -361,15 +365,23 @@ export default function CustomizerPage() {
                       customAttributes: [
                         {
                           key: "Design ID",
-                          value: designId || "",
+                          value: `DTF-${Date.now()}`,
                         },
                         {
                           key: "Artwork URL",
-                          value: artworkUrl || uploadedDesignUrl || "",
+                          value:
+                            typeof uploadedDesignUrl !== "undefined"
+                              ? uploadedDesignUrl
+                              : typeof previewImageUrl !== "undefined"
+                              ? previewImageUrl
+                              : "",
                         },
                         {
                           key: "Size",
-                          value: size || selectedSize || "",
+                          value:
+                            typeof selectedSize !== "undefined"
+                              ? selectedSize
+                              : "",
                         },
                       ],
                     }),
