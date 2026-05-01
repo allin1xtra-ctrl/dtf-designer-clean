@@ -25,8 +25,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const shopDomain = process.env.SHOPIFY_STORE_DOMAIN;
-    const token = process.env.SHOPIFY_STOREFRONT_TOKEN;
+    const shopDomain = process.env.SHOPIFY_STORE_DOMAIN?.trim();
+    const token = process.env.SHOPIFY_STOREFRONT_TOKEN?.trim();
 
     if (!shopDomain || !token) {
       return NextResponse.json(
