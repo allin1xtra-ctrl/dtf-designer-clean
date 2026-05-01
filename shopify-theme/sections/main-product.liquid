@@ -1,14 +1,14 @@
 {% comment %}
   main-product.liquid — Premium DTF Product Page
   - Variant selector synced to Customize + ATC buttons
-  - Passes product_id + variant_id to https://dtf-designer-clean.vercel.app/customizer?product={{ product.handle }}&variant={{ product.selected_or_first_available_variant.id }}
+  - Passes product handle + variant_id to Vercel customizer
   - Reorder Last Design for logged-in customers
 {% endcomment %}
   <a
     id="dtf-customize-btn"
     class="dtf-size-btn"
     style="background:#00fff7;color:#18181b;margin-top:0.75rem;"
-    href="https://dtf-designer-clean.vercel.app/customizer?product={{ product.handle }}&variant={{ product.selected_or_first_available_variant.id }}"
+    href="https://dtf-designer-clean.vercel.app/customizer?product={{ product.handle }}&variant={{ current_variant.id }}"
     target="_blank" rel="noopener"
   >
     ⚡ Start Customizing
@@ -165,7 +165,7 @@
 
     // ✅ Sync Customize button URL (now external Vercel app)
     if (customizeBtn) {
-      customizeBtn.href = 'https://dtf-designer-clean.vercel.app/customizer?product=' + productHandle + '&variant=' + variantId;
+      customizeBtn.href = 'https://dtf-designer-clean.vercel.app/customizer?product={{ product.handle }}&variant=' + variantId;
     }
 
     // ✅ Update price display

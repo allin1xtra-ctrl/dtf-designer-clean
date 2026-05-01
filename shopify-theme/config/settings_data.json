@@ -17,7 +17,7 @@
         "text": "<p>Upload. Print. Press. Done.</p>",
         "hero_image": "shopify://shop_images/hero-banner_19629971-6588-4b79-afbd-2371a685ce5c.png",
         "primary_label": "Start Customizing",
-        "primary_link": "/apps/dtf-designer-pro-2",
+        "primary_link": "https://dtf-designer-clean.vercel.app/customizer",
         "secondary_label": "No minimums • Fast turnaround • Premium quality",
         "secondary_link": "shopify://policies/shipping-policy",
         "stat_1_number": "300 DPI",
@@ -177,7 +177,7 @@
         "heading": "Connect this section to your DTF Designer Pro flow",
         "text": "Use it as the bridge between your theme and your custom product builder or upload workflow.",
         "button_label": "Start Customizing",
-        "button_link": "/apps/dtf-designer-pro-2",
+        "button_link": "https://dtf-designer-clean.vercel.app/customizer",
         "side_title": "Built for front, back, sleeves, and neck tag customization",
         "side_text": "Ideal if you want to keep building toward a full storefront customizer experience."
       }
