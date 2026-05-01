@@ -328,7 +328,7 @@ export default function CustomizerPage() {
             type="button"
             disabled={!variantId}
             className="w-full rounded bg-white px-4 py-3 font-semibold text-black hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-40"
-            onClick={() => {
+            onClick={async () => {
               const searchParams = new URLSearchParams(window.location.search);
               const variantId = searchParams.get("variant");
               const productHandle = searchParams.get("product");
@@ -336,20 +336,49 @@ export default function CustomizerPage() {
                 alert("Missing Shopify variant ID.");
                 return;
               }
-              // Build note with all design details (cart permalink doesn't support properties)
-              const uploadedDesignUrl = ""; // Set if you have an uploaded design URL
-              const previewImageUrl = getCanvas()?.toDataURL({ format: "png", quality: 1, multiplier: 2 }) || "";
-              const customizationData = viewsRef.current;
-              const designNote = [
-                productHandle ? `Product: ${productHandle}` : '',
-                uploadedDesignUrl ? `Design URL: ${uploadedDesignUrl}` : '',
-                previewImageUrl ? `Preview: ${previewImageUrl}` : '',
-                customizationData ? `Customization: ${JSON.stringify(customizationData)}` : '',
-              ].filter(Boolean).join(' | ');
-              // Shopify cart permalink — works cross-domain, no CORS
-              const cartUrl = new URL(`https://yourdtfplug.com/cart/${variantId}:1`);
-              if (designNote) cartUrl.searchParams.set('note', designNote);
-              window.location.href = cartUrl.toString();
+              try {
+                const uploadedDesignUrl = ""; // Set if you have an uploaded design URL
+                const previewImageUrl = getCanvas()?.toDataURL({ format: "png", quality: 1, multiplier: 2 }) || "";
+                const customizationData = viewsRef.current;
+                const res = await fetch(
+                  `https://${process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN}/api/2024-01/graphql.json`,
+                  {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'X-Shopify-Storefront-Access-Token': process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_TOKEN,
+                    },
+                    body: JSON.stringify({
+                      query: `\n            mutation checkoutCreate($input: CheckoutCreateInput!) {\n              checkoutCreate(input: $input) {\n                checkout { webUrl }\n                checkoutUserErrors { field message }\n              }\n            }\n          `,
+                      variables: {
+                        input: {
+                          lineItems: [{
+                            variantId: `gid://shopify/ProductVariant/${variantId}`,
+                            quantity: 1,
+                            customAttributes: [
+                              { key: "_custom_design", value: uploadedDesignUrl || "none" },
+                              { key: "_design_source", value: productHandle || "none" },
+                              { key: "_preview_image", value: previewImageUrl || "none" },
+                              { key: "_design_data", value: JSON.stringify(customizationData || {}) },
+                            ]
+                          }]
+                        }
+                      }
+                    })
+                  }
+                );
+                const { data } = await res.json();
+                const errors = data?.checkoutCreate?.checkoutUserErrors;
+                if (errors?.length) {
+                  alert(`Error: ${errors[0].message}`);
+                  return;
+                }
+                // ✅ Redirect to Shopify checkout with all properties
+                window.location.href = data.checkoutCreate.checkout.webUrl;
+              } catch (err) {
+                console.error('Cart error:', err);
+                alert('Something went wrong. Please try again.');
+              }
             }}
           >
             Add Custom Design to Cart
