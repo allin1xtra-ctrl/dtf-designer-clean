@@ -8,10 +8,19 @@
   <meta property="og:title" content="{{ shop.name }}">
   <meta property="og:description" content="{{ shop.description | escape }}">
   <meta property="og:image" content="{{ shop.logo | image_url }}">
+
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" type="image/png" href="{{ 'favicon.png' | asset_url }}">
   {{ content_for_header }}
   <link rel="stylesheet" href="{{ 'theme.css' | asset_url }}">
+
+  <!-- SEO & Social Meta Tags -->
+  <meta name="description" content="{% if page_description %}{{ page_description | escape }}{% else %}Your Favorite DTF Plug offers premium custom DTF transfers, gang sheets, and print-ready apparel designs with fast turnaround, vibrant color, and professional-quality results.{% endif %}">
+  <meta property="og:description" content="{% if page_description %}{{ page_description | escape }}{% else %}Your Favorite DTF Plug offers premium custom DTF transfers, gang sheets, and print-ready apparel designs with fast turnaround, vibrant color, and professional-quality results.{% endif %}">
+  <meta property="og:title" content="{% if page_title %}{{ page_title }} · {% endif %}{{ shop.name }}">
+  <meta property="og:type" content="website">
+  <link rel="canonical" href="{{ canonical_url }}">
+
 </head>
 
 <body>
@@ -21,13 +30,15 @@
   </div>
 
   <!-- Sticky Header -->
+
   <header style="position:sticky;top:0;z-index:1000;background:#18181b;padding:1rem 0 0.5rem 0;box-shadow:0 2px 12px #00fff733;">
     <div style="max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;">
       <a href="/" style="font-size:1.5rem;font-weight:900;color:#00fff7;text-decoration:none;">{{ shop.name }}</a>
-      <nav>
-        <a href="/collections/all" style="color:#fff;margin-right:2rem;">Shop</a>
-        <a href="/pages/customizer" style="color:#fff;margin-right:2rem;">Customizer</a>
-        <a href="/cart" style="color:#fff;">Cart</a>
+      <nav class="site-nav" aria-label="Main navigation">
+        <a href="/" aria-label="Go to homepage" style="color:#fff;margin-right:2rem;">Home</a>
+        <a href="/collections/all" aria-label="Browse all products" style="color:#fff;margin-right:2rem;">Shop</a>
+        <a href="/pages/contact" aria-label="Contact us" style="color:#fff;margin-right:2rem;">Contact</a>
+        <a class="nav-pill" href="/cart" aria-label="View your shopping cart" style="color:#fff;">Cart</a>
       </nav>
     </div>
   </header>

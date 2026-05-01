@@ -253,7 +253,7 @@
       </div>
 
       <div class="dtf-cta-cluster">
-        <a href="https://dtf-designer-clean.vercel.app/customizer?product={{ product.handle }}&variant={{ product.selected_or_first_available_variant.id }}" target="_blank" rel="noopener" class="dtf-button dtf-button-primary">Start Customizing</a>
+        <a href="{{ section.settings.designer_url }}?product={{ product.handle }}&variant={{ product.selected_or_first_available_variant.id }}" class="dtf-button dtf-button-primary">Start Customizing</a>
         <a href="{{ gang_sheet_url }}" class="dtf-button dtf-button-secondary">{{ section.settings.gang_sheet_label }}</a>
         <a href="{{ starter_pack_url }}" class="dtf-button dtf-button-secondary">{{ section.settings.starter_pack_label }}</a>
       </div>
@@ -661,7 +661,12 @@
   "settings": [
     { "type": "text", "id": "heading", "label": "Heading", "default": "Create your order with a premium designer flow" },
     { "type": "textarea", "id": "subtext", "label": "Subtext", "default": "Give shoppers a polished transfer-company experience with quick launch choices, trust content, and a designer that adds straight to Shopify cart." },
-    { "type": "text", "id": "designer_url", "label": "Designer app URL", "default": "https://dtf-designer-clean.vercel.app" },
+    {
+      "type": "url",
+      "id": "designer_url",
+      "label": "DTF Designer Pro App URL",
+      "default": "https://dtf-designer-clean.vercel.app/customizer"
+    },
     { "type": "url", "id": "custom_drip_url", "label": "Custom Drip collection URL" },
     { "type": "url", "id": "custom_transfers_url", "label": "Custom Transfers designer product URL" },
     { "type": "url", "id": "premade_transfers_url", "label": "Pre-made Transfers product URL" },

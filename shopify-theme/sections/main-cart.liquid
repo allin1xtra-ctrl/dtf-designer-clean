@@ -1,0 +1,51 @@
+<section class="cart-section page-width">
+  <h1>Your Cart</h1>
+  {% if cart.item_count == 0 %}
+    <p>Your cart is empty.</p>
+  {% else %}
+    <form action="/cart" method="post" novalidate>
+      <table class="cart-table">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Custom Design Details</th>
+            <th>Quantity</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in cart.items %}
+            <tr>
+              <td>
+                <a href="{{ item.url }}">{{ item.product.title }}</a><br>
+                <span>{{ item.variant.title }}</span>
+              </td>
+              <td>
+                {% if item.properties %}
+                  <ul>
+                    {% for p in item.properties %}
+                      {% unless p.last == blank %}
+                        <li><strong>{{ p.first }}:</strong> {{ p.last }}</li>
+                      {% endunless %}
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  <span>-</span>
+                {% endif %}
+              </td>
+              <td>
+                <input type="number" name="updates[]" value="{{ item.quantity }}" min="0">
+              </td>
+              <td>{{ item.line_price | money }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="cart-footer">
+        <strong>Subtotal:</strong> {{ cart.total_price | money }}
+        <button type="submit" name="update" class="cart-update">Update Cart</button>
+        <a href="/checkout" class="cart-checkout">Checkout</a>
+      </div>
+    </form>
+  {% endif %}
+</section>

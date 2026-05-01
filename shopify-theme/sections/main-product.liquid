@@ -1,7 +1,7 @@
 {% comment %}
   main-product.liquid — Premium DTF Product Page
   - Variant selector synced to Customize + ATC buttons
-  - Passes product_id + variant_id to /pages/customizer
+  - Passes product_id + variant_id to https://dtf-designer-clean.vercel.app/customizer?product={{ product.handle }}&variant={{ product.selected_or_first_available_variant.id }}
   - Reorder Last Design for logged-in customers
 {% endcomment %}
   <a
