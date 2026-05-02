@@ -57,7 +57,7 @@
   <script>
     window.addEventListener('message', function(event) {
       // ✅ Always validate the origin for security!
-      if (event.origin !== 'https://your-real-dtf-app.com') return;
+      if (event.origin !== 'https://dtf-designer-clean.vercel.app') return;
       if (!event.data || event.data.type !== 'DTF_ADD_TO_CART') return;
 
       const payload = event.data.data;
@@ -127,5 +127,70 @@
   <script src="//code.tidio.co/yourtidioid.js" async></script>
 
   {{ content_for_footer }}
+
+
+
+<script>
+(function () {
+  window.addEventListener("message", async function (event) {
+    const allowedOrigins = [
+      "https://dtf-designer-clean.vercel.app"
+    ];
+
+    if (!allowedOrigins.includes(event.origin)) {
+      console.log("Blocked message from:", event.origin);
+      return;
+    }
+
+    const message = event.data || {};
+
+    if (message.type !== "DTF_ADD_TO_CART") {
+      return;
+    }
+
+    const data = message.data || {};
+    const variantId = Number(data.id);
+    const quantity = Number(data.quantity || 1);
+    const properties = data.properties || {};
+
+    if (!variantId) {
+      console.error("Missing variant ID:", data);
+      alert("Missing product variant. Please choose a product again.");
+      return;
+    }
+
+    try {
+      const response = await fetch("/cart/add.js", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify({
+          id: variantId,
+          quantity: quantity,
+          properties: properties
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error("Cart add failed:", result);
+        alert("Cart add failed. Please check product availability.");
+        return;
+      }
+
+      console.log("✅ Added to cart from customizer:", result);
+      window.location.href = "/cart";
+
+    } catch (error) {
+      console.error("Add to cart request failed:", error);
+      alert("Something went wrong adding your custom item to cart.");
+    }
+  });
+})();
+</script>
+
 </body>
 </html>

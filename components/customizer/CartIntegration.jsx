@@ -1,72 +1,123 @@
 "use client";
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 
 export default function CartIntegration({ loading, product }) {
   const [status, setStatus] = useState("");
-  const [artworkUrl, setArtworkUrl] = useState(""); // Replace with actual artwork URL from state/props
-  const [variantId, setVariantId] = useState(""); // Replace with actual variant ID from product/selection
+  const [artworkUrl, setArtworkUrl] = useState("");
+  const [variantId, setVariantId] = useState("");
+  const [selectedSize, setSelectedSize] = useState("Custom");
+  const [customText, setCustomText] = useState("");
+  const [variantIdManuallyEditable, setVariantIdManuallyEditable] = useState(false);
 
-  async function handleAddToCart() {
-    setStatus("Adding to cart...");
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlVariant = params.get("variant");
+    if (urlVariant) {
+      setVariantId(urlVariant);
+      setVariantIdManuallyEditable(false);
+      return;
+    }
+    // Fallback if your product prop has variant data
+    const fallbackVariant =
+      product?.variantId ||
+      product?.selectedVariantId ||
+      product?.variants?.[0]?.id ||
+      "";
+    if (fallbackVariant) {
+      setVariantId(String(fallbackVariant).replace("gid://shopify/ProductVariant/", ""));
+      setVariantIdManuallyEditable(false);
+    } else {
+      setVariantIdManuallyEditable(true);
+    }
+  }, [product]);
+
+  function handleAddToCart() {
+    const cleanVariantId = String(variantId).replace("gid://shopify/ProductVariant/", "");
+    if (!cleanVariantId) {
+      setStatus("Missing Shopify variant ID.");
+      return;
+    }
+    const designId = `DTF-${Date.now()}`;
+    setStatus("Adding your custom design to cart...");
     try {
-      const res = await fetch("/cart/add.js", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
+      window.parent.postMessage(
+        {
+          type: "DTF_ADD_TO_CART",
+          data: {
+            id: Number(cleanVariantId),
+            quantity: 1,
+            properties: {
+              "Design ID": designId,
+              "Artwork URL": artworkUrl || "No artwork uploaded yet",
+              "Size": selectedSize || "Custom",
+              "Custom Text": customText || ""
+            }
+          }
         },
-        body: JSON.stringify({
-          items: [
-            {
-              id: variantId || "", // Shopify variant ID
-              quantity: 1,
-              properties: {
-                "Artwork URL": artworkUrl || "https://your-art-url.com/art.png", // Replace with actual artwork URL
-              },
-            },
-          ],
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to add to cart");
-      setStatus("Added to cart!");
+        "https://yourdtfplug.com"
+      );
+      setStatus("Custom design sent to cart. Redirecting...");
     } catch (e) {
       setStatus("Error: " + e.message);
     }
   }
 
   return (
-    <div className="mt-6 p-4 border rounded" style={{ minHeight: 80 }}>
-      <h2 className="text-lg font-semibold mb-2">Shopify Cart Integration</h2>
+    <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-4" style={{ minHeight: 80 }}>
+      <h2 className="mb-2 text-lg font-semibold">Finalize Your Custom Order</h2>
+      <p className="mb-4 text-sm text-gray-300">
+        Review your design details, then add your custom DTF order to cart.
+      </p>
       {loading ? (
         <div className="skeleton shimmer" style={{ height: 24, width: 200 }} />
       ) : (
         <>
-          <div className="mb-2">
+          <div className="mb-3 grid gap-2 md:grid-cols-2">
             <input
+              id="artwork-url"
+              name="artworkUrl"
               type="text"
-              className="border px-2 py-1 rounded mr-2"
-              placeholder="Artwork URL"
+              className="rounded border px-3 py-2 text-black"
+              placeholder="Artwork file or preview URL"
               value={artworkUrl}
-              onChange={e => setArtworkUrl(e.target.value)}
-              style={{ width: 260 }}
+              onChange={(e) => setArtworkUrl(e.target.value)}
+            />
+            {/* Hide Variant ID from customers, but keep as hidden input for debugging or form completeness */}
+            <input
+              id="shopify-variant-id"
+              name="variantId"
+              type="hidden"
+              value={variantId}
+              readOnly
             />
             <input
+              id="selected-size"
+              name="selectedSize"
               type="text"
-              className="border px-2 py-1 rounded mr-2"
-              placeholder="Variant ID"
-              value={variantId}
-              onChange={e => setVariantId(e.target.value)}
-              style={{ width: 120 }}
+              className="rounded border px-3 py-2 text-black"
+              placeholder="Size, e.g. 12x12"
+              value={selectedSize}
+              onChange={(e) => setSelectedSize(e.target.value)}
             />
-            <button
-              className="bg-black text-white px-4 py-2 rounded"
-              onClick={handleAddToCart}
-              disabled={!artworkUrl || !variantId}
-            >
-              Add to Cart
-            </button>
+            <input
+              id="custom-text"
+              name="customText"
+              type="text"
+              className="rounded border px-3 py-2 text-black"
+              placeholder="Custom Text"
+              value={customText}
+              onChange={(e) => setCustomText(e.target.value)}
+            />
           </div>
-          {status && <div className="text-sm mt-2">{status}</div>}
+          <button
+            className="rounded bg-white px-5 py-3 font-bold text-black transition hover:scale-105"
+            onClick={handleAddToCart}
+            disabled={!variantId}
+          >
+            Add Custom Design to Cart
+          </button>
+          {status && <div className="mt-2 text-sm">{status}</div>}
         </>
       )}
     </div>
