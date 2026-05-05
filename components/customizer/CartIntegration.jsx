@@ -3,19 +3,18 @@
 import { useState, useEffect, useRef } from "react";
 
   const [status, setStatus] = useState("");
-  const [error, setError] = useState("");
   const [artworkUrl, setArtworkUrl] = useState("");
   const [variantId, setVariantId] = useState("");
   const [selectedSize, setSelectedSize] = useState("Custom");
   const [customText, setCustomText] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const statusRef = useRef(null);
+  const [variantIdManuallyEditable, setVariantIdManuallyEditable] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const urlVariant = params.get("variant");
     if (urlVariant) {
       setVariantId(urlVariant);
+      setVariantIdManuallyEditable(false);
       return;
     }
     // Fallback if your product prop has variant data
@@ -26,19 +25,17 @@ import { useState, useEffect, useRef } from "react";
       "";
     if (fallbackVariant) {
       setVariantId(String(fallbackVariant).replace("gid://shopify/ProductVariant/", ""));
+      setVariantIdManuallyEditable(false);
+    } else {
+      setVariantIdManuallyEditable(true);
     }
   }, [product]);
 
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setError("");
-    setStatus("");
-    setSubmitting(true);
+  function handleAddToCart() {
     const cleanVariantId = String(variantId).replace("gid://shopify/ProductVariant/", "");
     if (!cleanVariantId) {
-      setError("Missing Shopify variant ID.");
-      setSubmitting(false);
+      setStatus("Missing Shopify variant ID.");
       return;
     }
     const designId = `DTF-${Date.now()}`;
@@ -72,21 +69,22 @@ import { useState, useEffect, useRef } from "react";
         );
         setStatus("Custom design sent to cart. Redirecting...");
       } else {
-        const res = await fetch(endpoint, {
+        fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
-        });
-        if (res.ok) {
-          setStatus("Custom design sent to cart. Redirecting...");
-        } else {
-          setError("Failed to add to cart. Please try again.");
-        }
+        })
+          .then(res => {
+            if (res.ok) {
+              setStatus("Custom design sent to cart. Redirecting...");
+            } else {
+              setStatus("Failed to add to cart. Please try again.");
+            }
+          })
+          .catch(e => setStatus("Error: " + e.message));
       }
     } catch (e) {
-      setError("Error: " + e.message);
-    } finally {
-      setSubmitting(false);
+      setStatus("Error: " + e.message);
     }
   }
 
@@ -99,24 +97,17 @@ import { useState, useEffect, useRef } from "react";
       {loading ? (
         <div className="skeleton shimmer" style={{ height: 24, width: 200 }} />
       ) : (
-        <form onSubmit={handleSubmit} autoComplete="on" aria-describedby={error ? "cart-error" : undefined}>
+        <>
           <div className="mb-3 grid gap-2 md:grid-cols-2">
-            <div>
-              <label htmlFor="artwork-url" className="block text-sm font-medium text-gray-200 mb-1">
-                Artwork URL
-              </label>
-              <input
-                id="artwork-url"
-                name="artworkUrl"
-                type="text"
-                autoComplete="off"
-                className="rounded border px-3 py-2 text-black w-full"
-                placeholder="Artwork file or preview URL"
-                value={artworkUrl}
-                onChange={(e) => setArtworkUrl(e.target.value)}
-                aria-describedby={error ? "cart-error" : undefined}
-              />
-            </div>
+            <input
+              id="artwork-url"
+              name="artworkUrl"
+              type="text"
+              className="rounded border px-3 py-2 text-black"
+              placeholder="Artwork file or preview URL"
+              value={artworkUrl}
+              onChange={(e) => setArtworkUrl(e.target.value)}
+            />
             {/* Hide Variant ID from customers, but keep as hidden input for debugging or form completeness */}
             <input
               id="shopify-variant-id"
@@ -125,61 +116,37 @@ import { useState, useEffect, useRef } from "react";
               value={variantId}
               readOnly
             />
-            <div>
-              <label htmlFor="selected-size" className="block text-sm font-medium text-gray-200 mb-1">
-                Size
-              </label>
-              <input
-                id="selected-size"
-                name="selectedSize"
-                type="text"
-                autoComplete="off"
-                className="rounded border px-3 py-2 text-black w-full"
-                placeholder="Size, e.g. 12x12"
-                value={selectedSize}
-                onChange={(e) => setSelectedSize(e.target.value)}
-                aria-describedby={error ? "cart-error" : undefined}
-              />
-            </div>
-            <div>
-              <label htmlFor="custom-text" className="block text-sm font-medium text-gray-200 mb-1">
-                Custom Text
-              </label>
-              <input
-                id="custom-text"
-                name="customText"
-                type="text"
-                autoComplete="off"
-                className="rounded border px-3 py-2 text-black w-full"
-                placeholder="Custom Text"
-                value={customText}
-                onChange={(e) => setCustomText(e.target.value)}
-                aria-describedby={error ? "cart-error" : undefined}
-              />
-            </div>
-          </div>
-          <div className="mt-2">
-            {status && (
-              <div id="cart-status" role="status" aria-live="polite" ref={statusRef} className="text-sm text-green-400">
-                {status}
-              </div>
-            )}
-            {error && (
-              <div id="cart-error" role="alert" className="text-sm text-red-400">
-                {error}
-              </div>
-            )}
+            <input
+              id="selected-size"
+              name="selectedSize"
+              type="text"
+              className="rounded border px-3 py-2 text-black"
+              placeholder="Size, e.g. 12x12"
+              value={selectedSize}
+              onChange={(e) => setSelectedSize(e.target.value)}
+            />
+            <input
+              id="custom-text"
+              name="customText"
+              type="text"
+              className="rounded border px-3 py-2 text-black"
+              placeholder="Custom Text"
+              value={customText}
+              onChange={(e) => setCustomText(e.target.value)}
+            />
           </div>
           <button
-            type="submit"
-            className="rounded bg-white px-5 py-3 font-bold text-black transition hover:scale-105 mt-2"
-            disabled={!variantId || submitting}
-            aria-busy={submitting ? "true" : undefined}
+            className="rounded bg-white px-5 py-3 font-bold text-black transition hover:scale-105"
+            onClick={handleAddToCart}
+            disabled={!variantId}
           >
-            {submitting ? "Adding..." : "Add Custom Design to Cart"}
+            Add Custom Design to Cart
           </button>
-        </form>
+          {status && <div className="mt-2 text-sm">{status}</div>}
+        </>
       )}
     </div>
   );
 }
+
+export default CartIntegration;
