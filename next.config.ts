@@ -22,12 +22,9 @@ const nextConfig = {
         source: "/(.*)",
         headers: [
           {
-            key: "X-Frame-Options",
-            value: "ALLOWALL",
-          },
-          {
             key: "Content-Security-Policy",
-            value: "frame-ancestors *",
+            value:
+              "frame-ancestors 'self' https://yourdtfplug.com https://www.yourdtfplug.com https://*.myshopify.com https://admin.shopify.com;",
           },
         ],
       },
