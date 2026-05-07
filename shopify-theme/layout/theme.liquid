@@ -117,23 +117,19 @@
       return;
     }
 
-    const dataPayload = (message && typeof message.data === "object" && message.data !== null)
-      ? message.data
-      : null;
-    const legacyPayload = (message && typeof message.payload === "object" && message.payload !== null)
-      ? message.payload
-      : null;
-    const payload = dataPayload || legacyPayload || {};
-    const rawVariantId = payload.id || payload.variantId;
+    const payload = message.data || message.payload || {};
+    const payloadObject =
+      typeof payload === "object" && payload !== null ? payload : {};
+    const rawVariantId = payloadObject.id || payloadObject.variantId;
     const variantId = Number(rawVariantId);
-    const quantity = Number(payload.quantity || 1);
-    const properties = payload.properties || {};
+    const quantity = Number(payloadObject.quantity || 1);
+    const properties = payloadObject.properties || {};
 
     if (!rawVariantId || !Number.isFinite(variantId) || variantId <= 0) {
       console.error("Invalid variant ID for cart add:", {
         rawVariantId: rawVariantId,
         parsedVariantId: variantId,
-        payload: payload,
+        payload: payloadObject,
       });
       alert("Missing product variant. Please choose a product again.");
       return;
