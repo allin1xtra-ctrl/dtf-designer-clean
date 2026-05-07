@@ -117,7 +117,13 @@
       return;
     }
 
-    const payload = message.data || message.payload || {};
+    const dataPayload = (message && typeof message.data === "object" && message.data !== null)
+      ? message.data
+      : null;
+    const legacyPayload = (message && typeof message.payload === "object" && message.payload !== null)
+      ? message.payload
+      : null;
+    const payload = dataPayload || legacyPayload || {};
     const rawVariantId = payload.id || payload.variantId;
     const variantId = Number(rawVariantId);
     const quantity = Number(payload.quantity || 1);
@@ -154,7 +160,10 @@
         result = responseText ? JSON.parse(responseText) : null;
       } catch (parseError) {
         result = null;
-        console.warn("Non-JSON /cart/add.js response:", parseError);
+        console.warn("Non-JSON /cart/add.js response:", {
+          error: parseError instanceof Error ? parseError.message : String(parseError),
+          responseText: responseText
+        });
       }
 
       if (!response.ok) {
