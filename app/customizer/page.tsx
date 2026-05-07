@@ -46,8 +46,13 @@ function isBase64DataUrl(value: unknown): value is string {
   return typeof value === "string" && value.startsWith("data:image");
 }
 
-function isHostedUrl(value: unknown): value is string {
-  return typeof value === "string" && value.startsWith("https://");
+function isHttpsUrl(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 export default function CustomizerPage() {
@@ -281,9 +286,9 @@ export default function CustomizerPage() {
 
       const uploadedArtworkUrl = await uploadPreviewImage();
 
-      if (isBase64DataUrl(uploadedArtworkUrl) || !isHostedUrl(uploadedArtworkUrl)) {
+      if (isBase64DataUrl(uploadedArtworkUrl) || !isHttpsUrl(uploadedArtworkUrl)) {
         alert(
-          "Artwork is still uploading. Please wait for the upload to finish before adding to cart."
+          "Artwork upload did not return a valid hosted URL. Please try again."
         );
         setCartStatus("");
         return;

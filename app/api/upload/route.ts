@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     const uploadResult = await new Promise<UploadApiResponse>(
       (resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
-          { folder: folder || undefined, resource_type: "image" },
+          { ...(folder && { folder }), resource_type: "image" },
           (error, result) => {
             if (error || !result) {
               reject(error ?? new Error("Cloudinary upload returned no result."));
