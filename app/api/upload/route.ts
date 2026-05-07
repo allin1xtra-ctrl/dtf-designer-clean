@@ -2,8 +2,12 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get("file");
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME?.trim();
-    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET?.trim();
+    const cloudName =
+      process.env.CLOUDINARY_CLOUD_NAME?.trim() ||
+      process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME?.trim();
+    const uploadPreset =
+      process.env.CLOUDINARY_UPLOAD_PRESET?.trim() ||
+      process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET?.trim();
     const folder = process.env.CLOUDINARY_FOLDER?.trim();
 
     if (!(file instanceof File)) {

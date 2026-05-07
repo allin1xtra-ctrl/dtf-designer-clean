@@ -261,10 +261,6 @@ export default function CustomizerPage() {
       throw new Error(result.error || "Artwork upload failed.");
     }
 
-    if (isBase64DataUrl(result.url)) {
-      throw new Error("Artwork is still processing. Please wait for the upload to finish.");
-    }
-
     return result.url;
   };
 
