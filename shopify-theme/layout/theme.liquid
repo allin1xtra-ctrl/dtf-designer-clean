@@ -53,37 +53,6 @@
   </main>
 
 
-  <!-- DTF Designer Pro postMessage cart receiver + Cart Drawer Notification -->
-  <script>
-    window.addEventListener('message', function(event) {
-      // ✅ Always validate the origin for security!
-      if (event.origin !== 'https://dtf-designer-clean.vercel.app') return;
-      if (!event.data || event.data.type !== 'DTF_ADD_TO_CART') return;
-
-      const payload = event.data.data;
-
-      fetch('/cart/add.js', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-      .then(res => res.json())
-      .then(item => {
-        // Show cart drawer notification
-        var drawer = document.createElement('div');
-        drawer.innerHTML = '<div style="position:fixed;top:24px;right:24px;background:#18181b;color:#00fff7;padding:1.2rem 2rem;border-radius:1.2rem;box-shadow:0 4px 32px #00fff7cc;z-index:9999;font-size:1.2rem;font-weight:700;">✅ Added to cart! <a href=\"/cart\" style=\"color:#fff200;margin-left:1.5rem;text-decoration:underline;\">View Cart</a></div>';
-        document.body.appendChild(drawer.firstChild);
-        setTimeout(function(){
-          if(drawer.firstChild) drawer.firstChild.remove();
-        }, 3500);
-        document.dispatchEvent(new CustomEvent('cart:updated', { detail: item }));
-      })
-      .catch(err => {
-        console.error('❌ Cart add failed:', err);
-      });
-    });
-  </script>
-
   <!-- Google Analytics (replace with your GA ID) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=UA-XXXXXXX-X"></script>
   <script>
@@ -148,13 +117,18 @@
       return;
     }
 
-    const data = message.data || {};
-    const variantId = Number(data.id);
-    const quantity = Number(data.quantity || 1);
-    const properties = data.properties || {};
+    const payload = message.data || message.payload || {};
+    const rawVariantId = payload.id || payload.variantId;
+    const variantId = Number(rawVariantId);
+    const quantity = Number(payload.quantity || 1);
+    const properties = payload.properties || {};
 
-    if (!variantId) {
-      console.error("Missing variant ID:", data);
+    if (!rawVariantId || !Number.isFinite(variantId) || variantId <= 0) {
+      console.error("Invalid variant ID for cart add:", {
+        rawVariantId: rawVariantId,
+        parsedVariantId: variantId,
+        payload: payload,
+      });
       alert("Missing product variant. Please choose a product again.");
       return;
     }
@@ -173,10 +147,28 @@
         })
       });
 
-      const result = await response.json();
+      const responseText = await response.text();
+      let result;
+
+      try {
+        result = responseText ? JSON.parse(responseText) : null;
+      } catch (parseError) {
+        result = null;
+        console.warn("Non-JSON /cart/add.js response:", parseError);
+      }
 
       if (!response.ok) {
-        console.error("Cart add failed:", result);
+        console.error("Cart add failed:", {
+          status: response.status,
+          statusText: response.statusText,
+          responseText: responseText,
+          parsed: result,
+          cartPayload: {
+            id: variantId,
+            quantity: quantity,
+            properties: properties
+          }
+        });
         alert("Cart add failed. Please check product availability.");
         return;
       }
