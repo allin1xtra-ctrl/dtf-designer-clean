@@ -5,8 +5,6 @@ import { Canvas, FabricImage, Textbox } from "fabric";
 import { normalizeVariantId } from "../lib/shopify";
 
 const FALLBACK_VARIANT_ID = "47766570074286";
-const FALLBACK_PRODUCT = "custom-dtf-transfer-by-size-upload-your-design";
-const FALLBACK_PRICE = "0.50";
 
 type ViewName = "front" | "back" | "leftSleeve" | "rightSleeve" | "neck";
 
@@ -18,20 +16,53 @@ const VIEW_LABELS: Record<ViewName, string> = {
   neck: "Neck Label",
 };
 
+type CanvasSnapshot = ReturnType<Canvas["toJSON"]>;
+type UploadResponse = {
+  error?: string;
+  url?: string;
+};
+
+const SHOPIFY_PARENT_ORIGIN = "https://yourdtfplug.com";
+
+function createDesignId() {
+  const timestamp = Date.now();
+  const cryptoApi = globalThis.crypto;
+
+  if (typeof cryptoApi?.randomUUID === "function") {
+    return `DTF-${timestamp}-${cryptoApi.randomUUID()}`;
+  }
+
+  if (!cryptoApi?.getRandomValues) {
+    return `DTF-${timestamp}-${Math.random().toString(36).slice(2, 14)}`;
+  }
+
+  const values = new Uint32Array(4);
+  cryptoApi.getRandomValues(values);
+
+  return `DTF-${timestamp}-${Array.from(values, (value) => value.toString(36)).join("")}`;
+}
+
+function isCloudinaryUrl(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.startsWith("https://res.cloudinary.com/")
+  );
+}
+
 export default function CustomizerPage() {
   const canvasElRef = useRef<HTMLCanvasElement | null>(null);
-  const fabricCanvasRef = useRef<any>(null);
+  const fabricCanvasRef = useRef<Canvas | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [currentView, setCurrentView] = useState<ViewName>("front");
   const [isReady, setIsReady] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [variantId, setVariantId] = useState(FALLBACK_VARIANT_ID);
-  const [productHandle, setProductHandle] = useState(FALLBACK_PRODUCT);
-  const [price, setPrice] = useState(FALLBACK_PRICE);
-  const [previewImage, setPreviewImage] = useState("");
+  const [selectedSize, setSelectedSize] = useState("Custom");
+  const [cartStatus, setCartStatus] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const viewsRef = useRef<Record<ViewName, any>>({
+  const viewsRef = useRef<Record<ViewName, CanvasSnapshot | null>>({
     front: null,
     back: null,
     leftSleeve: null,
@@ -48,8 +79,7 @@ export default function CustomizerPage() {
       params.get("variant_id");
     const normalized = normalizeVariantId(rawVariant);
     setVariantId(normalized || FALLBACK_VARIANT_ID);
-    setProductHandle(params.get("product") || FALLBACK_PRODUCT);
-    setPrice(params.get("price") || FALLBACK_PRICE);
+    setSelectedSize(params.get("size") || "Custom");
   }, []);
 
   useEffect(() => {
@@ -70,7 +100,7 @@ export default function CustomizerPage() {
     };
   }, []);
 
-  const getCanvas = (): any => fabricCanvasRef.current;
+  const getCanvas = () => fabricCanvasRef.current;
 
   const saveCurrentView = () => {
     const canvas = getCanvas();
@@ -197,47 +227,90 @@ export default function CustomizerPage() {
     canvas.renderAll();
   };
 
-  const prepareShopifyCart = () => {
+  const exportCurrentViewBlob = async () => {
     const canvas = getCanvas();
-    if (!canvas) return "";
+    if (!canvas) return null;
 
     saveCurrentView();
 
-    const dataURL = canvas.toDataURL({
-      format: "png",
-      quality: 1,
-      multiplier: 2,
+    const renderedCanvas = canvas.lowerCanvasEl;
+
+    if (!renderedCanvas) {
+      return null;
+    }
+
+    return new Promise<Blob | null>((resolve) => {
+      renderedCanvas.toBlob((blob) => resolve(blob), "image/png");
     });
-
-    setPreviewImage(dataURL);
-
-    return dataURL;
   };
 
-  const handleAddToCart = () => {
-    const artworkUrl = prepareShopifyCart();
-    const designId = `DTF-${Date.now()}`;
+  const uploadPreviewImage = async () => {
+    const blob = await exportCurrentViewBlob();
 
+    if (!blob) {
+      throw new Error("Preview image could not be generated.");
+    }
+
+    const formData = new FormData();
+    formData.append("file", blob, `dtf-${currentView}.png`);
+
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+    const result = (await response.json()) as UploadResponse;
+
+    if (!response.ok || !result.url) {
+      throw new Error(result.error || "Artwork upload failed.");
+    }
+
+    return result.url;
+  };
+
+  const handleAddToCart = async () => {
     const numericId = parseInt(variantId, 10);
     if (isNaN(numericId)) {
       console.error("Invalid variant ID:", variantId);
       return;
     }
 
-    const payload = {
-      id: numericId,
-      quantity,
-      properties: {
-        "Design ID": designId,
-        "Artwork URL": artworkUrl,
-        Product: productHandle,
-      },
-    };
+    try {
+      setIsSubmitting(true);
+      setCartStatus("Uploading artwork...");
 
-    window.parent.postMessage(
-      { type: "DTF_ADD_TO_CART", payload },
-      "https://yourdtfplug.com"
-    );
+      const uploadedArtworkUrl = await uploadPreviewImage();
+
+      if (!isCloudinaryUrl(uploadedArtworkUrl)) {
+        alert(
+          "Artwork upload is not complete. Please wait and try again."
+        );
+        setCartStatus("");
+        return;
+      }
+
+      const payload = {
+        id: numericId,
+        quantity: Number(quantity || 1),
+        properties: {
+          "Design ID": createDesignId(),
+          Size: selectedSize || "Custom",
+          Placement: VIEW_LABELS[currentView],
+          "Artwork URL": uploadedArtworkUrl,
+          "Preview URL": uploadedArtworkUrl,
+        },
+      };
+
+      window.parent.postMessage(
+        { type: "DTF_ADD_TO_CART", data: payload },
+        SHOPIFY_PARENT_ORIGIN
+      );
+      setCartStatus("Custom design sent to Shopify cart.");
+    } catch (error) {
+      console.error("Add to cart failed:", error);
+      setCartStatus("Artwork upload failed. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const downloadDesign = () => {
@@ -366,6 +439,14 @@ export default function CustomizerPage() {
         <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
           <h2 className="mb-2 text-lg font-semibold">Checkout</h2>
 
+          <label className="mb-2 block text-sm text-gray-300">Size</label>
+          <input
+            type="text"
+            value={selectedSize}
+            onChange={(e) => setSelectedSize(e.target.value)}
+            className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white"
+          />
+
           <label className="mb-2 block text-sm text-gray-300">Quantity</label>
           <input
             type="number"
@@ -378,10 +459,15 @@ export default function CustomizerPage() {
           <button
             type="button"
             onClick={handleAddToCart}
+            disabled={isSubmitting}
             className="w-full rounded bg-white px-4 py-3 font-semibold text-black hover:bg-gray-200"
           >
-            Add Custom Design to Cart
+            {isSubmitting ? "Uploading..." : "Add Custom Design to Cart"}
           </button>
+
+          {cartStatus ? (
+            <p className="mt-3 text-sm text-gray-300">{cartStatus}</p>
+          ) : null}
         </div>
       </aside>
 
