@@ -26,13 +26,18 @@ const SHOPIFY_PARENT_ORIGIN = "https://yourdtfplug.com";
 
 function createDesignId() {
   const timestamp = Date.now();
+  const cryptoApi = globalThis.crypto;
 
-  if (typeof globalThis.crypto?.randomUUID === "function") {
-    return `DTF-${timestamp}-${globalThis.crypto.randomUUID()}`;
+  if (typeof cryptoApi?.randomUUID === "function") {
+    return `DTF-${timestamp}-${cryptoApi.randomUUID()}`;
+  }
+
+  if (!cryptoApi?.getRandomValues) {
+    return `DTF-${timestamp}-${Math.random().toString(36).slice(2, 14)}`;
   }
 
   const values = new Uint32Array(4);
-  globalThis.crypto?.getRandomValues(values);
+  cryptoApi.getRandomValues(values);
 
   return `DTF-${timestamp}-${Array.from(values, (value) => value.toString(36)).join("")}`;
 }
