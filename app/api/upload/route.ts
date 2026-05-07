@@ -34,15 +34,25 @@ export async function POST(request: Request) {
     );
     const uploadResult = await uploadResponse.json();
 
-    if (
-      !uploadResponse.ok ||
-      typeof uploadResult?.secure_url !== "string" ||
-      !uploadResult.secure_url.trim()
-    ) {
+    if (!uploadResponse.ok) {
       return Response.json(
         {
           error: uploadResult?.error?.message || "Cloudinary upload failed.",
         },
+        { status: 502 }
+      );
+    }
+
+    if (typeof uploadResult?.secure_url !== "string") {
+      return Response.json(
+        { error: "Cloudinary did not return a hosted URL." },
+        { status: 502 }
+      );
+    }
+
+    if (!uploadResult.secure_url.trim()) {
+      return Response.json(
+        { error: "Cloudinary returned an empty hosted URL." },
         { status: 502 }
       );
     }

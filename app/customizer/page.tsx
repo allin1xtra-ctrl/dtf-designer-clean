@@ -31,10 +31,10 @@ function createDesignId() {
     return `DTF-${timestamp}-${globalThis.crypto.randomUUID()}`;
   }
 
-  const values = new Uint32Array(2);
+  const values = new Uint32Array(4);
   globalThis.crypto?.getRandomValues(values);
 
-  return `DTF-${timestamp}-${values[0].toString(36)}${values[1].toString(36)}`;
+  return `DTF-${timestamp}-${Array.from(values, (value) => value.toString(36)).join("")}`;
 }
 
 function isBase64DataUrl(value: unknown): value is string {
@@ -256,6 +256,10 @@ export default function CustomizerPage() {
       throw new Error(result.error || "Artwork upload failed.");
     }
 
+    if (isBase64DataUrl(result.url)) {
+      throw new Error("Artwork is still processing. Please wait for the upload to finish.");
+    }
+
     return result.url;
   };
 
@@ -296,7 +300,7 @@ export default function CustomizerPage() {
         { type: "DTF_ADD_TO_CART", data: payload },
         SHOPIFY_PARENT_ORIGIN
       );
-      setCartStatus("Custom design sent to cart. Redirecting...");
+      setCartStatus("Custom design sent to Shopify cart.");
     } catch (error) {
       console.error("Add to cart failed:", error);
       setCartStatus("Artwork upload failed. Please try again.");
