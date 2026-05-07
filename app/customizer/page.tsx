@@ -43,7 +43,11 @@ function createDesignId() {
 }
 
 function isBase64DataUrl(value: unknown): value is string {
-  return typeof value === "string" && value.startsWith("data:image/");
+  return typeof value === "string" && value.startsWith("data:image");
+}
+
+function isHostedUrl(value: unknown): value is string {
+  return typeof value === "string" && value.startsWith("https://");
 }
 
 export default function CustomizerPage() {
@@ -277,9 +281,9 @@ export default function CustomizerPage() {
 
       const uploadedArtworkUrl = await uploadPreviewImage();
 
-      if (isBase64DataUrl(uploadedArtworkUrl)) {
+      if (isBase64DataUrl(uploadedArtworkUrl) || !isHostedUrl(uploadedArtworkUrl)) {
         alert(
-          "Artwork is still processing. Please wait for the upload to finish before adding to cart."
+          "Artwork is still uploading. Please wait for the upload to finish before adding to cart."
         );
         setCartStatus("");
         return;
