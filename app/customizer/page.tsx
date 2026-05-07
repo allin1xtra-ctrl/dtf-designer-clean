@@ -346,6 +346,8 @@ export default function CustomizerPage() {
 
           <input
             ref={fileInputRef}
+            id="artwork-file-upload"
+            name="artworkFileUpload"
             type="file"
             accept="image/*"
             onChange={handleUpload}
