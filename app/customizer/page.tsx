@@ -2,7 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Canvas, FabricImage, Textbox } from "fabric";
-import { getShopifyCartAddUrl, normalizeVariantId } from "../lib/shopify";
+import { normalizeVariantId } from "../lib/shopify";
+
+const FALLBACK_VARIANT_ID = "47766570074286";
+const FALLBACK_PRODUCT = "custom-dtf-transfer-by-size-upload-your-design";
+const FALLBACK_PRICE = "0.50";
 
 type ViewName = "front" | "back" | "leftSleeve" | "rightSleeve" | "neck";
 
@@ -17,12 +21,14 @@ const VIEW_LABELS: Record<ViewName, string> = {
 export default function CustomizerPage() {
   const canvasElRef = useRef<HTMLCanvasElement | null>(null);
   const fabricCanvasRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [currentView, setCurrentView] = useState<ViewName>("front");
   const [isReady, setIsReady] = useState(false);
   const [quantity, setQuantity] = useState(1);
-  const [variantId, setVariantId] = useState("");
-  const [productHandle, setProductHandle] = useState("");
+  const [variantId, setVariantId] = useState(FALLBACK_VARIANT_ID);
+  const [productHandle, setProductHandle] = useState(FALLBACK_PRODUCT);
+  const [price, setPrice] = useState(FALLBACK_PRICE);
   const [previewImage, setPreviewImage] = useState("");
 
   const viewsRef = useRef<Record<ViewName, any>>({
@@ -35,11 +41,15 @@ export default function CustomizerPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const variant = params.get("variant");
-    const product = params.get("product");
-
-    setVariantId(normalizeVariantId(variant));
-    setProductHandle(product || "");
+    // Support variant, variantId, or variant_id; ignore v (cache-buster)
+    const rawVariant =
+      params.get("variant") ||
+      params.get("variantId") ||
+      params.get("variant_id");
+    const normalized = normalizeVariantId(rawVariant);
+    setVariantId(normalized || FALLBACK_VARIANT_ID);
+    setProductHandle(params.get("product") || FALLBACK_PRODUCT);
+    setPrice(params.get("price") || FALLBACK_PRICE);
   }, []);
 
   useEffect(() => {
@@ -204,6 +214,32 @@ export default function CustomizerPage() {
     return dataURL;
   };
 
+  const handleAddToCart = () => {
+    const artworkUrl = prepareShopifyCart();
+    const designId = `DTF-${Date.now()}`;
+
+    const numericId = parseInt(variantId, 10);
+    if (isNaN(numericId)) {
+      console.error("Invalid variant ID:", variantId);
+      return;
+    }
+
+    const payload = {
+      id: numericId,
+      quantity,
+      properties: {
+        "Design ID": designId,
+        "Artwork URL": artworkUrl,
+        Product: productHandle,
+      },
+    };
+
+    window.parent.postMessage(
+      { type: "DTF_ADD_TO_CART", payload },
+      "https://yourdtfplug.com"
+    );
+  };
+
   const downloadDesign = () => {
     const canvas = getCanvas();
     if (!canvas) return;
@@ -236,15 +272,25 @@ export default function CustomizerPage() {
           </h2>
 
           <input
+            ref={fileInputRef}
             type="file"
             accept="image/*"
             onChange={handleUpload}
-            className="block w-full cursor-pointer rounded bg-[#1f1f1f] p-2 text-sm text-white file:mr-3 file:rounded file:border-0 file:bg-[#333] file:px-3 file:py-2 file:text-white"
+            className="hidden"
           />
+
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="block w-full cursor-pointer rounded bg-[#1f1f1f] p-2 text-sm text-white hover:bg-[#333]"
+          >
+            Upload Artwork
+          </button>
         </div>
 
         <div className="mt-5 grid gap-2">
           <button
+            type="button"
             onClick={addText}
             className="rounded bg-[#1f1f1f] px-4 py-3 text-left hover:bg-[#333]"
           >
@@ -252,6 +298,7 @@ export default function CustomizerPage() {
           </button>
 
           <button
+            type="button"
             onClick={removeSelected}
             className="rounded bg-[#1f1f1f] px-4 py-3 text-left hover:bg-[#333]"
           >
@@ -259,6 +306,7 @@ export default function CustomizerPage() {
           </button>
 
           <button
+            type="button"
             onClick={rotateSelected}
             className="rounded bg-[#1f1f1f] px-4 py-3 text-left hover:bg-[#333]"
           >
@@ -266,6 +314,7 @@ export default function CustomizerPage() {
           </button>
 
           <button
+            type="button"
             onClick={bringForward}
             className="rounded bg-[#1f1f1f] px-4 py-3 text-left hover:bg-[#333]"
           >
@@ -273,6 +322,7 @@ export default function CustomizerPage() {
           </button>
 
           <button
+            type="button"
             onClick={sendBackward}
             className="rounded bg-[#1f1f1f] px-4 py-3 text-left hover:bg-[#333]"
           >
@@ -289,6 +339,7 @@ export default function CustomizerPage() {
             {(Object.keys(VIEW_LABELS) as ViewName[]).map((view) => (
               <button
                 key={view}
+                type="button"
                 onClick={() => loadView(view)}
                 className={`rounded px-4 py-3 text-left ${
                   currentView === view
@@ -304,6 +355,7 @@ export default function CustomizerPage() {
 
         <div className="mt-5">
           <button
+            type="button"
             onClick={downloadDesign}
             className="w-full rounded bg-[#1f1f1f] px-4 py-3 text-left hover:bg-[#333]"
           >
@@ -323,102 +375,13 @@ export default function CustomizerPage() {
             className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white"
           />
 
-
           <button
             type="button"
-            disabled={!variantId}
-            className="w-full rounded bg-white px-4 py-3 font-semibold text-black hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-40"
-            onClick={async () => {
-              const handleCheckout = async () => {
-                // Ensure all variables are defined to prevent build errors
-                const uploadedDesignUrl = "";
-                const previewImageUrl = "";
-                const selectedSize = "";
-                try {
-                  const searchParams = new URLSearchParams(window.location.search);
-                  const variantId = searchParams.get("variant");
-
-                  if (!variantId) {
-                    alert("Missing Shopify variant ID.");
-                    return;
-                  }
-
-                  // Remove Shopify GID if it ever comes through as a full GID
-                  const numericVariantId = variantId.replace(
-                    "gid://shopify/ProductVariant/",
-                    ""
-                  );
-
-                  const checkoutEndpoint =
-                    window.location.hostname.includes("yourdtfplug.com")
-                      ? "https://dtf-designer-clean.vercel.app/api/checkout"
-                      : "/api/checkout";
-
-                  const res = await fetch(checkoutEndpoint, {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                      variantId: numericVariantId,
-                      quantity: 1,
-                      customAttributes: [
-                        {
-                          key: "Design ID",
-                          value: `DTF-${Date.now()}`,
-                        },
-                        {
-                          key: "Artwork URL",
-                          value:
-                            typeof uploadedDesignUrl !== "undefined"
-                              ? uploadedDesignUrl
-                              : typeof previewImageUrl !== "undefined"
-                              ? previewImageUrl
-                              : "",
-                        },
-                        {
-                          key: "Size",
-                          value:
-                            typeof selectedSize !== "undefined"
-                              ? selectedSize
-                              : "",
-                        },
-                      ],
-                    }),
-                  });
-
-                  const result = await res.json();
-
-                  if (!res.ok) {
-                    console.error("Checkout failed:", result);
-                    alert("Checkout failed. Check console for details.");
-                    return;
-                  }
-
-                  if (!result.checkoutUrl) {
-                    console.error("No checkoutUrl returned:", result);
-                    alert("Checkout URL missing.");
-                    return;
-                  }
-
-                  window.location.href = result.checkoutUrl;
-                } catch (error) {
-                  console.error("Checkout error:", error);
-                  alert("Something went wrong starting checkout.");
-                }
-              };
-              handleCheckout();
-            }}
+            onClick={handleAddToCart}
+            className="w-full rounded bg-white px-4 py-3 font-semibold text-black hover:bg-gray-200"
           >
             Add Custom Design to Cart
           </button>
-
-          {!variantId && (
-            <p className="mt-2 text-xs text-yellow-400">
-              Missing Shopify variant ID. Open this page from a product
-              Customize button.
-            </p>
-          )}
         </div>
       </aside>
 
