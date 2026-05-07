@@ -46,13 +46,11 @@ function isBase64DataUrl(value: unknown): value is string {
   return typeof value === "string" && value.startsWith("data:image");
 }
 
-function isHttpsUrl(value: unknown): value is string {
-  if (typeof value !== "string") return false;
-  try {
-    return new URL(value).protocol === "https:";
-  } catch {
-    return false;
-  }
+function isCloudinaryUrl(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.startsWith("https://res.cloudinary.com/")
+  );
 }
 
 export default function CustomizerPage() {
@@ -286,9 +284,9 @@ export default function CustomizerPage() {
 
       const uploadedArtworkUrl = await uploadPreviewImage();
 
-      if (isBase64DataUrl(uploadedArtworkUrl) || !isHttpsUrl(uploadedArtworkUrl)) {
+      if (isBase64DataUrl(uploadedArtworkUrl) || !isCloudinaryUrl(uploadedArtworkUrl)) {
         alert(
-          "Artwork upload did not return a valid hosted URL. Please try again."
+          "Artwork upload is not complete. Please wait and try again."
         );
         setCartStatus("");
         return;
