@@ -42,10 +42,6 @@ function createDesignId() {
   return `DTF-${timestamp}-${Array.from(values, (value) => value.toString(36)).join("")}`;
 }
 
-function isBase64DataUrl(value: unknown): value is string {
-  return typeof value === "string" && value.startsWith("data:image");
-}
-
 function isCloudinaryUrl(value: unknown): value is string {
   return (
     typeof value === "string" &&
@@ -284,7 +280,7 @@ export default function CustomizerPage() {
 
       const uploadedArtworkUrl = await uploadPreviewImage();
 
-      if (isBase64DataUrl(uploadedArtworkUrl) || !isCloudinaryUrl(uploadedArtworkUrl)) {
+      if (!isCloudinaryUrl(uploadedArtworkUrl)) {
         alert(
           "Artwork upload is not complete. Please wait and try again."
         );
