@@ -34,7 +34,11 @@ export async function POST(request: Request) {
     );
     const uploadResult = await uploadResponse.json();
 
-    if (!uploadResponse.ok || typeof uploadResult?.secure_url !== "string") {
+    if (
+      !uploadResponse.ok ||
+      typeof uploadResult?.secure_url !== "string" ||
+      !uploadResult.secure_url.trim()
+    ) {
       return Response.json(
         {
           error: uploadResult?.error?.message || "Cloudinary upload failed.",

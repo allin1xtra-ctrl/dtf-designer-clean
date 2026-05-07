@@ -25,14 +25,16 @@ type UploadResponse = {
 const SHOPIFY_PARENT_ORIGIN = "https://yourdtfplug.com";
 
 function createDesignId() {
+  const timestamp = Date.now();
+
   if (typeof globalThis.crypto?.randomUUID === "function") {
-    return `DTF-${globalThis.crypto.randomUUID()}`;
+    return `DTF-${timestamp}-${globalThis.crypto.randomUUID()}`;
   }
 
   const values = new Uint32Array(2);
   globalThis.crypto?.getRandomValues(values);
 
-  return `DTF-${values[0].toString(36)}${values[1].toString(36)}`;
+  return `DTF-${timestamp}-${values[0].toString(36)}${values[1].toString(36)}`;
 }
 
 function isBase64DataUrl(value: unknown): value is string {
@@ -269,12 +271,8 @@ export default function CustomizerPage() {
       setCartStatus("Uploading artwork...");
 
       const uploadedArtworkUrl = await uploadPreviewImage();
-      const previewImageUrl = uploadedArtworkUrl;
 
-      if (
-        isBase64DataUrl(uploadedArtworkUrl) ||
-        isBase64DataUrl(previewImageUrl)
-      ) {
+      if (isBase64DataUrl(uploadedArtworkUrl)) {
         alert(
           "Artwork is still processing. Please wait for the upload to finish before adding to cart."
         );
@@ -290,7 +288,7 @@ export default function CustomizerPage() {
           Size: selectedSize || "Custom",
           Placement: VIEW_LABELS[currentView],
           "Artwork URL": uploadedArtworkUrl,
-          "Preview URL": previewImageUrl,
+          "Preview URL": uploadedArtworkUrl,
         },
       };
 
