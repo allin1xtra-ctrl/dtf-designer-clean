@@ -101,9 +101,16 @@
 
 <script>
 (function () {
+  if (window.__DTF_CART_BRIDGE_LISTENER_ATTACHED__) {
+    console.log("DTF cart bridge listener already attached; skipping duplicate registration.");
+    return;
+  }
+  window.__DTF_CART_BRIDGE_LISTENER_ATTACHED__ = true;
+
   window.addEventListener("message", async function (event) {
     const allowedOrigins = [
-      "https://dtf-designer-clean.vercel.app"
+      "https://dtf-designer-clean.vercel.app",
+      "https://dtf-designer-clean-git-main-allin1xtra-ctrl.vercel.app"
     ];
 
     if (!allowedOrigins.includes(event.origin)) {
