@@ -14,17 +14,21 @@ const PropertiesPanel = ({ selectedObject, onChange, onDelete, onDuplicate }) =>
       <h4>Properties</h4>
       {selectedObject.type === "text" && (
         <>
-          <label>
+          <label htmlFor="prop-text">
             Text:
             <input
+              id="prop-text"
+              name="text"
               type="text"
               value={selectedObject.text || ""}
               onChange={e => handleChange("text", e.target.value)}
             />
           </label>
-          <label>
+          <label htmlFor="prop-font-size">
             Font Size:
             <input
+              id="prop-font-size"
+              name="fontSize"
               type="number"
               value={selectedObject.fontSize || 24}
               min={8}
@@ -32,17 +36,21 @@ const PropertiesPanel = ({ selectedObject, onChange, onDelete, onDuplicate }) =>
               onChange={e => handleChange("fontSize", parseInt(e.target.value, 10))}
             />
           </label>
-          <label>
+          <label htmlFor="prop-font-family">
             Font Family:
             <input
+              id="prop-font-family"
+              name="fontFamily"
               type="text"
               value={selectedObject.fontFamily || "Arial"}
               onChange={e => handleChange("fontFamily", e.target.value)}
             />
           </label>
-          <label>
+          <label htmlFor="prop-fill-color">
             Fill Color:
             <input
+              id="prop-fill-color"
+              name="fill"
               type="color"
               value={selectedObject.fill || "#000000"}
               onChange={e => handleChange("fill", e.target.value)}
@@ -52,9 +60,11 @@ const PropertiesPanel = ({ selectedObject, onChange, onDelete, onDuplicate }) =>
       )}
       {selectedObject.type === "image" && (
         <>
-          <label>
+          <label htmlFor="prop-opacity">
             Opacity:
             <input
+              id="prop-opacity"
+              name="opacity"
               type="range"
               min={0}
               max={1}

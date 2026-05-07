@@ -441,16 +441,20 @@ export default function CustomizerPage() {
         <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
           <h2 className="mb-2 text-lg font-semibold">Checkout</h2>
 
-          <label className="mb-2 block text-sm text-gray-300">Size</label>
+          <label htmlFor="checkout-size" className="mb-2 block text-sm text-gray-300">Size</label>
           <input
+            id="checkout-size"
+            name="size"
             type="text"
             value={selectedSize}
             onChange={(e) => setSelectedSize(e.target.value)}
             className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white"
           />
 
-          <label className="mb-2 block text-sm text-gray-300">Quantity</label>
+          <label htmlFor="checkout-quantity" className="mb-2 block text-sm text-gray-300">Quantity</label>
           <input
+            id="checkout-quantity"
+            name="quantity"
             type="number"
             min="1"
             value={quantity}

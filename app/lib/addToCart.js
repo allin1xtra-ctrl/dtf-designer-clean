@@ -31,8 +31,8 @@ export async function sendAddToCart({
 
   // Fire postMessage to Shopify parent
   window.parent.postMessage({
-    type: 'dtf:add-to-cart',
-    payload: {
+    type: 'DTF_ADD_TO_CART',
+    data: {
       variantId: Number(variantId),
       quantity,
       properties: {
