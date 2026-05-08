@@ -321,9 +321,10 @@ export default function CustomizerPage() {
       }
 
       const payload = {
-        id: numericId,
-        quantity: Number(quantity || 1),
+        id: variantId,
+        quantity,
         properties: {
+          "Design Notes": "Custom DTF design",
           "Design ID": createDesignId(),
           Size: selectedSize || "Custom",
           Placement: VIEW_LABELS[currentView],
