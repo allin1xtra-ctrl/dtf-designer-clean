@@ -31,4 +31,6 @@ const ArtworkCanvas = forwardRef(({ printWidth, printHeight }, ref) => {
   return <canvas ref={canvasRef} width={printWidth} height={printHeight} />;
 });
 
+ArtworkCanvas.displayName = 'ArtworkCanvas';
+
 export default ArtworkCanvas;

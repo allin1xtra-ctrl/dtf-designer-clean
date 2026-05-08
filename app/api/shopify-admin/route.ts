@@ -10,12 +10,12 @@ const getAuthHeader = () => {
   return `Basic ${token}`;
 };
 
-const shopifyFetch = async (endpoint: string, options: any = {}) => {
+const shopifyFetch = async (endpoint: string, options: RequestInit = {}) => {
   const url = `https://${SHOPIFY_STORE_DOMAIN}/admin/api/${SHOPIFY_ADMIN_API_VERSION}${endpoint}`;
-  const headers = {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Authorization: getAuthHeader(),
-    ...options.headers,
+    ...((options.headers as Record<string, string> | undefined) ?? {}),
   };
   const res = await fetch(url, { ...options, headers });
   return res.json();

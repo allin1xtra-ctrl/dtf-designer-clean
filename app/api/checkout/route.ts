@@ -99,9 +99,10 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ checkoutUrl });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Checkout route failed";
     return NextResponse.json(
-      { error: error.message || "Checkout route failed" },
+      { error: message },
       { status: 500 }
     );
   }

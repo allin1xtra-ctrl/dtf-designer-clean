@@ -2,8 +2,13 @@
 "use client";
 import React, { useState } from "react";
 
+type ShopifyProduct = {
+  id: number | string;
+  title: string;
+};
+
 export default function ShopifyProductList() {
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState<ShopifyProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -37,7 +42,7 @@ export default function ShopifyProductList() {
       </button>
       {error && <div style={{ color: "red", marginTop: 8 }}>{error}</div>}
       <ul style={{ marginTop: 16 }}>
-        {products.map((p: any) => (
+        {products.map((p) => (
           <li key={p.id} style={{ marginBottom: 8 }}>
             <strong>{p.title}</strong> (ID: {p.id})
           </li>

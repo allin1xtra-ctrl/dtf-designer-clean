@@ -1,35 +1,27 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
+
+function CartIntegration({ loading = false, product = null }) {
 
   const [status, setStatus] = useState("");
   const [artworkUrl, setArtworkUrl] = useState("");
-  const [variantId, setVariantId] = useState("");
-  const [selectedSize, setSelectedSize] = useState("Custom");
-  const [customText, setCustomText] = useState("");
-  const [variantIdManuallyEditable, setVariantIdManuallyEditable] = useState(false);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const urlVariant = params.get("variant");
-    if (urlVariant) {
-      setVariantId(urlVariant);
-      setVariantIdManuallyEditable(false);
-      return;
+  const [variantId, setVariantId] = useState(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlVariant = params.get("variant");
+      if (urlVariant) return urlVariant;
     }
-    // Fallback if your product prop has variant data
+
     const fallbackVariant =
       product?.variantId ||
       product?.selectedVariantId ||
       product?.variants?.[0]?.id ||
       "";
-    if (fallbackVariant) {
-      setVariantId(String(fallbackVariant).replace("gid://shopify/ProductVariant/", ""));
-      setVariantIdManuallyEditable(false);
-    } else {
-      setVariantIdManuallyEditable(true);
-    }
-  }, [product]);
+    return String(fallbackVariant).replace("gid://shopify/ProductVariant/", "");
+  });
+  const [selectedSize, setSelectedSize] = useState("Custom");
+  const [customText, setCustomText] = useState("");
 
 
   function handleAddToCart() {
@@ -148,7 +140,5 @@ import { useState, useEffect, useRef } from "react";
     </div>
   );
 }
-
-export default CartIntegration;
 
 export default CartIntegration;

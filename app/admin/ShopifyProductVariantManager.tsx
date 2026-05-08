@@ -2,9 +2,16 @@
 "use client";
 import React, { useState } from "react";
 
+type ShopifyProductVariant = {
+  id: number | string;
+  title?: string;
+  price?: string | number;
+  sku?: string;
+};
+
 export default function ShopifyProductVariantManager() {
   const [productId, setProductId] = useState("");
-  const [variants, setVariants] = useState([]);
+  const [variants, setVariants] = useState<ShopifyProductVariant[]>([]);
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -45,7 +52,7 @@ export default function ShopifyProductVariantManager() {
       </button>
       {status && <div style={{ marginTop: 12 }}>{status}</div>}
       <ul style={{ marginTop: 16 }}>
-        {variants.map((v: any) => (
+        {variants.map((v) => (
           <li key={v.id} style={{ marginBottom: 8 }}>
             <div>ID: {v.id}</div>
             <div>Title: {v.title}</div>
