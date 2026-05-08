@@ -92,11 +92,33 @@ export default function CustomizerPage() {
     });
 
     fabricCanvasRef.current = canvas;
+    canvas.calcOffset();
     setIsReady(true);
 
     return () => {
       canvas.dispose();
       fabricCanvasRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    let resizeTimer: ReturnType<typeof setTimeout>;
+
+    const handleResize = () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        const canvas = fabricCanvasRef.current;
+        if (!canvas) return;
+        canvas.calcOffset();
+        canvas.getObjects().forEach((obj) => obj.setCoords());
+        canvas.requestRenderAll();
+      }, 100);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => {
+      clearTimeout(resizeTimer);
+      window.removeEventListener("resize", handleResize);
     };
   }, []);
 
@@ -148,13 +170,23 @@ export default function CustomizerPage() {
         img.set({
           left: 100,
           top: 100,
+          selectable: true,
+          evented: true,
+          hasControls: true,
+          hasBorders: true,
+          lockMovementX: false,
+          lockMovementY: false,
+          lockScalingX: false,
+          lockScalingY: false,
         });
 
         img.scaleToWidth(220);
 
         canvas.add(img);
         canvas.setActiveObject(img);
-        canvas.renderAll();
+        img.setCoords();
+        canvas.calcOffset();
+        canvas.requestRenderAll();
       } catch (error) {
         console.error("Image upload failed:", error);
       }
@@ -345,11 +377,12 @@ export default function CustomizerPage() {
           </h2>
 
           <input
+            id="artwork-file-upload"
             ref={fileInputRef}
             type="file"
             accept="image/*"
             onChange={handleUpload}
-            className="hidden"
+            style={{ display: "none" }}
           />
 
           <button
