@@ -141,6 +141,7 @@ function isCloudinaryUrl(value: unknown): value is string {
 
 export default function CustomizerPage() {
   const canvasElRef = useRef<HTMLCanvasElement | null>(null);
+  const contentAreaRef = useRef<HTMLDivElement | null>(null);
   const fabricCanvasRef = useRef<Canvas | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -155,6 +156,7 @@ export default function CustomizerPage() {
   const [hasVariantInQuery, setHasVariantInQuery] = useState(false);
   const [printLocations, setPrintLocations] = useState<PrintLocationsMap>({});
   const [shouldDebugLog, setShouldDebugLog] = useState(false);
+  const [canvasScale, setCanvasScale] = useState(1);
 
   const viewsRef = useRef<Record<ViewName, CanvasSnapshot | null>>({
     front: null,
@@ -262,7 +264,29 @@ export default function CustomizerPage() {
     fabricCanvasRef.current = canvas;
     setIsReady(true);
 
+    const resizeCanvasToFit = () => {
+      const content = contentAreaRef.current;
+      if (!content) return;
+      const availableWidth = content.clientWidth;
+      if (!availableWidth) return;
+
+      const targetWidth = Math.min(CANVAS_DEFAULT_WIDTH, availableWidth);
+      const nextScale = targetWidth / CANVAS_DEFAULT_WIDTH;
+
+      canvas.setZoom(nextScale);
+      canvas.setDimensions({
+        width: targetWidth,
+        height: CANVAS_DEFAULT_HEIGHT * nextScale,
+      });
+      canvas.requestRenderAll();
+      setCanvasScale(nextScale);
+    };
+
+    resizeCanvasToFit();
+    window.addEventListener("resize", resizeCanvasToFit);
+
     return () => {
+      window.removeEventListener("resize", resizeCanvasToFit);
       canvas.dispose();
       fabricCanvasRef.current = null;
     };
@@ -669,7 +693,7 @@ export default function CustomizerPage() {
         </div>
       </aside>
 
-      <main className="flex flex-1 flex-col">
+      <main className="dtf-customizer-main flex flex-1 flex-col">
         <div className="flex h-[60px] items-center border-b border-[#222] bg-[#111] px-5">
           <span className="text-sm text-gray-300">
             Current view:{" "}
@@ -683,12 +707,15 @@ export default function CustomizerPage() {
           )}
         </div>
 
-        <div className="dtf-customizer-content flex flex-1 items-center justify-center bg-[#181818] p-6">
+        <div
+          ref={contentAreaRef}
+          className="dtf-customizer-content flex flex-1 items-center justify-center bg-[#181818] p-6"
+        >
           <div
-            className="relative overflow-hidden rounded border border-[#333] bg-white shadow-2xl"
+            className="canvas-container relative overflow-hidden rounded border border-[#333] bg-white shadow-2xl"
             style={{
-              width: `${CANVAS_DEFAULT_WIDTH}px`,
-              height: `${CANVAS_DEFAULT_HEIGHT}px`,
+              width: `${CANVAS_DEFAULT_WIDTH * canvasScale}px`,
+              height: `${CANVAS_DEFAULT_HEIGHT * canvasScale}px`,
             }}
           >
             {mockupUrl ? (

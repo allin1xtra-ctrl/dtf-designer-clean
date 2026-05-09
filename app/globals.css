@@ -55,6 +55,32 @@ body.customizer-viewport-lock .dtf-customizer-content {
   overflow-y: auto;
 }
 
+body.customizer-viewport-lock .canvas-container {
+  touch-action: pan-y;
+}
+
+@media (max-width: 768px) {
+  body.customizer-viewport-lock aside {
+    display: none !important;
+  }
+
+  body.customizer-viewport-lock .dtf-customizer-main {
+    width: 100% !important;
+  }
+
+  body.customizer-viewport-lock .dtf-customizer-content {
+    padding: 1rem !important;
+  }
+
+  body.customizer-viewport-lock .canvas-container {
+    width: 100%;
+    max-width: 100vw;
+    overflow: visible;
+    border: none;
+    box-shadow: none;
+  }
+}
+
 /* 1. Reserve space for iframe (Shopify section or app embed) */
 .iframe-container {
   min-height: 750px;
