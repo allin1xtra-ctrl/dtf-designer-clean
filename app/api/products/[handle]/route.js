@@ -18,6 +18,9 @@ export async function GET(_req, { params }) {
     return Response.json(product);
   } catch (err) {
     console.error(err);
-    return Response.json({ error: err.message || "Failed to fetch product." }, { status: 500 });
+    return Response.json(
+      { error: "Failed to fetch product." },
+      { status: 500 }
+    );
   }
 }

@@ -138,6 +138,7 @@ export default function CustomizerPage() {
   const [cartStatus, setCartStatus] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [productHandle, setProductHandle] = useState("");
+  const [hasVariantInQuery, setHasVariantInQuery] = useState(false);
   const [printLocations, setPrintLocations] = useState<PrintLocationsMap>({});
 
   const viewsRef = useRef<Record<ViewName, CanvasSnapshot | null>>({
@@ -156,6 +157,7 @@ export default function CustomizerPage() {
       params.get("variantId") ||
       params.get("variant_id");
     const normalized = normalizeVariantId(rawVariant);
+    setHasVariantInQuery(Boolean(normalized));
     setVariantId(normalized || FALLBACK_VARIANT_ID);
     setSelectedSize(params.get("size") || "Custom");
     setProductHandle(params.get("product") || "");
@@ -183,11 +185,7 @@ export default function CustomizerPage() {
 
         setPrintLocations(parsePrintLocations(result.metafield?.value));
 
-        const urlVariant = normalizeVariantId(
-          new URLSearchParams(window.location.search).get("variant")
-        );
-
-        if (!urlVariant && result.variants?.[0]?.id) {
+        if (!hasVariantInQuery && result.variants?.[0]?.id) {
           const fallbackVariant = normalizeVariantId(result.variants[0].id);
           if (fallbackVariant) {
             setVariantId(fallbackVariant);
@@ -203,7 +201,7 @@ export default function CustomizerPage() {
     return () => {
       isMounted = false;
     };
-  }, [productHandle]);
+  }, [hasVariantInQuery, productHandle]);
 
   useEffect(() => {
     if (!canvasElRef.current) return;
