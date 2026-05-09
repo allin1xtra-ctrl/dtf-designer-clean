@@ -10,7 +10,7 @@ export async function GET(_req, context) {
   const storefrontToken =
     process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN ||
     process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN;
-  let handle;
+  let handle = rawHandle || "";
 
   try {
     handle = decodeURIComponent(rawHandle || "").trim();
@@ -34,7 +34,8 @@ export async function GET(_req, context) {
 
     return Response.json(product);
   } catch (error) {
-    console.error("Product API failed for handle:", handle || rawHandle, error);
+    const handleForLog = handle || rawHandle || "<missing-handle>";
+    console.error("Product API failed for handle:", handleForLog, error);
     return Response.json(
       { error: "Failed to fetch product." },
       { status: 500 }
