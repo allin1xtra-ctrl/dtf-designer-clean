@@ -1134,10 +1134,10 @@ export default function CustomizerPage() {
           </div>
 
           <div className="mb-2 grid grid-cols-2 gap-2">
-            <label className="text-xs text-gray-300">Text Color
+            <label htmlFor="text-color-input" className="text-xs text-gray-300">Text Color
               <input id="text-color-input" name="textColor" type="color" value={textControls.textColor} onChange={(e) => updateTextControls({ textColor: e.target.value })} className="mt-1 h-9 w-full rounded bg-[#1f1f1f]" />
             </label>
-            <label className="text-xs text-gray-300">Outline Color
+            <label htmlFor="outline-color-input" className="text-xs text-gray-300">Outline Color
               <input id="outline-color-input" name="outlineColor" type="color" value={textControls.outlineColor} onChange={(e) => updateTextControls({ outlineColor: e.target.value })} className="mt-1 h-9 w-full rounded bg-[#1f1f1f]" />
             </label>
           </div>
@@ -1186,7 +1186,7 @@ export default function CustomizerPage() {
 
           <div className="mt-3 rounded border border-[#2b2b2b] bg-[#111] p-3">
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-300">Design Idea</h3>
-            <label htmlFor="design-idea-input" className="mb-1 block text-xs text-gray-300">Design Idea</label>
+            <label htmlFor="design-idea-input" className="mb-1 block text-xs text-gray-300">Describe your design idea</label>
             <input id="design-idea-input" name="designIdeaPrompt" type="text" value={designIdeaPrompt} onChange={(e) => setDesignIdeaPrompt(e.target.value)} placeholder="Describe your design idea..." className="mb-2 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm" />
             <button type="button" onClick={generateDesignIdea} className="w-full rounded bg-[#1f1f1f] px-2 py-2 text-left text-xs hover:bg-[#333]" title="AI Generate Design Idea">Generate Idea</button>
           </div>
