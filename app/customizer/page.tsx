@@ -22,7 +22,83 @@ type UploadResponse = {
   url?: string;
 };
 
+type PrintArea = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+type PrintLocationData = {
+  mockupUrl?: string;
+  designArea?: Partial<PrintArea>;
+};
+
+type PrintLocationsMap = Record<string, PrintLocationData>;
+
+type ProductByHandleResponse = {
+  title?: string;
+  handle?: string;
+  metafield?: {
+    value?: string;
+  };
+  variants?: Array<{
+    id?: string;
+  }>;
+};
+
 const SHOPIFY_PARENT_ORIGIN = "https://yourdtfplug.com";
+const DEFAULT_DESIGN_AREA: PrintArea = { x: 10, y: 10, width: 80, height: 80 };
+const VIEW_LOCATION_KEYS: Record<ViewName, string[]> = {
+  front: ["front"],
+  back: ["back"],
+  leftSleeve: ["leftSleeve", "left_sleeve"],
+  rightSleeve: ["rightSleeve", "right_sleeve"],
+  neck: ["neck", "neckLabel", "neck_label"],
+};
+
+function clampPercent(value: unknown, fallback: number) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(0, Math.min(100, parsed));
+}
+
+function normalizeDesignArea(value?: Partial<PrintArea>): PrintArea {
+  return {
+    x: clampPercent(value?.x, DEFAULT_DESIGN_AREA.x),
+    y: clampPercent(value?.y, DEFAULT_DESIGN_AREA.y),
+    width: clampPercent(value?.width, DEFAULT_DESIGN_AREA.width),
+    height: clampPercent(value?.height, DEFAULT_DESIGN_AREA.height),
+  };
+}
+
+function parsePrintLocations(value?: string): PrintLocationsMap {
+  if (!value) return {};
+
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (error) {
+    console.error("Failed to parse dtf.print_locations metafield:", error);
+    return {};
+  }
+}
+
+function getLocationData(
+  printLocations: PrintLocationsMap,
+  view: ViewName
+): PrintLocationData {
+  const keys = VIEW_LOCATION_KEYS[view];
+
+  for (const key of keys) {
+    const location = printLocations[key];
+    if (location && typeof location === "object") {
+      return location;
+    }
+  }
+
+  return {};
+}
 
 function createDesignId() {
   const timestamp = Date.now();
@@ -61,6 +137,8 @@ export default function CustomizerPage() {
   const [selectedSize, setSelectedSize] = useState("Custom");
   const [cartStatus, setCartStatus] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [productHandle, setProductHandle] = useState("");
+  const [printLocations, setPrintLocations] = useState<PrintLocationsMap>({});
 
   const viewsRef = useRef<Record<ViewName, CanvasSnapshot | null>>({
     front: null,
@@ -80,7 +158,52 @@ export default function CustomizerPage() {
     const normalized = normalizeVariantId(rawVariant);
     setVariantId(normalized || FALLBACK_VARIANT_ID);
     setSelectedSize(params.get("size") || "Custom");
+    setProductHandle(params.get("product") || "");
   }, []);
+
+  useEffect(() => {
+    if (!productHandle) return;
+
+    let isMounted = true;
+
+    const fetchProductByHandle = async () => {
+      try {
+        const response = await fetch(
+          `/api/products/${encodeURIComponent(productHandle)}`
+        );
+        const result = (await response.json()) as ProductByHandleResponse & {
+          error?: string;
+        };
+
+        if (!response.ok) {
+          throw new Error(result.error || "Failed to load product.");
+        }
+
+        if (!isMounted) return;
+
+        setPrintLocations(parsePrintLocations(result.metafield?.value));
+
+        const urlVariant = normalizeVariantId(
+          new URLSearchParams(window.location.search).get("variant")
+        );
+
+        if (!urlVariant && result.variants?.[0]?.id) {
+          const fallbackVariant = normalizeVariantId(result.variants[0].id);
+          if (fallbackVariant) {
+            setVariantId(fallbackVariant);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch product by handle:", error);
+      }
+    };
+
+    fetchProductByHandle();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [productHandle]);
 
   useEffect(() => {
     if (!canvasElRef.current) return;
@@ -88,7 +211,7 @@ export default function CustomizerPage() {
     const canvas = new Canvas(canvasElRef.current, {
       width: 500,
       height: 600,
-      backgroundColor: "#ffffff",
+      backgroundColor: "transparent",
     });
 
     fabricCanvasRef.current = canvas;
@@ -116,7 +239,7 @@ export default function CustomizerPage() {
     saveCurrentView();
 
     canvas.clear();
-    canvas.backgroundColor = "#ffffff";
+    canvas.backgroundColor = "transparent";
 
     setCurrentView(view);
 
@@ -128,6 +251,10 @@ export default function CustomizerPage() {
 
     canvas.renderAll();
   };
+
+  const activeLocationData = getLocationData(printLocations, currentView);
+  const mockupUrl = activeLocationData?.mockupUrl;
+  const designArea = normalizeDesignArea(activeLocationData?.designArea);
 
   const handleUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -144,13 +271,22 @@ export default function CustomizerPage() {
 
       try {
         const img = await FabricImage.fromURL(result);
+        const canvasWidth = canvas.getWidth() || 500;
+        const canvasHeight = canvas.getHeight() || 600;
+        const areaLeft = (canvasWidth * designArea.x) / 100;
+        const areaTop = (canvasHeight * designArea.y) / 100;
+        const areaWidth = (canvasWidth * designArea.width) / 100;
+        const areaHeight = (canvasHeight * designArea.height) / 100;
+
+        img.scaleToWidth(areaWidth);
+        if (img.getScaledHeight() > areaHeight) {
+          img.scaleToHeight(areaHeight);
+        }
 
         img.set({
-          left: 100,
-          top: 100,
+          left: areaLeft + (areaWidth - img.getScaledWidth()) / 2,
+          top: areaTop + (areaHeight - img.getScaledHeight()) / 2,
         });
-
-        img.scaleToWidth(220);
 
         canvas.add(img);
         canvas.setActiveObject(img);
@@ -486,7 +622,15 @@ export default function CustomizerPage() {
         </div>
 
         <div className="flex flex-1 items-center justify-center bg-[#181818] p-6">
-          <div className="rounded border border-[#333] bg-white shadow-2xl">
+          <div className="relative h-[600px] w-[500px] overflow-hidden rounded border border-[#333] bg-white shadow-2xl">
+            {mockupUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={mockupUrl}
+                alt={`${VIEW_LABELS[currentView]} mockup`}
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+            ) : null}
             <canvas ref={canvasElRef} />
           </div>
         </div>

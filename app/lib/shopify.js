@@ -133,3 +133,67 @@ export async function getProducts() {
     })) || []
   );
 }
+
+export async function getProductByHandle(handle) {
+  const query = `
+    query ProductByHandle($handle: String!) {
+      product(handle: $handle) {
+        id
+        title
+        handle
+        featuredImage {
+          url
+          altText
+        }
+        metafield(namespace: "dtf", key: "print_locations") {
+          value
+        }
+        variants(first: 50) {
+          edges {
+            node {
+              id
+              title
+              availableForSale
+              price {
+                amount
+                currencyCode
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  const data = await shopifyStorefrontFetch(query, { handle });
+  const product = data?.product;
+
+  if (!product) {
+    return null;
+  }
+
+  return {
+    id: product.id,
+    title: product.title,
+    handle: product.handle,
+    featuredImage: product.featuredImage
+      ? {
+          url: product.featuredImage.url,
+          altText: product.featuredImage.altText,
+        }
+      : null,
+    metafield: product.metafield
+      ? {
+          value: product.metafield.value,
+        }
+      : null,
+    variants:
+      product.variants?.edges?.map(({ node: v }) => ({
+        id: v.id,
+        title: v.title,
+        availableForSale: v.availableForSale,
+        price: v.price.amount,
+        currencyCode: v.price.currencyCode,
+      })) || [],
+  };
+}
