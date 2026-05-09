@@ -1,6 +1,10 @@
 import { getProductByHandle } from "../../../lib/shopify.js";
 import { NextResponse } from "next/server";
 
+function isValidHttpErrorStatus(status) {
+  return (status >= 400 && status <= 451) || (status >= 500 && status <= 511);
+}
+
 export async function GET(_req, context) {
   const params = await context.params;
   const rawHandle = params?.handle;
@@ -36,7 +40,7 @@ export async function GET(_req, context) {
   } catch (error) {
     console.error("Product API failed for handle:", handle, error);
     const statusCode =
-      typeof error?.status === "number" && error.status >= 400 && error.status <= 599
+      typeof error?.status === "number" && isValidHttpErrorStatus(error.status)
         ? error.status
         : 500;
 

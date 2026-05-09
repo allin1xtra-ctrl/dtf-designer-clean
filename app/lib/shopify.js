@@ -28,7 +28,7 @@ function cleanDomain(domain) {
     const parsed = normalized.startsWith("http")
       ? new URL(normalized)
       : new URL(`https://${normalized}`);
-    return parsed.host.trim().replace(/\/$/, "");
+    return parsed.host.trim();
   } catch {
     return normalized
       .replace(/^https?:\/\//, "")
@@ -86,7 +86,11 @@ export async function shopifyStorefrontFetch(query, variables = {}) {
   }
 
   if (!response.ok || json?.errors) {
-    const details = json?.errors || json || responseText || "Unknown Shopify response";
+    const hasJsonPayload =
+      json &&
+      (Array.isArray(json?.errors) ||
+        (typeof json === "object" && Object.keys(json).length > 0));
+    const details = json?.errors || (hasJsonPayload ? json : responseText) || "Unknown Shopify response";
     const requestError = new Error(
       `Shopify Storefront API request failed (${response.status} ${response.statusText}): ${JSON.stringify(details)}`
     );
