@@ -625,13 +625,19 @@ export default function CustomizerPage() {
         </div>
 
         <div className="flex flex-1 items-center justify-center bg-[#181818] p-6">
-          <div className="relative h-[600px] w-[500px] overflow-hidden rounded border border-[#333] bg-white shadow-2xl">
+          <div
+            className="relative overflow-hidden rounded border border-[#333] bg-white shadow-2xl"
+            style={{
+              width: `${CANVAS_DEFAULT_WIDTH}px`,
+              height: `${CANVAS_DEFAULT_HEIGHT}px`,
+            }}
+          >
             {mockupUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={mockupUrl}
                 alt={`${VIEW_LABELS[currentView]} mockup`}
-                className="absolute inset-0 h-full w-full object-cover"
+                className="absolute inset-0 h-full w-full object-contain"
               />
             ) : null}
             <canvas ref={canvasElRef} />
