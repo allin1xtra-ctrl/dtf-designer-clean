@@ -1,5 +1,4 @@
 import { getProductByHandle } from "../../../lib/shopify.js";
-import { NextResponse } from "next/server";
 
 export async function GET(_req, context) {
   const params = await context.params;
@@ -16,8 +15,8 @@ export async function GET(_req, context) {
     handle = decodeURIComponent(rawHandle || "").trim();
 
     if (!storefrontDomain || !storefrontToken) {
-      return NextResponse.json(
-        { error: "Missing Shopify Storefront API configuration" },
+      return Response.json(
+        { error: "Missing Shopify Storefront API configuration", configured: false },
         { status: 500 }
       );
     }
@@ -36,8 +35,13 @@ export async function GET(_req, context) {
   } catch (error) {
     const handleForLog = handle || rawHandle || "<missing-handle>";
     console.error("Product API failed for handle:", handleForLog, error);
+    const details = error instanceof Error ? error.message : String(error);
     return Response.json(
-      { error: "Failed to fetch product." },
+      {
+        error: "Failed to fetch product.",
+        handle: handleForLog,
+        details,
+      },
       { status: 500 }
     );
   }
