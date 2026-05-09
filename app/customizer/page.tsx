@@ -1129,7 +1129,7 @@ export default function CustomizerPage() {
 
           <label htmlFor="font-size-range" className="mb-1 block text-xs text-gray-300">Font Size</label>
           <div className="mb-2 flex gap-2">
-            <input id="font-size-range" name="fontSizeRange" type="range" min={10} max={220} value={textControls.fontSize} onChange={(e) => updateTextControls({ fontSize: Number(e.target.value) })} className="w-full" aria-label="Font Size Slider" />
+            <input id="font-size-range" name="fontSize" type="range" min={10} max={220} value={textControls.fontSize} onChange={(e) => updateTextControls({ fontSize: Number(e.target.value) })} className="w-full" aria-label="Font Size Slider" />
             <label htmlFor="font-size-input" className="sr-only">Font Size Value</label>
             <input id="font-size-input" name="fontSize" type="number" min={10} max={220} value={textControls.fontSize} onChange={(e) => updateTextControls({ fontSize: Number(e.target.value) || 32 })} className="w-20 rounded bg-[#1f1f1f] px-2 py-1 text-sm" aria-label="Font Size" />
           </div>
@@ -1168,7 +1168,7 @@ export default function CustomizerPage() {
 
           <label htmlFor="bend-curve-range" className="mb-1 block text-xs text-gray-300">Bend / Curve</label>
           <div className="mb-1 flex gap-2">
-            <input id="bend-curve-range" name="bendCurveRange" type="range" min={5} max={200} value={textControls.bendCurve} onChange={(e) => updateTextControls({ bendCurve: Number(e.target.value) })} className="w-full" aria-label="Bend Curve Slider" />
+            <input id="bend-curve-range" name="bendCurve" type="range" min={5} max={200} value={textControls.bendCurve} onChange={(e) => updateTextControls({ bendCurve: Number(e.target.value) })} className="w-full" aria-label="Bend Curve Slider" />
             <label htmlFor="bend-curve-input" className="sr-only">Bend Curve Value</label>
             <input id="bend-curve-input" name="bendCurve" type="number" min={5} max={200} value={textControls.bendCurve} onChange={(e) => updateTextControls({ bendCurve: Number(e.target.value) || 25 })} className="w-20 rounded bg-[#1f1f1f] px-2 py-1 text-sm" aria-label="Bend Curve" />
           </div>
@@ -1188,7 +1188,7 @@ export default function CustomizerPage() {
 
           <div className="mt-3 rounded border border-[#2b2b2b] bg-[#111] p-3">
             <h3 id="design-idea-heading" className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-300">Design Idea</h3>
-            <input id="design-idea-input" name="designIdeaPrompt" aria-labelledby="design-idea-heading" type="text" value={designIdeaPrompt} onChange={(e) => setDesignIdeaPrompt(e.target.value)} placeholder="e.g. vintage skull with roses and bold script" className="mb-2 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm" />
+            <input id="design-idea-input" name="designIdeaPrompt" aria-labelledby="design-idea-heading" type="text" value={designIdeaPrompt} onChange={(e) => setDesignIdeaPrompt(e.target.value)} placeholder="Describe style, colors, and key elements for your design" className="mb-2 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm" />
             <button type="button" onClick={generateDesignIdea} className="w-full rounded bg-[#1f1f1f] px-2 py-2 text-left text-xs hover:bg-[#333]" title="AI Generate Design Idea">Generate Idea</button>
           </div>
 
