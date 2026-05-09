@@ -5,6 +5,8 @@ import { Canvas, FabricImage, Textbox } from "fabric";
 import { normalizeVariantId } from "../lib/shopify";
 
 const FALLBACK_VARIANT_ID = "47766570074286";
+const CANVAS_DEFAULT_WIDTH = 500;
+const CANVAS_DEFAULT_HEIGHT = 600;
 
 type ViewName = "front" | "back" | "leftSleeve" | "rightSleeve" | "neck";
 
@@ -22,7 +24,95 @@ type UploadResponse = {
   url?: string;
 };
 
+type PrintArea = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+type PrintLocationData = {
+  mockupUrl?: string;
+  designArea?: Partial<PrintArea>;
+};
+
+type PrintLocationsMap = Record<string, PrintLocationData>;
+
+type ProductByHandleResponse = {
+  title?: string;
+  handle?: string;
+  metafield?: {
+    value?: string;
+  };
+  variants?: Array<{
+    id?: string;
+  }>;
+};
+type ProductByHandleApiResponse = ProductByHandleResponse & {
+  error?: string;
+};
+
 const SHOPIFY_PARENT_ORIGIN = "https://yourdtfplug.com";
+const DEFAULT_DESIGN_AREA: PrintArea = { x: 10, y: 10, width: 80, height: 80 };
+const VIEW_LOCATION_KEYS: Record<ViewName, string[]> = {
+  front: ["front"],
+  back: ["back"],
+  leftSleeve: ["leftSleeve", "left_sleeve"],
+  rightSleeve: ["rightSleeve", "right_sleeve"],
+  neck: ["neck", "neckLabel", "neck_label", "neck_tag"],
+};
+
+function clampPercentage(value: unknown, fallback: number) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(0, Math.min(100, parsed));
+}
+
+function normalizeDesignArea(value?: Partial<PrintArea>): PrintArea {
+  return {
+    x: clampPercentage(value?.x, DEFAULT_DESIGN_AREA.x),
+    y: clampPercentage(value?.y, DEFAULT_DESIGN_AREA.y),
+    width: clampPercentage(value?.width, DEFAULT_DESIGN_AREA.width),
+    height: clampPercentage(value?.height, DEFAULT_DESIGN_AREA.height),
+  };
+}
+
+function parsePrintLocations(value?: string): PrintLocationsMap {
+  if (!value) return {};
+
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (error) {
+    console.error("Failed to parse dtf.print_locations metafield:", {
+      error,
+      valuePreview: String(value).slice(0, 500),
+    });
+    return {};
+  }
+}
+
+function getPrintLocationDataForView(
+  printLocations: PrintLocationsMap,
+  view: ViewName
+): { activeLocation: string; activeLocationData: PrintLocationData } {
+  const keys = VIEW_LOCATION_KEYS[view];
+
+  for (const key of keys) {
+    const location = printLocations[key];
+    if (location && typeof location === "object") {
+      return {
+        activeLocation: key,
+        activeLocationData: location,
+      };
+    }
+  }
+
+  return {
+    activeLocation: keys[0] || view,
+    activeLocationData: {},
+  };
+}
 
 function createDesignId() {
   const timestamp = Date.now();
@@ -61,6 +151,10 @@ export default function CustomizerPage() {
   const [selectedSize, setSelectedSize] = useState("Custom");
   const [cartStatus, setCartStatus] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [productHandle, setProductHandle] = useState("");
+  const [hasVariantInQuery, setHasVariantInQuery] = useState(false);
+  const [printLocations, setPrintLocations] = useState<PrintLocationsMap>({});
+  const [shouldDebugLog, setShouldDebugLog] = useState(false);
 
   const viewsRef = useRef<Record<ViewName, CanvasSnapshot | null>>({
     front: null,
@@ -78,17 +172,81 @@ export default function CustomizerPage() {
       params.get("variantId") ||
       params.get("variant_id");
     const normalized = normalizeVariantId(rawVariant);
+    const handleFromUrl = params.get("product") || params.get("handle") || "";
+    const debugFlag = params.get("debugMockup") || params.get("debug");
+    const debugEnabled = debugFlag === "1" || debugFlag === "true";
+    setHasVariantInQuery(Boolean(normalized));
     setVariantId(normalized || FALLBACK_VARIANT_ID);
     setSelectedSize(params.get("size") || "Custom");
+    setProductHandle(handleFromUrl);
+    setShouldDebugLog(debugEnabled);
   }, []);
+
+  useEffect(() => {
+    if (!productHandle) return;
+
+    let isMounted = true;
+    const controller = new AbortController();
+
+    const fetchProductByHandle = async () => {
+      try {
+        const response = await fetch(
+          `/api/products/${encodeURIComponent(productHandle)}`,
+          { signal: controller.signal }
+        );
+        const raw = await response.text();
+        let result = {} as ProductByHandleApiResponse;
+
+        if (raw) {
+          try {
+            result = JSON.parse(raw) as ProductByHandleApiResponse;
+          } catch (parseError) {
+            throw new Error(
+              `Invalid product API response JSON (${response.status}): ${String(
+                parseError
+              )}`
+            );
+          }
+        }
+
+        if (!response.ok) {
+          throw new Error(
+            result.error || `Failed to load product (${response.status}).`
+          );
+        }
+
+        if (!isMounted) return;
+
+        const parsedLocations = parsePrintLocations(result.metafield?.value);
+        setPrintLocations(parsedLocations);
+
+        if (!hasVariantInQuery && result.variants?.[0]?.id) {
+          const fallbackVariant = normalizeVariantId(result.variants[0].id);
+          if (fallbackVariant) {
+            setVariantId(fallbackVariant);
+          }
+        }
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        console.error("Failed to fetch product by handle:", error);
+      }
+    };
+
+    fetchProductByHandle();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, [hasVariantInQuery, productHandle]);
 
   useEffect(() => {
     if (!canvasElRef.current) return;
 
     const canvas = new Canvas(canvasElRef.current, {
-      width: 500,
-      height: 600,
-      backgroundColor: "#ffffff",
+      width: CANVAS_DEFAULT_WIDTH,
+      height: CANVAS_DEFAULT_HEIGHT,
+      backgroundColor: "transparent",
     });
 
     fabricCanvasRef.current = canvas;
@@ -116,7 +274,7 @@ export default function CustomizerPage() {
     saveCurrentView();
 
     canvas.clear();
-    canvas.backgroundColor = "#ffffff";
+    canvas.backgroundColor = "transparent";
 
     setCurrentView(view);
 
@@ -128,6 +286,23 @@ export default function CustomizerPage() {
 
     canvas.renderAll();
   };
+
+  const locationInfo = getPrintLocationDataForView(
+    printLocations,
+    currentView
+  );
+  const { activeLocation, activeLocationData } = locationInfo;
+  const mockupUrl = activeLocationData?.mockupUrl;
+  const designArea = normalizeDesignArea(activeLocationData?.designArea);
+
+  useEffect(() => {
+    if (!shouldDebugLog) return;
+    console.log("productHandle", productHandle);
+    console.log("printLocations", printLocations);
+    console.log("activeLocation", activeLocation);
+    console.log("activeLocationData", printLocations?.[activeLocation]);
+    console.log("mockupUrl", printLocations?.[activeLocation]?.mockupUrl);
+  }, [activeLocation, printLocations, productHandle, shouldDebugLog]);
 
   const handleUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -144,13 +319,26 @@ export default function CustomizerPage() {
 
       try {
         const img = await FabricImage.fromURL(result);
+        const canvasWidth = canvas.getWidth();
+        const canvasHeight = canvas.getHeight();
+        if (!canvasWidth || !canvasHeight) {
+          console.error("Canvas dimensions are not initialized.");
+          return;
+        }
+        const areaLeft = (canvasWidth * designArea.x) / 100;
+        const areaTop = (canvasHeight * designArea.y) / 100;
+        const areaWidth = (canvasWidth * designArea.width) / 100;
+        const areaHeight = (canvasHeight * designArea.height) / 100;
+
+        img.scaleToWidth(areaWidth);
+        if (img.getScaledHeight() > areaHeight) {
+          img.scaleToHeight(areaHeight);
+        }
 
         img.set({
-          left: 100,
-          top: 100,
+          left: areaLeft + (areaWidth - img.getScaledWidth()) / 2,
+          top: areaTop + (areaHeight - img.getScaledHeight()) / 2,
         });
-
-        img.scaleToWidth(220);
 
         canvas.add(img);
         canvas.setActiveObject(img);
@@ -486,8 +674,26 @@ export default function CustomizerPage() {
         </div>
 
         <div className="flex flex-1 items-center justify-center bg-[#181818] p-6">
-          <div className="rounded border border-[#333] bg-white shadow-2xl">
-            <canvas ref={canvasElRef} />
+          <div
+            className="relative overflow-hidden rounded border border-[#333] bg-white shadow-2xl"
+            style={{
+              width: `${CANVAS_DEFAULT_WIDTH}px`,
+              height: `${CANVAS_DEFAULT_HEIGHT}px`,
+            }}
+          >
+            {mockupUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={mockupUrl}
+                alt={`${VIEW_LABELS[currentView]} mockup`}
+                className="absolute inset-0 z-0 h-full w-full object-contain"
+              />
+            ) : (
+              <div className="absolute inset-0 z-0 flex items-center justify-center bg-[#f3f3f3] text-sm font-medium text-gray-500">
+                Mockup not configured
+              </div>
+            )}
+            <canvas ref={canvasElRef} className="relative z-10" />
           </div>
         </div>
       </main>
