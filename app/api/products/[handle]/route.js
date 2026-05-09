@@ -2,7 +2,7 @@ import { getProductByHandle } from "../../../lib/shopify.js";
 import { NextResponse } from "next/server";
 
 function isValidHttpErrorStatus(status) {
-  return (status >= 400 && status <= 451) || (status >= 500 && status <= 511);
+  return status >= 400 && status < 600;
 }
 
 export async function GET(_req, context) {

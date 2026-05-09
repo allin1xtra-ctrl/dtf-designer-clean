@@ -33,8 +33,7 @@ function cleanDomain(domain) {
     return normalized
       .replace(/^https?:\/\//, "")
       .split("/")[0]
-      .trim()
-      .replace(/\/$/, "");
+      .trim();
   }
 }
 
@@ -80,7 +79,7 @@ export async function shopifyStorefrontFetch(query, variables = {}) {
   const responseText = await response.text();
   let json = null;
   try {
-    json = responseText ? JSON.parse(responseText) : null;
+    json = JSON.parse(responseText);
   } catch {
     json = null;
   }
