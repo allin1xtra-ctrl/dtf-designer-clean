@@ -48,6 +48,10 @@ type ProductByHandleResponse = {
     id?: string;
   }>;
 };
+type ProductByHandleApiResponse = ProductByHandleResponse & {
+  error?: string;
+  product?: ProductByHandleResponse;
+};
 
 const SHOPIFY_PARENT_ORIGIN = "https://yourdtfplug.com";
 const DEFAULT_DESIGN_AREA: PrintArea = { x: 10, y: 10, width: 80, height: 80 };
@@ -56,7 +60,7 @@ const VIEW_LOCATION_KEYS: Record<ViewName, string[]> = {
   back: ["back"],
   leftSleeve: ["leftSleeve", "left_sleeve"],
   rightSleeve: ["rightSleeve", "right_sleeve"],
-  neck: ["neck", "neckLabel", "neck_label"],
+  neck: ["neck", "neckLabel", "neck_label", "neck_tag"],
 };
 
 function clampPercentage(value: unknown, fallback: number) {
@@ -89,17 +93,23 @@ function parsePrintLocations(value?: string): PrintLocationsMap {
 function getPrintLocationDataForView(
   printLocations: PrintLocationsMap,
   view: ViewName
-): PrintLocationData {
+): { activeLocation: string; activeLocationData: PrintLocationData } {
   const keys = VIEW_LOCATION_KEYS[view];
 
   for (const key of keys) {
     const location = printLocations[key];
     if (location && typeof location === "object") {
-      return location;
+      return {
+        activeLocation: key,
+        activeLocationData: location,
+      };
     }
   }
 
-  return {};
+  return {
+    activeLocation: keys[0] || view,
+    activeLocationData: {},
+  };
 }
 
 function createDesignId() {
@@ -159,10 +169,12 @@ export default function CustomizerPage() {
       params.get("variantId") ||
       params.get("variant_id");
     const normalized = normalizeVariantId(rawVariant);
+    const handleFromUrl = params.get("product") || params.get("handle") || "";
     setHasVariantInQuery(Boolean(normalized));
     setVariantId(normalized || FALLBACK_VARIANT_ID);
     setSelectedSize(params.get("size") || "Custom");
-    setProductHandle(params.get("product") || "");
+    setProductHandle(handleFromUrl);
+    console.log("productHandle", handleFromUrl);
   }, []);
 
   useEffect(() => {
@@ -175,9 +187,7 @@ export default function CustomizerPage() {
         const response = await fetch(
           `/api/products/${encodeURIComponent(productHandle)}`
         );
-        const result = (await response.json()) as ProductByHandleResponse & {
-          error?: string;
-        };
+        const result = (await response.json()) as ProductByHandleApiResponse;
 
         if (!response.ok) {
           throw new Error(result.error || "Failed to load product.");
@@ -185,10 +195,12 @@ export default function CustomizerPage() {
 
         if (!isMounted) return;
 
-        setPrintLocations(parsePrintLocations(result.metafield?.value));
+        const productData = result.product ?? result;
+        const parsedLocations = parsePrintLocations(productData.metafield?.value);
+        setPrintLocations(parsedLocations);
 
-        if (!hasVariantInQuery && result.variants?.[0]?.id) {
-          const fallbackVariant = normalizeVariantId(result.variants[0].id);
+        if (!hasVariantInQuery && productData.variants?.[0]?.id) {
+          const fallbackVariant = normalizeVariantId(productData.variants[0].id);
           if (fallbackVariant) {
             setVariantId(fallbackVariant);
           }
@@ -256,8 +268,17 @@ export default function CustomizerPage() {
     printLocations,
     currentView
   );
-  const mockupUrl = activeLocationData?.mockupUrl;
-  const designArea = normalizeDesignArea(activeLocationData?.designArea);
+  const activeLocation = activeLocationData.activeLocation;
+  const currentLocationData = activeLocationData.activeLocationData;
+  const mockupUrl = currentLocationData?.mockupUrl;
+  const designArea = normalizeDesignArea(currentLocationData?.designArea);
+
+  useEffect(() => {
+    console.log("printLocations", printLocations);
+    console.log("activeLocation", activeLocation);
+    console.log("activeLocationData", printLocations?.[activeLocation]);
+    console.log("mockupUrl", printLocations?.[activeLocation]?.mockupUrl);
+  }, [activeLocation, printLocations]);
 
   const handleUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -637,10 +658,14 @@ export default function CustomizerPage() {
               <img
                 src={mockupUrl}
                 alt={`${VIEW_LABELS[currentView]} mockup`}
-                className="absolute inset-0 h-full w-full object-contain"
+                className="absolute inset-0 z-0 h-full w-full object-contain"
               />
-            ) : null}
-            <canvas ref={canvasElRef} />
+            ) : (
+              <div className="absolute inset-0 z-0 flex items-center justify-center bg-[#f3f3f3] text-sm font-medium text-gray-500">
+                Mockup not configured
+              </div>
+            )}
+            <canvas ref={canvasElRef} className="relative z-10" />
           </div>
         </div>
       </main>
