@@ -5,6 +5,8 @@ import { Canvas, FabricImage, Textbox } from "fabric";
 import { normalizeVariantId } from "../lib/shopify";
 
 const FALLBACK_VARIANT_ID = "47766570074286";
+const CANVAS_DEFAULT_WIDTH = 500;
+const CANVAS_DEFAULT_HEIGHT = 600;
 
 type ViewName = "front" | "back" | "leftSleeve" | "rightSleeve" | "neck";
 
@@ -57,7 +59,7 @@ const VIEW_LOCATION_KEYS: Record<ViewName, string[]> = {
   neck: ["neck", "neckLabel", "neck_label"],
 };
 
-function clampToPercentRange(value: unknown, fallback: number) {
+function clampPercentage(value: unknown, fallback: number) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return fallback;
   return Math.max(0, Math.min(100, parsed));
@@ -65,10 +67,10 @@ function clampToPercentRange(value: unknown, fallback: number) {
 
 function normalizeDesignArea(value?: Partial<PrintArea>): PrintArea {
   return {
-    x: clampToPercentRange(value?.x, DEFAULT_DESIGN_AREA.x),
-    y: clampToPercentRange(value?.y, DEFAULT_DESIGN_AREA.y),
-    width: clampToPercentRange(value?.width, DEFAULT_DESIGN_AREA.width),
-    height: clampToPercentRange(value?.height, DEFAULT_DESIGN_AREA.height),
+    x: clampPercentage(value?.x, DEFAULT_DESIGN_AREA.x),
+    y: clampPercentage(value?.y, DEFAULT_DESIGN_AREA.y),
+    width: clampPercentage(value?.width, DEFAULT_DESIGN_AREA.width),
+    height: clampPercentage(value?.height, DEFAULT_DESIGN_AREA.height),
   };
 }
 
@@ -207,8 +209,8 @@ export default function CustomizerPage() {
     if (!canvasElRef.current) return;
 
     const canvas = new Canvas(canvasElRef.current, {
-      width: 500,
-      height: 600,
+      width: CANVAS_DEFAULT_WIDTH,
+      height: CANVAS_DEFAULT_HEIGHT,
       backgroundColor: "transparent",
     });
 
@@ -272,8 +274,8 @@ export default function CustomizerPage() {
 
       try {
         const img = await FabricImage.fromURL(result);
-        const canvasWidth = canvas.getWidth() || 500;
-        const canvasHeight = canvas.getHeight() || 600;
+        const canvasWidth = canvas.getWidth() || CANVAS_DEFAULT_WIDTH;
+        const canvasHeight = canvas.getHeight() || CANVAS_DEFAULT_HEIGHT;
         const areaLeft = (canvasWidth * designArea.x) / 100;
         const areaTop = (canvasHeight * designArea.y) / 100;
         const areaWidth = (canvasWidth * designArea.width) / 100;
