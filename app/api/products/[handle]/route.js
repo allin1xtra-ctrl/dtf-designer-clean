@@ -10,7 +10,7 @@ export async function GET(_req, context) {
   const storefrontToken =
     process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN ||
     process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN;
-  let handle = "";
+  let handle;
 
   try {
     handle = decodeURIComponent(rawHandle || "").trim();
