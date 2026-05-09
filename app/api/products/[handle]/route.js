@@ -3,16 +3,17 @@ import { NextResponse } from "next/server";
 
 export async function GET(_req, context) {
   const params = await context.params;
+  const rawHandle = params?.handle;
   const storefrontDomain =
     process.env.SHOPIFY_STORE_DOMAIN ||
     process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN;
   const storefrontToken =
     process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN ||
     process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN;
+  let handle = "";
 
   try {
-    const rawHandle = params?.handle;
-    const handle = decodeURIComponent(rawHandle || "").trim();
+    handle = decodeURIComponent(rawHandle || "").trim();
 
     if (!storefrontDomain || !storefrontToken) {
       return NextResponse.json(
@@ -33,9 +34,7 @@ export async function GET(_req, context) {
 
     return Response.json(product);
   } catch (error) {
-    const rawHandle = params?.handle;
-    const handle = decodeURIComponent(rawHandle || "").trim();
-    console.error("Product API failed for handle:", handle, error);
+    console.error("Product API failed for handle:", handle || rawHandle, error);
     return Response.json(
       { error: "Failed to fetch product." },
       { status: 500 }
