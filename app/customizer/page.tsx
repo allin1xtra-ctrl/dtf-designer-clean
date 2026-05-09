@@ -50,12 +50,10 @@ type ProductByHandleResponse = {
 };
 type ProductByHandleApiResponse = ProductByHandleResponse & {
   error?: string;
-  product?: ProductByHandleResponse;
 };
 
 const SHOPIFY_PARENT_ORIGIN = "https://yourdtfplug.com";
 const DEFAULT_DESIGN_AREA: PrintArea = { x: 10, y: 10, width: 80, height: 80 };
-const SHOULD_DEBUG_LOG = process.env.NODE_ENV !== "production";
 const VIEW_LOCATION_KEYS: Record<ViewName, string[]> = {
   front: ["front"],
   back: ["back"],
@@ -153,6 +151,7 @@ export default function CustomizerPage() {
   const [productHandle, setProductHandle] = useState("");
   const [hasVariantInQuery, setHasVariantInQuery] = useState(false);
   const [printLocations, setPrintLocations] = useState<PrintLocationsMap>({});
+  const [shouldDebugLog, setShouldDebugLog] = useState(false);
 
   const viewsRef = useRef<Record<ViewName, CanvasSnapshot | null>>({
     front: null,
@@ -171,11 +170,14 @@ export default function CustomizerPage() {
       params.get("variant_id");
     const normalized = normalizeVariantId(rawVariant);
     const handleFromUrl = params.get("product") || params.get("handle") || "";
+    const debugFlag = params.get("debugMockup") || params.get("debug");
+    const debugEnabled = debugFlag === "1" || debugFlag === "true";
     setHasVariantInQuery(Boolean(normalized));
     setVariantId(normalized || FALLBACK_VARIANT_ID);
     setSelectedSize(params.get("size") || "Custom");
     setProductHandle(handleFromUrl);
-    if (SHOULD_DEBUG_LOG) {
+    setShouldDebugLog(debugEnabled);
+    if (debugEnabled) {
       console.log("productHandle", handleFromUrl);
     }
   }, []);
@@ -192,20 +194,24 @@ export default function CustomizerPage() {
           `/api/products/${encodeURIComponent(productHandle)}`,
           { signal: controller.signal }
         );
-        const result = (await response.json()) as ProductByHandleApiResponse;
+        const raw = await response.text();
+        const result = raw
+          ? (JSON.parse(raw) as ProductByHandleApiResponse)
+          : ({} as ProductByHandleApiResponse);
 
         if (!response.ok) {
-          throw new Error(result.error || "Failed to load product.");
+          throw new Error(
+            result.error || `Failed to load product (${response.status}).`
+          );
         }
 
         if (!isMounted) return;
 
-        const productData = result.product ?? result;
-        const parsedLocations = parsePrintLocations(productData.metafield?.value);
+        const parsedLocations = parsePrintLocations(result.metafield?.value);
         setPrintLocations(parsedLocations);
 
-        if (!hasVariantInQuery && productData.variants?.[0]?.id) {
-          const fallbackVariant = normalizeVariantId(productData.variants[0].id);
+        if (!hasVariantInQuery && result.variants?.[0]?.id) {
+          const fallbackVariant = normalizeVariantId(result.variants[0].id);
           if (fallbackVariant) {
             setVariantId(fallbackVariant);
           }
@@ -280,12 +286,12 @@ export default function CustomizerPage() {
   const designArea = normalizeDesignArea(activeLocationData?.designArea);
 
   useEffect(() => {
-    if (!SHOULD_DEBUG_LOG) return;
+    if (!shouldDebugLog) return;
     console.log("printLocations", printLocations);
     console.log("activeLocation", activeLocation);
     console.log("activeLocationData", printLocations?.[activeLocation]);
     console.log("mockupUrl", printLocations?.[activeLocation]?.mockupUrl);
-  }, [activeLocation, printLocations]);
+  }, [activeLocation, printLocations, shouldDebugLog]);
 
   const handleUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
