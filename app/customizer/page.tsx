@@ -1186,7 +1186,7 @@ export default function CustomizerPage() {
 
           <div className="mt-3 rounded border border-[#2b2b2b] bg-[#111] p-3">
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-300">Design Idea</h3>
-            <label htmlFor="design-idea-input" className="mb-1 block text-xs text-gray-300">Design Prompt</label>
+            <label htmlFor="design-idea-input" className="mb-1 block text-xs text-gray-300">Design Idea</label>
             <input id="design-idea-input" name="designIdeaPrompt" type="text" value={designIdeaPrompt} onChange={(e) => setDesignIdeaPrompt(e.target.value)} placeholder="Describe your design idea..." className="mb-2 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm" />
             <button type="button" onClick={generateDesignIdea} className="w-full rounded bg-[#1f1f1f] px-2 py-2 text-left text-xs hover:bg-[#333]" title="AI Generate Design Idea">Generate Idea</button>
           </div>
@@ -1201,8 +1201,7 @@ export default function CustomizerPage() {
 
         <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">Transfer Size Preview</h2>
-          <label htmlFor="transfer-size-select" className="sr-only">Transfer Size</label>
-          <select id="transfer-size-select" name="transferSize" value={transferSize} onChange={(e) => setTransferSize(e.target.value)} className="mb-3 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm">
+          <select id="transfer-size-select" name="transferSize" aria-label="Transfer Size" value={transferSize} onChange={(e) => setTransferSize(e.target.value)} className="mb-3 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm">
             {TRANSFER_SIZE_PRESETS.map((size) => <option key={size} value={size}>{size}</option>)}
           </select>
           <p className="text-xs text-gray-400">Live transfer size: <span className="font-semibold text-white">{transferSize}</span></p>
