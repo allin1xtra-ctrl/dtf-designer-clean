@@ -1096,7 +1096,7 @@ export default function CustomizerPage() {
 
         <div className="mt-5">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">Upload Artwork</h2>
-          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+          <input id="artwork-upload-input" name="artworkUpload" ref={fileInputRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
           <button type="button" onClick={() => fileInputRef.current?.click()} className="block w-full cursor-pointer rounded bg-[#1f1f1f] p-2 text-sm text-white hover:bg-[#333]">Upload Artwork</button>
         </div>
 
@@ -1117,8 +1117,8 @@ export default function CustomizerPage() {
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">Text & Font Customization</h2>
           <p className="mb-3 text-xs text-gray-400">Selected object: {selectedObjectType}</p>
 
-          <label className="mb-1 block text-xs text-gray-300">Font</label>
-          <select value={textControls.fontFamily} onChange={(e) => updateTextControls({ fontFamily: e.target.value })} className="mb-2 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm">
+          <label htmlFor="font-family-select" className="mb-1 block text-xs text-gray-300">Font</label>
+          <select id="font-family-select" name="fontFamily" value={textControls.fontFamily} onChange={(e) => updateTextControls({ fontFamily: e.target.value })} className="mb-2 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm">
             <option value="Arial">Arial</option>
             <option value="Helvetica">Helvetica</option>
             <option value="Impact">Impact</option>
@@ -1127,26 +1127,26 @@ export default function CustomizerPage() {
             <option value="Verdana">Verdana</option>
           </select>
 
-          <label className="mb-1 block text-xs text-gray-300">Font Size</label>
+          <label htmlFor="font-size-range" className="mb-1 block text-xs text-gray-300">Font Size</label>
           <div className="mb-2 flex gap-2">
-            <input type="range" min={10} max={220} value={textControls.fontSize} onChange={(e) => updateTextControls({ fontSize: Number(e.target.value) })} className="w-full" />
-            <input type="number" min={10} max={220} value={textControls.fontSize} onChange={(e) => updateTextControls({ fontSize: Number(e.target.value) || 32 })} className="w-20 rounded bg-[#1f1f1f] px-2 py-1 text-sm" />
+            <input id="font-size-range" name="fontSizeRange" type="range" min={10} max={220} value={textControls.fontSize} onChange={(e) => updateTextControls({ fontSize: Number(e.target.value) })} className="w-full" aria-label="Font Size Slider" />
+            <input id="font-size-input" name="fontSize" type="number" min={10} max={220} value={textControls.fontSize} onChange={(e) => updateTextControls({ fontSize: Number(e.target.value) || 32 })} className="w-20 rounded bg-[#1f1f1f] px-2 py-1 text-sm" aria-label="Font Size" />
           </div>
 
           <div className="mb-2 grid grid-cols-2 gap-2">
             <label className="text-xs text-gray-300">Text Color
-              <input type="color" value={textControls.textColor} onChange={(e) => updateTextControls({ textColor: e.target.value })} className="mt-1 h-9 w-full rounded bg-[#1f1f1f]" />
+              <input id="text-color-input" name="textColor" type="color" value={textControls.textColor} onChange={(e) => updateTextControls({ textColor: e.target.value })} className="mt-1 h-9 w-full rounded bg-[#1f1f1f]" />
             </label>
             <label className="text-xs text-gray-300">Outline Color
-              <input type="color" value={textControls.outlineColor} onChange={(e) => updateTextControls({ outlineColor: e.target.value })} className="mt-1 h-9 w-full rounded bg-[#1f1f1f]" />
+              <input id="outline-color-input" name="outlineColor" type="color" value={textControls.outlineColor} onChange={(e) => updateTextControls({ outlineColor: e.target.value })} className="mt-1 h-9 w-full rounded bg-[#1f1f1f]" />
             </label>
           </div>
 
-          <label className="mb-1 block text-xs text-gray-300">Outline Width</label>
-          <input type="range" min={0} max={20} value={textControls.outlineWidth} onChange={(e) => updateTextControls({ outlineWidth: Number(e.target.value) })} className="mb-2 w-full" />
+          <label htmlFor="outline-width-range" className="mb-1 block text-xs text-gray-300">Outline Width</label>
+          <input id="outline-width-range" name="outlineWidth" type="range" min={0} max={20} value={textControls.outlineWidth} onChange={(e) => updateTextControls({ outlineWidth: Number(e.target.value) })} className="mb-2 w-full" />
 
-          <label className="mb-1 block text-xs text-gray-300">Letter Spacing</label>
-          <input type="range" min={-200} max={800} step={10} value={textControls.letterSpacing} onChange={(e) => updateTextControls({ letterSpacing: Number(e.target.value) })} className="mb-3 w-full" />
+          <label htmlFor="letter-spacing-range" className="mb-1 block text-xs text-gray-300">Letter Spacing</label>
+          <input id="letter-spacing-range" name="letterSpacing" type="range" min={-200} max={800} step={10} value={textControls.letterSpacing} onChange={(e) => updateTextControls({ letterSpacing: Number(e.target.value) })} className="mb-3 w-full" />
 
           <div className="mb-2 grid grid-cols-3 gap-2 text-xs">
             <button type="button" onClick={() => updateTextControls({ bold: !textControls.bold })} className={`rounded px-2 py-2 ${textControls.bold ? "bg-white text-black" : "bg-[#1f1f1f]"}`}>Bold</button>
@@ -1165,10 +1165,10 @@ export default function CustomizerPage() {
             <button type="button" onClick={() => updateTextControls({ curveMode: "wave" })} className={`rounded px-2 py-2 ${textControls.curveMode === "wave" ? "bg-white text-black" : "bg-[#1f1f1f]"}`}>Wave</button>
           </div>
 
-          <label className="mb-1 block text-xs text-gray-300">Bend / Curve</label>
+          <label htmlFor="bend-curve-range" className="mb-1 block text-xs text-gray-300">Bend / Curve</label>
           <div className="mb-1 flex gap-2">
-            <input type="range" min={5} max={200} value={textControls.bendCurve} onChange={(e) => updateTextControls({ bendCurve: Number(e.target.value) })} className="w-full" />
-            <input type="number" min={5} max={200} value={textControls.bendCurve} onChange={(e) => updateTextControls({ bendCurve: Number(e.target.value) || 25 })} className="w-20 rounded bg-[#1f1f1f] px-2 py-1 text-sm" />
+            <input id="bend-curve-range" name="bendCurveRange" type="range" min={5} max={200} value={textControls.bendCurve} onChange={(e) => updateTextControls({ bendCurve: Number(e.target.value) })} className="w-full" aria-label="Bend Curve Slider" />
+            <input id="bend-curve-input" name="bendCurve" type="number" min={5} max={200} value={textControls.bendCurve} onChange={(e) => updateTextControls({ bendCurve: Number(e.target.value) || 25 })} className="w-20 rounded bg-[#1f1f1f] px-2 py-1 text-sm" aria-label="Bend Curve" />
           </div>
         </div>
 
@@ -1186,7 +1186,8 @@ export default function CustomizerPage() {
 
           <div className="mt-3 rounded border border-[#2b2b2b] bg-[#111] p-3">
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-300">Design Idea</h3>
-            <input type="text" value={designIdeaPrompt} onChange={(e) => setDesignIdeaPrompt(e.target.value)} placeholder="Describe your design idea..." className="mb-2 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm" />
+            <label htmlFor="design-idea-input" className="mb-1 block text-xs text-gray-300">Design Prompt</label>
+            <input id="design-idea-input" name="designIdeaPrompt" type="text" value={designIdeaPrompt} onChange={(e) => setDesignIdeaPrompt(e.target.value)} placeholder="Describe your design idea..." className="mb-2 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm" />
             <button type="button" onClick={generateDesignIdea} className="w-full rounded bg-[#1f1f1f] px-2 py-2 text-left text-xs hover:bg-[#333]" title="AI Generate Design Idea">Generate Idea</button>
           </div>
 
@@ -1200,7 +1201,8 @@ export default function CustomizerPage() {
 
         <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">Transfer Size Preview</h2>
-          <select value={transferSize} onChange={(e) => setTransferSize(e.target.value)} className="mb-3 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm">
+          <label htmlFor="transfer-size-select" className="sr-only">Transfer Size</label>
+          <select id="transfer-size-select" name="transferSize" value={transferSize} onChange={(e) => setTransferSize(e.target.value)} className="mb-3 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm">
             {TRANSFER_SIZE_PRESETS.map((size) => <option key={size} value={size}>{size}</option>)}
           </select>
           <p className="text-xs text-gray-400">Live transfer size: <span className="font-semibold text-white">{transferSize}</span></p>
@@ -1222,11 +1224,11 @@ export default function CustomizerPage() {
 
         <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
           <h2 className="mb-2 text-lg font-semibold">Checkout</h2>
-          <label className="mb-2 block text-sm text-gray-300">Size</label>
-          <input type="text" value={selectedSize} onChange={(e) => setSelectedSize(e.target.value)} className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white" />
+          <label htmlFor="checkout-size-input" className="mb-2 block text-sm text-gray-300">Size</label>
+          <input id="checkout-size-input" name="size" type="text" value={selectedSize} onChange={(e) => setSelectedSize(e.target.value)} className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white" />
 
-          <label className="mb-2 block text-sm text-gray-300">Quantity</label>
-          <input type="number" min="1" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white" />
+          <label htmlFor="checkout-quantity-input" className="mb-2 block text-sm text-gray-300">Quantity</label>
+          <input id="checkout-quantity-input" name="quantity" type="number" min="1" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white" />
 
           <button type="button" onClick={handleAddToCart} disabled={isSubmitting} className="w-full rounded bg-white px-4 py-3 font-semibold text-black hover:bg-gray-200">{isSubmitting ? "Uploading..." : "Add Custom Design to Cart"}</button>
           {cartStatus ? <p className="mt-3 text-sm text-gray-300">{cartStatus}</p> : null}
