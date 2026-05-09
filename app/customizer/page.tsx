@@ -97,6 +97,11 @@ type AiActionResponse = {
 
 const SHOPIFY_PARENT_ORIGIN = "https://yourdtfplug.com";
 const DEFAULT_DESIGN_AREA: PrintArea = { x: 10, y: 10, width: 80, height: 80 };
+const MIN_CURVE_AMPLITUDE = 8;
+const MAX_CURVE_AMPLITUDE = 220;
+const NEAR_WHITE_THRESHOLD = 245;
+const SOFT_WHITE_THRESHOLD = 225;
+const TRANSFER_SIZE_PRESETS = ["8x8", "10x10", "12x12", "12x16", "14x16", "16x20"];
 const VIEW_LOCATION_KEYS: Record<ViewName, string[]> = {
   front: ["front"],
   back: ["back"],
@@ -205,10 +210,15 @@ function pxFromPercentage(total: number, percent: number) {
 }
 
 function distanceFromPrintableArea(bounds: { left: number; top: number; width: number; height: number }, area: { left: number; top: number; width: number; height: number }) {
+  const boundsRight = bounds.left + bounds.width;
+  const boundsBottom = bounds.top + bounds.height;
+  const areaRight = area.left + area.width;
+  const areaBottom = area.top + area.height;
+
   const overflowLeft = Math.max(0, area.left - bounds.left);
   const overflowTop = Math.max(0, area.top - bounds.top);
-  const overflowRight = Math.max(0, bounds.left + bounds.width - (area.left + area.width));
-  const overflowBottom = Math.max(0, bounds.top + bounds.height - (area.top + area.height));
+  const overflowRight = Math.max(0, boundsRight - areaRight);
+  const overflowBottom = Math.max(0, boundsBottom - areaBottom);
   return Math.max(overflowLeft, overflowTop, overflowRight, overflowBottom);
 }
 
@@ -237,6 +247,8 @@ export default function CustomizerPage() {
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [designIdeaPrompt, setDesignIdeaPrompt] = useState("");
   const [textControls, setTextControls] = useState<TextControlsState>(DEFAULT_TEXT_CONTROLS);
+  const designAreaRef = useRef<PrintArea>(DEFAULT_DESIGN_AREA);
+  const shouldDebugAiLogRef = useRef(false);
 
   const viewsRef = useRef<Record<ViewName, CanvasSnapshot | null>>({
     front: null,
@@ -249,7 +261,7 @@ export default function CustomizerPage() {
   const getCanvas = () => fabricCanvasRef.current;
 
   const logAiDebug = (action: string, details: Record<string, unknown>) => {
-    if (!shouldDebugAiLog) return;
+    if (!shouldDebugAiLogRef.current) return;
     const activeObject = getCanvas()?.getActiveObject();
     console.log("[AI DEBUG]", {
       selectedObject: activeObject,
@@ -275,7 +287,10 @@ export default function CustomizerPage() {
       letterSpacing: Number(textObject.charSpacing) || 0,
       bold: textObject.fontWeight === "bold" || Number(textObject.fontWeight) >= 700,
       italic: textObject.fontStyle === "italic",
-      uppercase: typeof textObject.text === "string" && textObject.text.length > 0 && textObject.text === textObject.text.toUpperCase(),
+      uppercase:
+        typeof textObject.text === "string" &&
+        /[a-zA-Z]/.test(textObject.text) &&
+        textObject.text === textObject.text.toUpperCase(),
       shadow: hasShadow,
       glow: hasGlow,
       curveMode: curveModeCandidate === "arcUp" || curveModeCandidate === "arcDown" || curveModeCandidate === "wave" ? curveModeCandidate : "none",
@@ -295,10 +310,10 @@ export default function CustomizerPage() {
     const canvasWidth = canvas.getWidth();
     const canvasHeight = canvas.getHeight();
     const printableArea = {
-      left: pxFromPercentage(canvasWidth, designArea.x),
-      top: pxFromPercentage(canvasHeight, designArea.y),
-      width: pxFromPercentage(canvasWidth, designArea.width),
-      height: pxFromPercentage(canvasHeight, designArea.height),
+      left: pxFromPercentage(canvasWidth, designAreaRef.current.x),
+      top: pxFromPercentage(canvasHeight, designAreaRef.current.y),
+      width: pxFromPercentage(canvasWidth, designAreaRef.current.width),
+      height: pxFromPercentage(canvasHeight, designAreaRef.current.height),
     };
 
     const bounds = activeObject.getBoundingRect();
@@ -361,7 +376,10 @@ export default function CustomizerPage() {
     }
 
     const width = Math.max(Number(textObject.width) || 260, 160);
-    const amplitude = Math.max(8, Math.min(220, Math.abs(bendCurve)));
+    const amplitude = Math.max(
+      MIN_CURVE_AMPLITUDE,
+      Math.min(MAX_CURVE_AMPLITUDE, Math.abs(bendCurve))
+    );
 
     const curveByMode: Record<Exclude<CurveMode, "none">, string> = {
       arcUp: `M ${-width / 2} 0 Q 0 ${-amplitude} ${width / 2} 0`,
@@ -551,18 +569,27 @@ export default function CustomizerPage() {
       const pixels = imageData.data;
 
       for (let i = 0; i < pixels.length; i += 4) {
-        const red = pixels[i] ?? 0;
-        const green = pixels[i + 1] ?? 0;
-        const blue = pixels[i + 2] ?? 0;
+        const red = pixels[i];
+        const green = pixels[i + 1];
+        const blue = pixels[i + 2];
 
-        const nearWhite = red > 245 && green > 245 && blue > 245;
-        const softWhite = red > 225 && green > 225 && blue > 225;
+        const nearWhite =
+          red > NEAR_WHITE_THRESHOLD &&
+          green > NEAR_WHITE_THRESHOLD &&
+          blue > NEAR_WHITE_THRESHOLD;
+        const softWhite =
+          red > SOFT_WHITE_THRESHOLD &&
+          green > SOFT_WHITE_THRESHOLD &&
+          blue > SOFT_WHITE_THRESHOLD;
 
         if (nearWhite) {
           pixels[i + 3] = 0;
         } else if (softWhite) {
           const average = (red + green + blue) / 3;
-          pixels[i + 3] = Math.max(0, Math.min(255, 255 - (average - 225) * 6));
+          pixels[i + 3] = Math.max(
+            0,
+            Math.min(255, 255 - (average - SOFT_WHITE_THRESHOLD) * 6)
+          );
         }
       }
 
@@ -597,10 +624,10 @@ export default function CustomizerPage() {
       const canvasWidth = canvas.getWidth();
       const canvasHeight = canvas.getHeight();
       const printableArea = {
-        left: pxFromPercentage(canvasWidth, designArea.x),
-        top: pxFromPercentage(canvasHeight, designArea.y),
-        width: pxFromPercentage(canvasWidth, designArea.width),
-        height: pxFromPercentage(canvasHeight, designArea.height),
+        left: pxFromPercentage(canvasWidth, designAreaRef.current.x),
+        top: pxFromPercentage(canvasHeight, designAreaRef.current.y),
+        width: pxFromPercentage(canvasWidth, designAreaRef.current.width),
+        height: pxFromPercentage(canvasHeight, designAreaRef.current.height),
       };
       const overflow = distanceFromPrintableArea(activeObject.getBoundingRect(), printableArea);
       if (overflow > 0) {
@@ -684,7 +711,15 @@ export default function CustomizerPage() {
         let result = {} as ProductByHandleApiResponse;
 
         if (raw) {
-          result = JSON.parse(raw) as ProductByHandleApiResponse;
+          try {
+            result = JSON.parse(raw) as ProductByHandleApiResponse;
+          } catch (parseError) {
+            throw new Error(
+              `Invalid product API response JSON (${response.status}): ${String(
+                parseError
+              )}`
+            );
+          }
         }
 
         if (!response.ok) {
@@ -720,6 +755,14 @@ export default function CustomizerPage() {
   const designArea = normalizeDesignArea(activeLocationData?.designArea);
 
   useEffect(() => {
+    designAreaRef.current = designArea;
+  }, [designArea]);
+
+  useEffect(() => {
+    shouldDebugAiLogRef.current = shouldDebugAiLog;
+  }, [shouldDebugAiLog]);
+
+  useEffect(() => {
     if (!canvasElRef.current) return;
 
     const canvas = new Canvas(canvasElRef.current, {
@@ -732,7 +775,7 @@ export default function CustomizerPage() {
 
     const handleSelection = () => {
       syncSelectedObject();
-      if (shouldDebugAiLog) {
+      if (shouldDebugAiLogRef.current) {
         const activeObject = canvas.getActiveObject();
         console.log("[AI DEBUG]", {
           selectedObject: activeObject,
@@ -764,7 +807,7 @@ export default function CustomizerPage() {
       canvas.dispose();
       fabricCanvasRef.current = null;
     };
-  }, [shouldDebugAiLog]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!shouldDebugLog) return;
@@ -842,7 +885,9 @@ export default function CustomizerPage() {
     syncSelectedObject();
   };
 
-  const withActiveObject = (callback: (obj: unknown) => void) => {
+  const withActiveObject = (
+    callback: (obj: Parameters<Canvas["centerObject"]>[0]) => void
+  ) => {
     const canvas = getCanvas();
     if (!canvas) return;
     const activeObject = canvas.getActiveObject();
@@ -883,8 +928,8 @@ export default function CustomizerPage() {
   const centerSelected = () => {
     withActiveObject((obj) => {
       const canvas = getCanvas();
-      if (!canvas || !obj || typeof obj !== "object") return;
-      canvas.centerObject(obj as never);
+      if (!canvas) return;
+      canvas.centerObject(obj);
     });
   };
 
@@ -1000,13 +1045,17 @@ export default function CustomizerPage() {
         return;
       }
 
+      const normalizedTransferSize = TRANSFER_SIZE_PRESETS.includes(transferSize)
+        ? transferSize
+        : "Custom";
+
       const payload = {
         id: numericId,
         quantity: Number(quantity || 1),
         properties: {
           "Design ID": createDesignId(),
           Size: selectedSize || "Custom",
-          "Transfer Size": transferSize,
+          "Transfer Size": normalizedTransferSize,
           Placement: VIEW_LABELS[currentView],
           "Print Location": activeLocation,
           "Artwork URL": uploadedArtworkUrl,
@@ -1036,8 +1085,6 @@ export default function CustomizerPage() {
     link.download = `DTF-Print-${currentView}.png`;
     link.click();
   };
-
-  const transferPresetSizes = ["8x8", "10x10", "12x12", "12x16", "14x16", "16x20"];
 
   return (
     <div className="flex min-h-screen bg-[#0e0e0e] text-white">
@@ -1154,7 +1201,7 @@ export default function CustomizerPage() {
         <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">Transfer Size Preview</h2>
           <select value={transferSize} onChange={(e) => setTransferSize(e.target.value)} className="mb-3 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm">
-            {transferPresetSizes.map((size) => <option key={size} value={size}>{size}</option>)}
+            {TRANSFER_SIZE_PRESETS.map((size) => <option key={size} value={size}>{size}</option>)}
           </select>
           <p className="text-xs text-gray-400">Live transfer size: <span className="font-semibold text-white">{transferSize}</span></p>
           {boundaryWarning ? <p className="mt-2 text-xs text-yellow-300">⚠ {boundaryWarning}</p> : null}
