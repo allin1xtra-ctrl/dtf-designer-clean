@@ -54,6 +54,12 @@ export function getShopifyCartAddUrl() {
   return domain ? `https://${domain}/cart/add` : "/cart/add";
 }
 
+function getStorefrontErrorDetails(json, responseText) {
+  if (Array.isArray(json?.errors)) return json.errors;
+  if (json && typeof json === "object" && Object.keys(json).length > 0) return json;
+  return responseText || "Unknown Shopify response";
+}
+
 export async function shopifyStorefrontFetch(query, variables = {}) {
   const domain = getShopifyDomain();
   if (!domain || !SHOPIFY_STOREFRONT_ACCESS_TOKEN) {
@@ -85,11 +91,7 @@ export async function shopifyStorefrontFetch(query, variables = {}) {
   }
 
   if (!response.ok || json?.errors) {
-    const hasJsonPayload =
-      json &&
-      (Array.isArray(json?.errors) ||
-        (typeof json === "object" && Object.keys(json).length > 0));
-    const details = json?.errors || (hasJsonPayload ? json : responseText) || "Unknown Shopify response";
+    const details = getStorefrontErrorDetails(json, responseText);
     const requestError = new Error(
       `Shopify Storefront API request failed (${response.status} ${response.statusText}): ${JSON.stringify(details)}`
     );
