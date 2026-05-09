@@ -152,6 +152,7 @@ export default function CustomizerPage() {
   const [productHandle, setProductHandle] = useState("");
   const [hasVariantInQuery, setHasVariantInQuery] = useState(false);
   const [printLocations, setPrintLocations] = useState<PrintLocationsMap>({});
+  const shouldDebugLog = process.env.NODE_ENV !== "production";
 
   const viewsRef = useRef<Record<ViewName, CanvasSnapshot | null>>({
     front: null,
@@ -174,8 +175,10 @@ export default function CustomizerPage() {
     setVariantId(normalized || FALLBACK_VARIANT_ID);
     setSelectedSize(params.get("size") || "Custom");
     setProductHandle(handleFromUrl);
-    console.log("productHandle", handleFromUrl);
-  }, []);
+    if (shouldDebugLog) {
+      console.log("productHandle", handleFromUrl);
+    }
+  }, [shouldDebugLog]);
 
   useEffect(() => {
     if (!productHandle) return;
@@ -264,21 +267,21 @@ export default function CustomizerPage() {
     canvas.renderAll();
   };
 
-  const activeLocationData = getPrintLocationDataForView(
+  const locationInfo = getPrintLocationDataForView(
     printLocations,
     currentView
   );
-  const activeLocation = activeLocationData.activeLocation;
-  const currentLocationData = activeLocationData.activeLocationData;
-  const mockupUrl = currentLocationData?.mockupUrl;
-  const designArea = normalizeDesignArea(currentLocationData?.designArea);
+  const { activeLocation, activeLocationData } = locationInfo;
+  const mockupUrl = activeLocationData?.mockupUrl;
+  const designArea = normalizeDesignArea(activeLocationData?.designArea);
 
   useEffect(() => {
+    if (!shouldDebugLog) return;
     console.log("printLocations", printLocations);
     console.log("activeLocation", activeLocation);
     console.log("activeLocationData", printLocations?.[activeLocation]);
     console.log("mockupUrl", printLocations?.[activeLocation]?.mockupUrl);
-  }, [activeLocation, printLocations]);
+  }, [activeLocation, printLocations, shouldDebugLog]);
 
   const handleUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
