@@ -55,6 +55,7 @@ type ProductByHandleApiResponse = ProductByHandleResponse & {
 
 const SHOPIFY_PARENT_ORIGIN = "https://yourdtfplug.com";
 const DEFAULT_DESIGN_AREA: PrintArea = { x: 10, y: 10, width: 80, height: 80 };
+const SHOULD_DEBUG_LOG = process.env.NODE_ENV !== "production";
 const VIEW_LOCATION_KEYS: Record<ViewName, string[]> = {
   front: ["front"],
   back: ["back"],
@@ -152,7 +153,6 @@ export default function CustomizerPage() {
   const [productHandle, setProductHandle] = useState("");
   const [hasVariantInQuery, setHasVariantInQuery] = useState(false);
   const [printLocations, setPrintLocations] = useState<PrintLocationsMap>({});
-  const shouldDebugLog = process.env.NODE_ENV !== "production";
 
   const viewsRef = useRef<Record<ViewName, CanvasSnapshot | null>>({
     front: null,
@@ -175,20 +175,22 @@ export default function CustomizerPage() {
     setVariantId(normalized || FALLBACK_VARIANT_ID);
     setSelectedSize(params.get("size") || "Custom");
     setProductHandle(handleFromUrl);
-    if (shouldDebugLog) {
+    if (SHOULD_DEBUG_LOG) {
       console.log("productHandle", handleFromUrl);
     }
-  }, [shouldDebugLog]);
+  }, []);
 
   useEffect(() => {
     if (!productHandle) return;
 
     let isMounted = true;
+    const controller = new AbortController();
 
     const fetchProductByHandle = async () => {
       try {
         const response = await fetch(
-          `/api/products/${encodeURIComponent(productHandle)}`
+          `/api/products/${encodeURIComponent(productHandle)}`,
+          { signal: controller.signal }
         );
         const result = (await response.json()) as ProductByHandleApiResponse;
 
@@ -209,6 +211,7 @@ export default function CustomizerPage() {
           }
         }
       } catch (error) {
+        if (controller.signal.aborted) return;
         console.error("Failed to fetch product by handle:", error);
       }
     };
@@ -217,6 +220,7 @@ export default function CustomizerPage() {
 
     return () => {
       isMounted = false;
+      controller.abort();
     };
   }, [hasVariantInQuery, productHandle]);
 
@@ -276,12 +280,12 @@ export default function CustomizerPage() {
   const designArea = normalizeDesignArea(activeLocationData?.designArea);
 
   useEffect(() => {
-    if (!shouldDebugLog) return;
+    if (!SHOULD_DEBUG_LOG) return;
     console.log("printLocations", printLocations);
     console.log("activeLocation", activeLocation);
     console.log("activeLocationData", printLocations?.[activeLocation]);
     console.log("mockupUrl", printLocations?.[activeLocation]?.mockupUrl);
-  }, [activeLocation, printLocations, shouldDebugLog]);
+  }, [activeLocation, printLocations]);
 
   const handleUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
