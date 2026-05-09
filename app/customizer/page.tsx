@@ -157,7 +157,6 @@ export default function CustomizerPage() {
   const [printLocations, setPrintLocations] = useState<PrintLocationsMap>({});
   const [shouldDebugLog, setShouldDebugLog] = useState(false);
   const [canvasScale, setCanvasScale] = useState(1);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const viewsRef = useRef<Record<ViewName, CanvasSnapshot | null>>({
     front: null,
@@ -250,21 +249,6 @@ export default function CustomizerPage() {
     return () => {
       document.documentElement.classList.remove("customizer-viewport-lock");
       document.body.classList.remove("customizer-viewport-lock");
-    };
-  }, []);
-
-  useEffect(() => {
-    const closeOnDesktop = () => {
-      if (window.innerWidth > 768) {
-        setIsMobileMenuOpen(false);
-      }
-    };
-
-    window.addEventListener("resize", closeOnDesktop);
-    closeOnDesktop();
-
-    return () => {
-      window.removeEventListener("resize", closeOnDesktop);
     };
   }, []);
 
@@ -569,11 +553,7 @@ export default function CustomizerPage() {
 
   return (
     <div className="flex min-h-screen bg-[#0e0e0e] text-white">
-      <aside
-        className={`dtf-customizer-sidebar w-[300px] shrink-0 border-r border-[#222] bg-[#111] p-5 ${
-          isMobileMenuOpen ? "mobile-open" : ""
-        }`}
-      >
+      <aside className="dtf-customizer-sidebar w-[300px] shrink-0 border-r border-[#222] bg-[#111] p-5">
         <h1 className="text-xl font-bold">DTF Designer Pro</h1>
 
         <p className="mt-1 text-sm text-gray-400">
@@ -713,23 +693,8 @@ export default function CustomizerPage() {
         </div>
       </aside>
 
-      <div
-        id="menu-overlay"
-        className={isMobileMenuOpen ? "show" : ""}
-        onClick={() => setIsMobileMenuOpen(false)}
-      />
-
       <main className="dtf-customizer-main flex flex-1 flex-col">
         <div className="flex h-[60px] items-center border-b border-[#222] bg-[#111] px-5">
-          <button
-            id="mobile-menu-toggle"
-            type="button"
-            onClick={() => setIsMobileMenuOpen((prev) => !prev)}
-            className="mr-3 inline-flex h-9 w-9 items-center justify-center rounded border border-[#333] text-white md:hidden"
-            aria-label="Toggle editor menu"
-          >
-            ☰
-          </button>
           <span className="text-sm text-gray-300">
             Current view:{" "}
             <strong className="text-white">{VIEW_LABELS[currentView]}</strong>

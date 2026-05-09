@@ -59,23 +59,9 @@ body.customizer-viewport-lock .canvas-container {
   touch-action: pan-y;
 }
 
-body.customizer-viewport-lock #menu-overlay {
-  display: none;
-}
-
 @media (max-width: 768px) {
-  body.customizer-viewport-lock .dtf-customizer-sidebar {
-    position: fixed;
-    top: 0;
-    bottom: 0;
-    left: -100%;
-    width: min(88vw, 320px);
-    z-index: 50;
-    transition: left 0.24s ease;
-  }
-
-  body.customizer-viewport-lock .dtf-customizer-sidebar.mobile-open {
-    left: 0;
+  body.customizer-viewport-lock aside {
+    display: none !important;
   }
 
   body.customizer-viewport-lock .dtf-customizer-main {
@@ -92,22 +78,6 @@ body.customizer-viewport-lock #menu-overlay {
     overflow: visible;
     border: none;
     box-shadow: none;
-  }
-
-  body.customizer-viewport-lock #menu-overlay {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.45);
-    opacity: 0;
-    pointer-events: none;
-    z-index: 40;
-    transition: opacity 0.24s ease;
-  }
-
-  body.customizer-viewport-lock #menu-overlay.show {
-    opacity: 1;
-    pointer-events: auto;
   }
 }
 
