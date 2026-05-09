@@ -180,9 +180,6 @@ export default function CustomizerPage() {
     setSelectedSize(params.get("size") || "Custom");
     setProductHandle(handleFromUrl);
     setShouldDebugLog(debugEnabled);
-    if (debugEnabled) {
-      console.log("productHandle", handleFromUrl);
-    }
   }, []);
 
   useEffect(() => {
@@ -300,11 +297,12 @@ export default function CustomizerPage() {
 
   useEffect(() => {
     if (!shouldDebugLog) return;
+    console.log("productHandle", productHandle);
     console.log("printLocations", printLocations);
     console.log("activeLocation", activeLocation);
     console.log("activeLocationData", printLocations?.[activeLocation]);
     console.log("mockupUrl", printLocations?.[activeLocation]?.mockupUrl);
-  }, [activeLocation, printLocations, shouldDebugLog]);
+  }, [activeLocation, printLocations, productHandle, shouldDebugLog]);
 
   const handleUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -321,8 +319,12 @@ export default function CustomizerPage() {
 
       try {
         const img = await FabricImage.fromURL(result);
-        const canvasWidth = canvas.getWidth() || CANVAS_DEFAULT_WIDTH;
-        const canvasHeight = canvas.getHeight() || CANVAS_DEFAULT_HEIGHT;
+        const canvasWidth = canvas.getWidth();
+        const canvasHeight = canvas.getHeight();
+        if (!canvasWidth || !canvasHeight) {
+          console.error("Canvas dimensions are not initialized.");
+          return;
+        }
         const areaLeft = (canvasWidth * designArea.x) / 100;
         const areaTop = (canvasHeight * designArea.y) / 100;
         const areaWidth = (canvasWidth * designArea.width) / 100;
