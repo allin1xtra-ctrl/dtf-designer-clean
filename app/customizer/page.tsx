@@ -241,6 +241,16 @@ export default function CustomizerPage() {
   }, [hasVariantInQuery, productHandle]);
 
   useEffect(() => {
+    document.documentElement.classList.add("customizer-viewport-lock");
+    document.body.classList.add("customizer-viewport-lock");
+
+    return () => {
+      document.documentElement.classList.remove("customizer-viewport-lock");
+      document.body.classList.remove("customizer-viewport-lock");
+    };
+  }, []);
+
+  useEffect(() => {
     if (!canvasElRef.current) return;
 
     const canvas = new Canvas(canvasElRef.current, {
@@ -519,7 +529,7 @@ export default function CustomizerPage() {
 
   return (
     <div className="flex min-h-screen bg-[#0e0e0e] text-white">
-      <aside className="w-[300px] shrink-0 border-r border-[#222] bg-[#111] p-5">
+      <aside className="dtf-customizer-sidebar w-[300px] shrink-0 border-r border-[#222] bg-[#111] p-5">
         <h1 className="text-xl font-bold">DTF Designer Pro</h1>
 
         <p className="mt-1 text-sm text-gray-400">
@@ -673,7 +683,7 @@ export default function CustomizerPage() {
           )}
         </div>
 
-        <div className="flex flex-1 items-center justify-center bg-[#181818] p-6">
+        <div className="dtf-customizer-content flex flex-1 items-center justify-center bg-[#181818] p-6">
           <div
             className="relative overflow-hidden rounded border border-[#333] bg-white shadow-2xl"
             style={{

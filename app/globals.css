@@ -26,6 +26,35 @@ body {
   font-family: 'Inter', system-ui, Arial, sans-serif;
 }
 
+html.customizer-viewport-lock,
+body.customizer-viewport-lock {
+  height: 100vh;
+  margin: 0;
+  overflow: hidden;
+}
+
+body.customizer-viewport-lock > .flex-1,
+body.customizer-viewport-lock > .flex-1 > .min-h-screen {
+  height: 100vh !important;
+  min-height: 100vh !important;
+  max-height: 100vh;
+  overflow: hidden;
+}
+
+body.customizer-viewport-lock main.flex.flex-1.flex-col {
+  height: 100%;
+  overflow: hidden;
+}
+
+body.customizer-viewport-lock .dtf-customizer-sidebar {
+  height: 100%;
+  overflow-y: auto;
+}
+
+body.customizer-viewport-lock .dtf-customizer-content {
+  overflow-y: auto;
+}
+
 /* 1. Reserve space for iframe (Shopify section or app embed) */
 .iframe-container {
   min-height: 750px;
