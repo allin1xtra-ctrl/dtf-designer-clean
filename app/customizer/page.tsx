@@ -84,7 +84,10 @@ function parsePrintLocations(value?: string): PrintLocationsMap {
     const parsed = JSON.parse(value);
     return parsed && typeof parsed === "object" ? parsed : {};
   } catch (error) {
-    console.error("Failed to parse dtf.print_locations metafield:", error);
+    console.error("Failed to parse dtf.print_locations metafield:", {
+      error,
+      valuePreview: String(value).slice(0, 500),
+    });
     return {};
   }
 }
@@ -195,9 +198,19 @@ export default function CustomizerPage() {
           { signal: controller.signal }
         );
         const raw = await response.text();
-        const result = raw
-          ? (JSON.parse(raw) as ProductByHandleApiResponse)
-          : ({} as ProductByHandleApiResponse);
+        let result = {} as ProductByHandleApiResponse;
+
+        if (raw) {
+          try {
+            result = JSON.parse(raw) as ProductByHandleApiResponse;
+          } catch (parseError) {
+            throw new Error(
+              `Invalid product API response JSON (${response.status}): ${String(
+                parseError
+              )}`
+            );
+          }
+        }
 
         if (!response.ok) {
           throw new Error(
