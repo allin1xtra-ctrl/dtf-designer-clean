@@ -57,7 +57,7 @@ const VIEW_LOCATION_KEYS: Record<ViewName, string[]> = {
   neck: ["neck", "neckLabel", "neck_label"],
 };
 
-function clampPercent(value: unknown, fallback: number) {
+function clampToPercentRange(value: unknown, fallback: number) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return fallback;
   return Math.max(0, Math.min(100, parsed));
@@ -65,10 +65,10 @@ function clampPercent(value: unknown, fallback: number) {
 
 function normalizeDesignArea(value?: Partial<PrintArea>): PrintArea {
   return {
-    x: clampPercent(value?.x, DEFAULT_DESIGN_AREA.x),
-    y: clampPercent(value?.y, DEFAULT_DESIGN_AREA.y),
-    width: clampPercent(value?.width, DEFAULT_DESIGN_AREA.width),
-    height: clampPercent(value?.height, DEFAULT_DESIGN_AREA.height),
+    x: clampToPercentRange(value?.x, DEFAULT_DESIGN_AREA.x),
+    y: clampToPercentRange(value?.y, DEFAULT_DESIGN_AREA.y),
+    width: clampToPercentRange(value?.width, DEFAULT_DESIGN_AREA.width),
+    height: clampToPercentRange(value?.height, DEFAULT_DESIGN_AREA.height),
   };
 }
 
@@ -84,7 +84,7 @@ function parsePrintLocations(value?: string): PrintLocationsMap {
   }
 }
 
-function getLocationData(
+function getPrintLocationDataForView(
   printLocations: PrintLocationsMap,
   view: ViewName
 ): PrintLocationData {
@@ -250,7 +250,10 @@ export default function CustomizerPage() {
     canvas.renderAll();
   };
 
-  const activeLocationData = getLocationData(printLocations, currentView);
+  const activeLocationData = getPrintLocationDataForView(
+    printLocations,
+    currentView
+  );
   const mockupUrl = activeLocationData?.mockupUrl;
   const designArea = normalizeDesignArea(activeLocationData?.designArea);
 
