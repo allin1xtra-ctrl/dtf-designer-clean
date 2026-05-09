@@ -10,15 +10,6 @@ const CANVAS_DEFAULT_HEIGHT = 600;
 
 type ViewName = "front" | "back" | "leftSleeve" | "rightSleeve" | "neck";
 type CurveMode = "none" | "arcUp" | "arcDown" | "wave";
-type FontOption = {
-  family: string;
-  fallback: string;
-};
-type FontGroup = {
-  label: string;
-  fonts: FontOption[];
-};
-const DEFAULT_FONT_FAMILY = "Inter";
 
 type TextControlsState = {
   fontFamily: string;
@@ -37,7 +28,7 @@ type TextControlsState = {
 };
 
 const DEFAULT_TEXT_CONTROLS: TextControlsState = {
-  fontFamily: DEFAULT_FONT_FAMILY,
+  fontFamily: "Arial",
   fontSize: 32,
   textColor: "#000000",
   outlineColor: "#000000",
@@ -111,78 +102,6 @@ const MAX_CURVE_AMPLITUDE = 220;
 const NEAR_WHITE_THRESHOLD = 245;
 const SOFT_WHITE_THRESHOLD = 225;
 const TRANSFER_SIZE_PRESETS = ["8x8", "10x10", "12x12", "12x16", "14x16", "16x20"];
-const GOOGLE_FONTS_STYLESHEET_ID = "dtf-pro-google-fonts";
-const GOOGLE_FONTS_STYLESHEET_URL =
-  "https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Anton&family=Archivo+Black&family=Bangers&family=Bebas+Neue&family=Black+Ops+One&family=Bungee&family=Dancing+Script:wght@400..700&family=Graduate&family=Great+Vibes&family=IBM+Plex+Mono:wght@400;500;700&family=Inter:wght@100..900&family=JetBrains+Mono:wght@100..800&family=League+Spartan:wght@100..900&family=Lobster&family=Luckiest+Guy&family=Montserrat:wght@100..900&family=Open+Sans:wght@300..800&family=Oswald:wght@200..700&family=Pacifico&family=Poppins:wght@100..900&family=Permanent+Marker&family=Raleway:wght@100..900&family=Roboto:wght@100..900&family=Roboto+Mono:wght@100..700&family=Rubik+Beastly&family=Rubik+Dirt&family=Rubik+Spray+Paint&family=Satisfy&family=Share+Tech+Mono&family=Space+Mono:wght@400;700&family=Teko:wght@300..700&family=Urbanist:wght@100..900&family=Work+Sans:wght@100..900&family=Yellowtail&display=swap";
-// License note: Curated Google Fonts (OFL/open-source, commercial-use safe) only.
-const FONT_GROUPS: FontGroup[] = [
-  {
-    label: "Bold / Streetwear",
-    fonts: [
-      { family: "Anton", fallback: "Impact, Arial Black, sans-serif" },
-      { family: "Bebas Neue", fallback: "Arial Narrow, Arial, sans-serif" },
-      { family: "Oswald", fallback: "Arial Narrow, Arial, sans-serif" },
-      { family: "Archivo Black", fallback: "Arial Black, Arial, sans-serif" },
-      { family: "League Spartan", fallback: "Arial Black, Arial, sans-serif" },
-      { family: "Bungee", fallback: "Impact, sans-serif" },
-      { family: "Black Ops One", fallback: "Impact, sans-serif" },
-      { family: "Teko", fallback: "Arial Narrow, Arial, sans-serif" },
-      { family: "Graduate", fallback: "Georgia, serif" },
-      { family: "Alfa Slab One", fallback: "Rockwell, Georgia, serif" },
-    ],
-  },
-  {
-    label: "Script",
-    fonts: [
-      { family: "Pacifico", fallback: "Brush Script MT, cursive" },
-      { family: "Lobster", fallback: "Brush Script MT, cursive" },
-      { family: "Dancing Script", fallback: "Brush Script MT, cursive" },
-      { family: "Great Vibes", fallback: "Snell Roundhand, cursive" },
-      { family: "Satisfy", fallback: "Brush Script MT, cursive" },
-      { family: "Yellowtail", fallback: "Brush Script MT, cursive" },
-    ],
-  },
-  {
-    label: "Graffiti / Sticker",
-    fonts: [
-      { family: "Permanent Marker", fallback: "Impact, Marker Felt, sans-serif" },
-      { family: "Bangers", fallback: "Impact, sans-serif" },
-      { family: "Luckiest Guy", fallback: "Impact, sans-serif" },
-      { family: "Rubik Spray Paint", fallback: "Impact, sans-serif" },
-      { family: "Rubik Dirt", fallback: "Impact, sans-serif" },
-      { family: "Rubik Beastly", fallback: "Impact, sans-serif" },
-    ],
-  },
-  {
-    label: "Clean Modern",
-    fonts: [
-      { family: "Poppins", fallback: "Arial, Helvetica, sans-serif" },
-      { family: "Montserrat", fallback: "Arial, Helvetica, sans-serif" },
-      { family: "Inter", fallback: "Arial, Helvetica, sans-serif" },
-      { family: "Roboto", fallback: "Arial, Helvetica, sans-serif" },
-      { family: "Open Sans", fallback: "Arial, Helvetica, sans-serif" },
-      { family: "Raleway", fallback: "Arial, Helvetica, sans-serif" },
-      { family: "Work Sans", fallback: "Arial, Helvetica, sans-serif" },
-      { family: "Urbanist", fallback: "Arial, Helvetica, sans-serif" },
-    ],
-  },
-  {
-    label: "Tech / Mono",
-    fonts: [
-      { family: "Space Mono", fallback: "Courier New, Courier, monospace" },
-      { family: "Roboto Mono", fallback: "Courier New, Courier, monospace" },
-      { family: "IBM Plex Mono", fallback: "Courier New, Courier, monospace" },
-      { family: "JetBrains Mono", fallback: "Courier New, Courier, monospace" },
-      { family: "Share Tech Mono", fallback: "Courier New, Courier, monospace" },
-    ],
-  },
-];
-const FONT_FALLBACKS = FONT_GROUPS.reduce<Record<string, string>>((acc, group) => {
-  for (const font of group.fonts) {
-    acc[font.family] = font.fallback;
-  }
-  return acc;
-}, {});
 const VIEW_LOCATION_KEYS: Record<ViewName, string[]> = {
   front: ["front"],
   back: ["back"],
@@ -330,7 +249,6 @@ export default function CustomizerPage() {
   const [textControls, setTextControls] = useState<TextControlsState>(DEFAULT_TEXT_CONTROLS);
   const designAreaRef = useRef<PrintArea>(DEFAULT_DESIGN_AREA);
   const shouldDebugAiLogRef = useRef(false);
-  const loadedFontsRef = useRef<Set<string>>(new Set());
 
   const viewsRef = useRef<Record<ViewName, CanvasSnapshot | null>>({
     front: null,
@@ -341,45 +259,6 @@ export default function CustomizerPage() {
   });
 
   const getCanvas = () => fabricCanvasRef.current;
-  const getFontFallback = (fontFamily: string) =>
-    FONT_FALLBACKS[fontFamily] || "Arial, Helvetica, sans-serif";
-
-  const normalizeFontFamily = (fontFamily: string) =>
-    String(fontFamily || "")
-      .split(",")[0]
-      .trim()
-      .replace(/^['"]|['"]$/g, "");
-
-  const ensureFontLoaded = async (fontFamily: string) => {
-    const normalizedFamily = normalizeFontFamily(fontFamily);
-    if (!normalizedFamily || typeof document === "undefined" || !document.fonts) return false;
-    if (loadedFontsRef.current.has(normalizedFamily)) return true;
-
-    try {
-      await document.fonts.load(`16px "${normalizedFamily}"`);
-      await document.fonts.load(`700 16px "${normalizedFamily}"`);
-      loadedFontsRef.current.add(normalizedFamily);
-      return true;
-    } catch (error) {
-      console.warn("Font load failed, using fallback:", {
-        fontFamily: normalizedFamily,
-        fallback: getFontFallback(normalizedFamily),
-        error,
-      });
-      return false;
-    }
-  };
-
-  const ensureGoogleFontsStylesheet = () => {
-    if (typeof document === "undefined") return;
-    if (document.getElementById(GOOGLE_FONTS_STYLESHEET_ID)) return;
-
-    const link = document.createElement("link");
-    link.id = GOOGLE_FONTS_STYLESHEET_ID;
-    link.rel = "stylesheet";
-    link.href = GOOGLE_FONTS_STYLESHEET_URL;
-    document.head.appendChild(link);
-  };
 
   const logAiDebug = (action: string, details: Record<string, unknown>) => {
     if (!shouldDebugAiLogRef.current) return;
@@ -400,7 +279,7 @@ export default function CustomizerPage() {
 
     setTextControls((prev) => ({
       ...prev,
-      fontFamily: normalizeFontFamily(textObject.fontFamily || DEFAULT_FONT_FAMILY) || DEFAULT_FONT_FAMILY,
+      fontFamily: textObject.fontFamily || "Arial",
       fontSize: Math.round(Number(textObject.fontSize) || 32),
       textColor: (textObject.fill as string) || "#000000",
       outlineColor: (textObject.stroke as string) || "#000000",
@@ -562,35 +441,6 @@ export default function CustomizerPage() {
       applyTextControls(next);
       return next;
     });
-  };
-
-  const handleFontFamilyChange = async (nextFontFamily: string) => {
-    const normalizedFamily = normalizeFontFamily(nextFontFamily);
-    const loaded = await ensureFontLoaded(normalizedFamily);
-    updateTextControls({ fontFamily: loaded ? normalizedFamily : DEFAULT_FONT_FAMILY });
-  };
-
-  const collectFontsUsed = () => {
-    const fonts = new Set<string>();
-    const addFromObjects = (objects: unknown[] = []) => {
-      for (const obj of objects) {
-        if (!obj || typeof obj !== "object") continue;
-        const candidate = obj as { type?: unknown; fontFamily?: unknown };
-        const type = typeof candidate.type === "string" ? candidate.type : "";
-        if (type !== "textbox" && type !== "text" && type !== "i-text") continue;
-        const family = normalizeFontFamily(String(candidate.fontFamily || ""));
-        if (family) fonts.add(family);
-      }
-    };
-
-    for (const snapshot of Object.values(viewsRef.current)) {
-      addFromObjects(snapshot?.objects as unknown[] | undefined);
-    }
-
-    const liveObjects = getCanvas()?.getObjects() || [];
-    addFromObjects(liveObjects as unknown[]);
-
-    return Array.from(fonts).sort((a, b) => a.localeCompare(b));
   };
 
   const replaceActiveImage = async (nextDataUrl: string) => {
@@ -831,11 +681,6 @@ export default function CustomizerPage() {
   };
 
   useEffect(() => {
-    ensureGoogleFontsStylesheet();
-    void ensureFontLoaded(DEFAULT_FONT_FAMILY);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const rawVariant = params.get("variant") || params.get("variantId") || params.get("variant_id");
     const normalized = normalizeVariantId(rawVariant);
@@ -1019,13 +864,9 @@ export default function CustomizerPage() {
     event.target.value = "";
   };
 
-  const addText = async () => {
+  const addText = () => {
     const canvas = getCanvas();
     if (!canvas) return;
-    const selectedFontFamily =
-      normalizeFontFamily(textControls.fontFamily || DEFAULT_FONT_FAMILY) || DEFAULT_FONT_FAMILY;
-    const loaded = await ensureFontLoaded(selectedFontFamily);
-    const fontFamily = loaded ? selectedFontFamily : DEFAULT_FONT_FAMILY;
 
     const text = new Textbox("Your Design", {
       left: 100,
@@ -1034,7 +875,7 @@ export default function CustomizerPage() {
       stroke: textControls.outlineColor,
       strokeWidth: textControls.outlineWidth,
       fontSize: textControls.fontSize,
-      fontFamily,
+      fontFamily: textControls.fontFamily,
       width: 250,
     });
 
@@ -1207,8 +1048,6 @@ export default function CustomizerPage() {
       const normalizedTransferSize = TRANSFER_SIZE_PRESETS.includes(transferSize)
         ? transferSize
         : "Custom";
-      const fontsUsed = collectFontsUsed();
-      const fallbackFonts = fontsUsed.map((font) => `${font} → ${getFontFallback(font)}`);
 
       const payload = {
         id: numericId,
@@ -1222,10 +1061,6 @@ export default function CustomizerPage() {
           "Artwork URL": uploadedArtworkUrl,
           "Preview URL": uploadedArtworkUrl,
           "Mockup URL": mockupUrl || "",
-          "Fonts Used": fontsUsed.length ? fontsUsed.join(", ") : DEFAULT_FONT_FAMILY,
-          "Font Fallbacks": fallbackFonts.length
-            ? fallbackFonts.join(" | ")
-            : `${DEFAULT_FONT_FAMILY} → ${getFontFallback(DEFAULT_FONT_FAMILY)}`,
           "Boundary Warning": boundaryWarning || "None",
         },
       };
@@ -1261,7 +1096,7 @@ export default function CustomizerPage() {
 
         <div className="mt-5">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">Upload Artwork</h2>
-          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+          <input id="artwork-upload-input" name="artworkUpload" ref={fileInputRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
           <button type="button" onClick={() => fileInputRef.current?.click()} className="block w-full cursor-pointer rounded bg-[#1f1f1f] p-2 text-sm text-white hover:bg-[#333]">Upload Artwork</button>
         </div>
 
@@ -1282,37 +1117,37 @@ export default function CustomizerPage() {
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">Text & Font Customization</h2>
           <p className="mb-3 text-xs text-gray-400">Selected object: {selectedObjectType}</p>
 
-          <label className="mb-1 block text-xs text-gray-300">Font</label>
-          <select value={textControls.fontFamily} onChange={(e) => void handleFontFamilyChange(e.target.value)} className="mb-2 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm">
-            {FONT_GROUPS.map((group) => (
-              <optgroup key={group.label} label={group.label}>
-                {group.fonts.map((font) => (
-                  <option key={font.family} value={font.family}>{font.family}</option>
-                ))}
-              </optgroup>
-            ))}
+          <label htmlFor="font-family-select" className="mb-1 block text-xs text-gray-300">Font</label>
+          <select id="font-family-select" name="fontFamily" value={textControls.fontFamily} onChange={(e) => updateTextControls({ fontFamily: e.target.value })} className="mb-2 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm">
+            <option value="Arial">Arial</option>
+            <option value="Helvetica">Helvetica</option>
+            <option value="Impact">Impact</option>
+            <option value="Times New Roman">Times New Roman</option>
+            <option value="Courier New">Courier New</option>
+            <option value="Verdana">Verdana</option>
           </select>
 
-          <label className="mb-1 block text-xs text-gray-300">Font Size</label>
+          <label htmlFor="font-size-range" className="mb-1 block text-xs text-gray-300">Font Size</label>
           <div className="mb-2 flex gap-2">
-            <input type="range" min={10} max={220} value={textControls.fontSize} onChange={(e) => updateTextControls({ fontSize: Number(e.target.value) })} className="w-full" />
-            <input type="number" min={10} max={220} value={textControls.fontSize} onChange={(e) => updateTextControls({ fontSize: Number(e.target.value) || 32 })} className="w-20 rounded bg-[#1f1f1f] px-2 py-1 text-sm" />
+            <input id="font-size-range" name="fontSizeRange" type="range" min={10} max={220} value={textControls.fontSize} onChange={(e) => updateTextControls({ fontSize: Number(e.target.value) })} className="w-full" aria-label="Font Size Slider" />
+            <label htmlFor="font-size-input" className="sr-only">Font Size Value</label>
+            <input id="font-size-input" name="fontSize" type="number" min={10} max={220} value={textControls.fontSize} onChange={(e) => updateTextControls({ fontSize: Number(e.target.value) || 32 })} className="w-20 rounded bg-[#1f1f1f] px-2 py-1 text-sm" aria-label="Font Size" />
           </div>
 
           <div className="mb-2 grid grid-cols-2 gap-2">
-            <label className="text-xs text-gray-300">Text Color
-              <input type="color" value={textControls.textColor} onChange={(e) => updateTextControls({ textColor: e.target.value })} className="mt-1 h-9 w-full rounded bg-[#1f1f1f]" />
+            <label htmlFor="text-color-input" className="text-xs text-gray-300">Text Color
+              <input id="text-color-input" name="textColor" type="color" value={textControls.textColor} onChange={(e) => updateTextControls({ textColor: e.target.value })} className="mt-1 h-9 w-full rounded bg-[#1f1f1f]" />
             </label>
-            <label className="text-xs text-gray-300">Outline Color
-              <input type="color" value={textControls.outlineColor} onChange={(e) => updateTextControls({ outlineColor: e.target.value })} className="mt-1 h-9 w-full rounded bg-[#1f1f1f]" />
+            <label htmlFor="outline-color-input" className="text-xs text-gray-300">Outline Color
+              <input id="outline-color-input" name="outlineColor" type="color" value={textControls.outlineColor} onChange={(e) => updateTextControls({ outlineColor: e.target.value })} className="mt-1 h-9 w-full rounded bg-[#1f1f1f]" />
             </label>
           </div>
 
-          <label className="mb-1 block text-xs text-gray-300">Outline Width</label>
-          <input type="range" min={0} max={20} value={textControls.outlineWidth} onChange={(e) => updateTextControls({ outlineWidth: Number(e.target.value) })} className="mb-2 w-full" />
+          <label htmlFor="outline-width-range" className="mb-1 block text-xs text-gray-300">Outline Width</label>
+          <input id="outline-width-range" name="outlineWidth" type="range" min={0} max={20} value={textControls.outlineWidth} onChange={(e) => updateTextControls({ outlineWidth: Number(e.target.value) })} className="mb-2 w-full" />
 
-          <label className="mb-1 block text-xs text-gray-300">Letter Spacing</label>
-          <input type="range" min={-200} max={800} step={10} value={textControls.letterSpacing} onChange={(e) => updateTextControls({ letterSpacing: Number(e.target.value) })} className="mb-3 w-full" />
+          <label htmlFor="letter-spacing-range" className="mb-1 block text-xs text-gray-300">Letter Spacing</label>
+          <input id="letter-spacing-range" name="letterSpacing" type="range" min={-200} max={800} step={10} value={textControls.letterSpacing} onChange={(e) => updateTextControls({ letterSpacing: Number(e.target.value) })} className="mb-3 w-full" />
 
           <div className="mb-2 grid grid-cols-3 gap-2 text-xs">
             <button type="button" onClick={() => updateTextControls({ bold: !textControls.bold })} className={`rounded px-2 py-2 ${textControls.bold ? "bg-white text-black" : "bg-[#1f1f1f]"}`}>Bold</button>
@@ -1331,10 +1166,11 @@ export default function CustomizerPage() {
             <button type="button" onClick={() => updateTextControls({ curveMode: "wave" })} className={`rounded px-2 py-2 ${textControls.curveMode === "wave" ? "bg-white text-black" : "bg-[#1f1f1f]"}`}>Wave</button>
           </div>
 
-          <label className="mb-1 block text-xs text-gray-300">Bend / Curve</label>
+          <label htmlFor="bend-curve-range" className="mb-1 block text-xs text-gray-300">Bend / Curve</label>
           <div className="mb-1 flex gap-2">
-            <input type="range" min={5} max={200} value={textControls.bendCurve} onChange={(e) => updateTextControls({ bendCurve: Number(e.target.value) })} className="w-full" />
-            <input type="number" min={5} max={200} value={textControls.bendCurve} onChange={(e) => updateTextControls({ bendCurve: Number(e.target.value) || 25 })} className="w-20 rounded bg-[#1f1f1f] px-2 py-1 text-sm" />
+            <input id="bend-curve-range" name="bendCurveRange" type="range" min={5} max={200} value={textControls.bendCurve} onChange={(e) => updateTextControls({ bendCurve: Number(e.target.value) })} className="w-full" aria-label="Bend Curve Slider" />
+            <label htmlFor="bend-curve-input" className="sr-only">Bend Curve Value</label>
+            <input id="bend-curve-input" name="bendCurve" type="number" min={5} max={200} value={textControls.bendCurve} onChange={(e) => updateTextControls({ bendCurve: Number(e.target.value) || 25 })} className="w-20 rounded bg-[#1f1f1f] px-2 py-1 text-sm" aria-label="Bend Curve" />
           </div>
         </div>
 
@@ -1352,7 +1188,8 @@ export default function CustomizerPage() {
 
           <div className="mt-3 rounded border border-[#2b2b2b] bg-[#111] p-3">
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-300">Design Idea</h3>
-            <input type="text" value={designIdeaPrompt} onChange={(e) => setDesignIdeaPrompt(e.target.value)} placeholder="Describe your design idea..." className="mb-2 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm" />
+            <label htmlFor="design-idea-input" className="sr-only">Design idea prompt</label>
+            <input id="design-idea-input" name="designIdeaPrompt" type="text" value={designIdeaPrompt} onChange={(e) => setDesignIdeaPrompt(e.target.value)} placeholder="Describe your design style and key elements" className="mb-2 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm" />
             <button type="button" onClick={generateDesignIdea} className="w-full rounded bg-[#1f1f1f] px-2 py-2 text-left text-xs hover:bg-[#333]" title="AI Generate Design Idea">Generate Idea</button>
           </div>
 
@@ -1366,7 +1203,8 @@ export default function CustomizerPage() {
 
         <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">Transfer Size Preview</h2>
-          <select value={transferSize} onChange={(e) => setTransferSize(e.target.value)} className="mb-3 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm">
+          <label htmlFor="transfer-size-select" className="sr-only">Transfer size</label>
+          <select id="transfer-size-select" name="transferSize" value={transferSize} onChange={(e) => setTransferSize(e.target.value)} className="mb-3 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm">
             {TRANSFER_SIZE_PRESETS.map((size) => <option key={size} value={size}>{size}</option>)}
           </select>
           <p className="text-xs text-gray-400">Live transfer size: <span className="font-semibold text-white">{transferSize}</span></p>
@@ -1388,11 +1226,11 @@ export default function CustomizerPage() {
 
         <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
           <h2 className="mb-2 text-lg font-semibold">Checkout</h2>
-          <label className="mb-2 block text-sm text-gray-300">Size</label>
-          <input type="text" value={selectedSize} onChange={(e) => setSelectedSize(e.target.value)} className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white" />
+          <label htmlFor="checkout-size-input" className="mb-2 block text-sm text-gray-300">Size</label>
+          <input id="checkout-size-input" name="size" type="text" value={selectedSize} onChange={(e) => setSelectedSize(e.target.value)} className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white" />
 
-          <label className="mb-2 block text-sm text-gray-300">Quantity</label>
-          <input type="number" min="1" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white" />
+          <label htmlFor="checkout-quantity-input" className="mb-2 block text-sm text-gray-300">Quantity</label>
+          <input id="checkout-quantity-input" name="quantity" type="number" min="1" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white" />
 
           <button type="button" onClick={handleAddToCart} disabled={isSubmitting} className="w-full rounded bg-white px-4 py-3 font-semibold text-black hover:bg-gray-200">{isSubmitting ? "Uploading..." : "Add Custom Design to Cart"}</button>
           {cartStatus ? <p className="mt-3 text-sm text-gray-300">{cartStatus}</p> : null}
