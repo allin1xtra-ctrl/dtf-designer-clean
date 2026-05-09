@@ -1,4 +1,4 @@
-import { getProductByHandle } from "../../../lib/shopify";
+import { getProductByHandle } from "../../../lib/shopify.js";
 
 export async function GET(_req, { params }) {
   try {
