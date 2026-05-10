@@ -121,9 +121,9 @@
         id="dtf-designer-{{ section.id }}"
         class="dtf-designer-mount"
         data-product-id="{{ product.id | default: '' }}"
+        data-product-handle="{{ product.handle | default: '' | escape }}"
         data-variant-id="{{ product.selected_or_first_available_variant.id | default: '' }}"
         data-product-title="{{ product.title | default: '' | escape }}"
-        data-product-image="{% if product.featured_image %}{{ product.featured_image | image_url: width: 1400 }}{% endif %}"
         data-designer-url="{{ section.settings.designer_url | escape }}"
         data-app-version="2026-04-15-3"
         data-default-mode="{{ request.params.dtf_mode | default: section.settings.default_mode }}"
@@ -201,15 +201,6 @@
         document.querySelector('form[action*="/cart/add"] [name="id"]')?.value ||
         document.querySelector('select[name="id"]')?.value ||
         document.querySelector('input[name="id"]')?.value ||
-        ''
-      );
-    }
-
-    function getCurrentProductImage() {
-      return (
-        mount.dataset.productImage ||
-        document.querySelector('[data-product-media-wrapper]:not([hidden]) img')?.currentSrc ||
-        document.querySelector('.product__media img')?.currentSrc ||
         ''
       );
     }
@@ -305,9 +296,9 @@
     function initEmbeddedDesigner() {
       var redirectToCart = mount.dataset.redirectToCart !== 'false';
       var variantId = getCurrentVariantId();
-      var productImage = getCurrentProductImage();
       var productTitle = getProductTitle();
       var productId = mount.dataset.productId || '';
+      var productHandle = mount.dataset.productHandle || '';
       var launchMode = (mount.dataset.defaultMode || 'apparel').toLowerCase() === 'transfer' ? 'transfer' : 'apparel';
       var startUpload = mount.dataset.startUpload === '1' || mount.dataset.startUpload === 'true';
 
@@ -325,9 +316,12 @@
       var url = new URL(designerUrl, window.location.origin);
       var designerOrigin = url.origin;
 
-      if (productId) url.searchParams.set('product', productId);
+      if (productHandle) {
+        url.searchParams.set('product', productHandle);
+      } else if (productId) {
+        url.searchParams.set('product', productId);
+      }
       if (variantId) url.searchParams.set('variant', variantId);
-      if (productImage) url.searchParams.set('image', productImage);
       if (productTitle) url.searchParams.set('title', productTitle);
       if (launchMode) url.searchParams.set('mode', launchMode);
       if (startUpload) url.searchParams.set('upload', '1');
@@ -350,8 +344,8 @@
           type: 'dtf:shopify-context',
           payload: {
             productId: productId,
+            productHandle: productHandle,
             variantId: getCurrentVariantId(),
-            productImage: getCurrentProductImage(),
             productTitle: getProductTitle()
           }
         }, designerOrigin);

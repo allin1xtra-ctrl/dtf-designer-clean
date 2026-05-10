@@ -1,13 +1,15 @@
 (function () {
-  function normalizeImageUrl(url) {
-    if (!url) return "";
-    if (url.startsWith("//")) return `${window.location.protocol}${url}`;
-    return url;
-  }
 
   function normalizeDesignerUrl(url) {
     if (!url) return "";
     return String(url).replace(/\/$/, "");
+  }
+
+  function normalizeProductHandle(value) {
+    if (value == null) return "";
+    const normalized = String(value).trim();
+    if (!normalized) return "";
+    return normalized.replace(/^\/?products\//, "").replace(/\/$/, "");
   }
 
   function normalizeVariantId(value) {
@@ -58,16 +60,15 @@
     );
   }
 
-  function getCurrentProductImage(container) {
-    return normalizeImageUrl(
-      container.dataset.productImage ||
-      document.querySelector('[data-product-media-wrapper]:not([hidden]) img')?.currentSrc ||
-      document.querySelector('.product__media img[loading="eager"]')?.currentSrc ||
-      document.querySelector('.product__media img')?.currentSrc ||
-      document.querySelector('[data-media-id] img')?.currentSrc ||
-      document.querySelector('img.product-featured-media')?.currentSrc ||
-      ""
-    );
+  function getCurrentProductHandle(container) {
+    const fromDataset = normalizeProductHandle(container.dataset.productHandle || "");
+    if (fromDataset) return fromDataset;
+
+    const fromUrl = normalizeProductHandle(new URLSearchParams(window.location.search).get("product"));
+    if (fromUrl) return fromUrl;
+
+    const pathnameMatch = window.location.pathname.match(/\/products\/([^/?#]+)/i);
+    return normalizeProductHandle(pathnameMatch?.[1] || "");
   }
 
   function getProductTitle(container) {
@@ -167,6 +168,7 @@
       }
 
       const productId = container.dataset.productId || "";
+      const productHandle = getCurrentProductHandle(container);
       const designerUrl = normalizeDesignerUrl(container.dataset.designerUrl || "https://dtf-designer-clean.vercel.app");
       const appVersion = container.dataset.appVersion || "2026-04-15-3";
       const redirectToCart = container.dataset.redirectToCart !== "false";
@@ -174,16 +176,18 @@
       const launchMode = getLaunchMode(container);
       const startUpload = shouldStartUpload(container);
       let variantId = getCurrentVariantId(container);
-      let productImage = getCurrentProductImage(container);
       const productForm = getProductForm(container);
 
       const iframe = document.createElement("iframe");
       const url = new URL(designerUrl, window.location.origin);
       const designerOrigin = url.origin;
 
-    if (productId) url.searchParams.set("product", productId);
+    if (productHandle) {
+      url.searchParams.set("product", productHandle);
+    } else if (productId) {
+      url.searchParams.set("product", productId);
+    }
     if (variantId) url.searchParams.set("variant", variantId);
-    if (productImage) url.searchParams.set("image", productImage);
     if (productTitle) url.searchParams.set("title", productTitle);
     if (launchMode) url.searchParams.set("mode", launchMode);
     if (startUpload) url.searchParams.set("upload", "1");
@@ -204,8 +208,8 @@
             type: "dtf:shopify-context",
             payload: {
               productId,
+              productHandle,
               variantId,
-              productImage,
               productTitle,
             },
           },
@@ -215,20 +219,13 @@
 
       const syncShopifyContext = () => {
         const nextVariantId = getCurrentVariantId(container);
-        const nextProductImage = getCurrentProductImage(container);
         const variantChanged = Boolean(nextVariantId && nextVariantId !== variantId);
-        const imageChanged = Boolean(nextProductImage && nextProductImage !== productImage);
 
-        if (!variantChanged && !imageChanged) return;
+        if (!variantChanged) return;
 
         if (variantChanged) {
           variantId = nextVariantId;
           container.dataset.variantId = nextVariantId;
-        }
-
-        if (imageChanged) {
-          productImage = nextProductImage;
-          container.dataset.productImage = nextProductImage;
         }
 
         postShopifyContext();
