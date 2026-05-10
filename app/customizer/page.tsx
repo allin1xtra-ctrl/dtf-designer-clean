@@ -1342,7 +1342,7 @@ export default function CustomizerPage() {
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-300">Design Idea</h3>
             <label htmlFor="design-idea-input" className="sr-only">Design idea prompt</label>
             <input id="design-idea-input" name="designIdeaPrompt" type="text" value={designIdeaPrompt} onChange={(e) => setDesignIdeaPrompt(e.target.value)} placeholder="Describe your design style and key elements" className="mb-2 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm" />
-            <button type="button" onClick={generateDesignIdea} disabled={!AI_DESIGN_ENABLED} aria-disabled={!AI_DESIGN_ENABLED} className={`w-full rounded px-2 py-2 text-left text-xs ${AI_DESIGN_ENABLED ? "bg-[#1f1f1f] hover:bg-[#333]" : "cursor-not-allowed bg-[#1f1f1f]/50 text-gray-400"}`} title="AI Generate Design Idea">Generate Idea</button>
+            <button type="button" onClick={generateDesignIdea} disabled={!AI_DESIGN_ENABLED} className={`w-full rounded px-2 py-2 text-left text-xs ${AI_DESIGN_ENABLED ? "bg-[#1f1f1f] hover:bg-[#333]" : "cursor-not-allowed bg-[#1f1f1f]/50 text-gray-400"}`} title="AI Generate Design Idea">Generate Idea</button>
             {!AI_DESIGN_ENABLED ? (
               <p className="mt-2 text-xs text-yellow-300">{AI_DESIGN_NOT_CONFIGURED_MESSAGE}</p>
             ) : null}
