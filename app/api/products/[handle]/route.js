@@ -10,17 +10,6 @@ export async function GET(_req, context) {
   const storefrontToken =
     process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN ||
     process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN;
-  const tokenSource = process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN
-    ? "SHOPIFY_STOREFRONT_ACCESS_TOKEN"
-    : process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN
-      ? "NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN"
-      : "missing";
-  console.error("[DEBUG] Shopify Storefront env:", {
-    tokenSource,
-    hasToken: Boolean(storefrontToken),
-    tokenLength: storefrontToken?.length || 0,
-    domain: storefrontDomain || "missing",
-  });
   let handle = rawHandle || "";
 
   try {
@@ -51,6 +40,15 @@ export async function GET(_req, context) {
       {
         error: "Product API request failed",
         message: error?.message || String(error),
+        debug: {
+          tokenSet: Boolean(storefrontToken),
+          tokenSource: process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN
+            ? "SHOPIFY_STOREFRONT_ACCESS_TOKEN"
+            : process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN
+              ? "NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN"
+              : "missing",
+          domain: storefrontDomain || "missing",
+        },
       },
       { status: 500 }
     );
