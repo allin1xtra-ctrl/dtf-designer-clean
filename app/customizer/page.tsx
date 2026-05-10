@@ -123,6 +123,7 @@ function clampPercentage(value: unknown, fallback: number) {
 }
 
 function normalizeBoundPercent(value: unknown, fallback: number) {
+  // Accept both normalized decimals (0-1) and percentages (0-100) from metafield payloads.
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return fallback;
   if (parsed >= 0 && parsed <= 1) return clampPercentage(parsed * 100, fallback);
@@ -841,6 +842,12 @@ export default function CustomizerPage() {
   const exceedsPrintWidth = Boolean(maxPrintWidth && transferDimensions && transferDimensions.width > maxPrintWidth);
   const exceedsPrintHeight = Boolean(maxPrintHeight && transferDimensions && transferDimensions.height > maxPrintHeight);
   const exceedsPrintLimits = exceedsPrintWidth || exceedsPrintHeight;
+  const isAddToCartDisabled = isSubmitting || Boolean(printLocationsError) || exceedsPrintLimits;
+  const addToCartDescriptionId = printLocationsError
+    ? "print-locations-error"
+    : exceedsPrintLimits
+      ? "print-limit-warning"
+      : undefined;
 
   useEffect(() => {
     if (!availableViews.length || availableViews.includes(currentView)) return;
@@ -1315,10 +1322,10 @@ export default function CustomizerPage() {
           <p className="text-xs text-gray-400">Live transfer size: <span className="font-semibold text-white">{transferSize}</span></p>
           {(maxPrintWidth || maxPrintHeight) ? (
             <p className="mt-2 text-xs text-gray-400">
-              Max print size: <span className="font-semibold text-white">{maxPrintWidth ?? "—"}&quot; × {maxPrintHeight ?? "—"}&quot;</span>
+              Max print size: <span className="font-semibold text-white">{maxPrintWidth ?? "—"} in × {maxPrintHeight ?? "—"} in</span>
             </p>
           ) : null}
-          {exceedsPrintLimits ? <p className="mt-2 text-xs text-yellow-300">⚠ Selected transfer size exceeds this location&apos;s print size limit.</p> : null}
+          {exceedsPrintLimits ? <p id="print-limit-warning" role="alert" aria-live="polite" className="mt-2 text-xs text-yellow-300">⚠ Selected transfer size exceeds this location&apos;s print size limit.</p> : null}
           {boundaryWarning ? <p className="mt-2 text-xs text-yellow-300">⚠ {boundaryWarning}</p> : null}
         </div>
 
@@ -1344,7 +1351,7 @@ export default function CustomizerPage() {
           <label htmlFor="checkout-quantity-input" className="mb-2 block text-sm text-gray-300">Quantity</label>
           <input id="checkout-quantity-input" name="quantity" type="number" min="1" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white" />
 
-          <button type="button" onClick={handleAddToCart} disabled={isSubmitting || Boolean(printLocationsError) || exceedsPrintLimits} className="w-full rounded bg-white px-4 py-3 font-semibold text-black hover:bg-gray-200 disabled:cursor-not-allowed disabled:bg-gray-500">{isSubmitting ? "Uploading..." : "Add Custom Design to Cart"}</button>
+          <button type="button" onClick={handleAddToCart} disabled={isAddToCartDisabled} aria-describedby={addToCartDescriptionId} className="w-full rounded bg-white px-4 py-3 font-semibold text-black hover:bg-gray-200 disabled:cursor-not-allowed disabled:bg-gray-500">{isSubmitting ? "Uploading..." : "Add Custom Design to Cart"}</button>
           {cartStatus ? <p className="mt-3 text-sm text-gray-300">{cartStatus}</p> : null}
         </div>
       </aside>
@@ -1355,7 +1362,7 @@ export default function CustomizerPage() {
           {!isReady && <span className="ml-4 text-sm text-yellow-400">Loading canvas...</span>}
         </div>
         {printLocationsError ? (
-          <div className="border-b border-red-700 bg-red-950 px-6 py-3 text-sm text-red-200">
+          <div id="print-locations-error" role="alert" aria-live="polite" className="border-b border-red-700 bg-red-950 px-6 py-3 text-sm text-red-200">
             {printLocationsError}
           </div>
         ) : null}
