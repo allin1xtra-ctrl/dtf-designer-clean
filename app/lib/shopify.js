@@ -40,20 +40,49 @@ export function getShopifyCartAddUrl() {
 export async function shopifyStorefrontFetch(query, variables = {}) {
   const domain = getShopifyDomain();
   if (!domain || !SHOPIFY_STOREFRONT_ACCESS_TOKEN) {
+    console.error("Missing Shopify Storefront API environment variables.", {
+      hasDomain: Boolean(domain),
+      hasStorefrontToken: Boolean(SHOPIFY_STOREFRONT_ACCESS_TOKEN),
+    });
+
     throw new Error("Missing Shopify Storefront API environment variables.");
   }
-  const response = await fetch(`https://${domain}/api/2024-10/graphql.json`, {
+
+  const endpoint = `https://${domain}/api/2024-10/graphql.json`;
+
+  const response = await fetch(endpoint, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
       "X-Shopify-Storefront-Access-Token": SHOPIFY_STOREFRONT_ACCESS_TOKEN,
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({ query, variables }),
   });
-  const json = await response.json();
-  if (!response.ok || json.errors) {
-    throw new Error(JSON.stringify(json.errors || json));
+
+  const json = await response.json().catch((error) => ({
+    errors: [
+      {
+        message: "Failed to parse Shopify Storefront response",
+        detail: String(error),
+      },
+    ],
+  }));
+
+  if (!response.ok) {
+    console.error("Shopify Storefront HTTP error:", {
+      status: response.status,
+      statusText: response.statusText,
+      errors: json.errors || json,
+    });
+
+    throw new Error("Shopify Storefront HTTP error");
   }
+
+  if (json.errors) {
+    console.error("Shopify GraphQL errors:", JSON.stringify(json.errors));
+    throw new Error("Shopify GraphQL error");
+  }
+
   return json.data;
 }
 
