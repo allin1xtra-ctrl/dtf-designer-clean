@@ -5,8 +5,12 @@ import { Canvas, FabricImage, Path, Shadow, Textbox } from "fabric";
 import { normalizeVariantId } from "../lib/shopify";
 
 const FALLBACK_VARIANT_ID = "47766570074286";
-const CANVAS_DEFAULT_WIDTH = 500;
-const CANVAS_DEFAULT_HEIGHT = 600;
+const CANVAS_DEFAULT_WIDTH = 900;
+const CANVAS_DEFAULT_HEIGHT = 1080;
+const CANVAS_ASPECT_RATIO = CANVAS_DEFAULT_WIDTH / CANVAS_DEFAULT_HEIGHT;
+const PREVIEW_STAGE_PADDING_PX = 32;
+const PREVIEW_STAGE_MIN_WIDTH = 280;
+const PREVIEW_STAGE_MIN_HEIGHT = 420;
 
 type ViewName = "front" | "back" | "leftSleeve" | "rightSleeve" | "neck";
 type CurveMode = "none" | "arcUp" | "arcDown" | "wave";
@@ -229,8 +233,10 @@ function distanceFromPrintableArea(bounds: { left: number; top: number; width: n
 
 export default function CustomizerPage() {
   const canvasElRef = useRef<HTMLCanvasElement | null>(null);
+  const previewStageRef = useRef<HTMLDivElement | null>(null);
   const fabricCanvasRef = useRef<Canvas | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const canvasSizeRef = useRef({ width: CANVAS_DEFAULT_WIDTH, height: CANVAS_DEFAULT_HEIGHT });
 
   const [currentView, setCurrentView] = useState<ViewName>("front");
   const [isReady, setIsReady] = useState(false);
@@ -252,6 +258,10 @@ export default function CustomizerPage() {
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [designIdeaPrompt, setDesignIdeaPrompt] = useState("");
   const [textControls, setTextControls] = useState<TextControlsState>(DEFAULT_TEXT_CONTROLS);
+  const [canvasSize, setCanvasSize] = useState({
+    width: CANVAS_DEFAULT_WIDTH,
+    height: CANVAS_DEFAULT_HEIGHT,
+  });
   const designAreaRef = useRef<PrintArea>(DEFAULT_DESIGN_AREA);
   const shouldDebugAiLogRef = useRef(false);
 
@@ -264,6 +274,56 @@ export default function CustomizerPage() {
   });
 
   const getCanvas = () => fabricCanvasRef.current;
+
+  const calculateCanvasSize = () => {
+    const stage = previewStageRef.current;
+    if (!stage) {
+      return { width: CANVAS_DEFAULT_WIDTH, height: CANVAS_DEFAULT_HEIGHT };
+    }
+
+    const availableWidth = Math.max(PREVIEW_STAGE_MIN_WIDTH, stage.clientWidth - PREVIEW_STAGE_PADDING_PX);
+    const availableHeight = Math.max(PREVIEW_STAGE_MIN_HEIGHT, stage.clientHeight - PREVIEW_STAGE_PADDING_PX);
+
+    let nextWidth = Math.min(availableWidth, availableHeight * CANVAS_ASPECT_RATIO);
+    let nextHeight = nextWidth / CANVAS_ASPECT_RATIO;
+
+    if (nextHeight > availableHeight) {
+      nextHeight = availableHeight;
+      nextWidth = nextHeight * CANVAS_ASPECT_RATIO;
+    }
+
+    return {
+      width: Math.max(PREVIEW_STAGE_MIN_WIDTH, Math.round(nextWidth)),
+      height: Math.max(PREVIEW_STAGE_MIN_HEIGHT, Math.round(nextHeight)),
+    };
+  };
+
+  const resizeCanvasTo = (nextWidth: number, nextHeight: number) => {
+    const canvas = getCanvas();
+    if (!canvas) return;
+
+    const prev = canvasSizeRef.current;
+    if (prev.width === nextWidth && prev.height === nextHeight) return;
+
+    const scaleX = nextWidth / prev.width;
+    const scaleY = nextHeight / prev.height;
+
+    canvas.getObjects().forEach((obj) => {
+      obj.set({
+        left: (obj.left || 0) * scaleX,
+        top: (obj.top || 0) * scaleY,
+        scaleX: (obj.scaleX || 1) * scaleX,
+        scaleY: (obj.scaleY || 1) * scaleY,
+      });
+      obj.setCoords();
+    });
+
+    canvas.setDimensions({ width: nextWidth, height: nextHeight });
+    canvas.requestRenderAll();
+    canvasSizeRef.current = { width: nextWidth, height: nextHeight };
+    setCanvasSize({ width: nextWidth, height: nextHeight });
+    updateBoundaryWarning();
+  };
 
   const logAiDebug = (action: string, details: Record<string, unknown>) => {
     if (!shouldDebugAiLogRef.current) return;
@@ -836,8 +896,8 @@ export default function CustomizerPage() {
     if (!canvasElRef.current) return;
 
     const canvas = new Canvas(canvasElRef.current, {
-      width: CANVAS_DEFAULT_WIDTH,
-      height: CANVAS_DEFAULT_HEIGHT,
+      width: canvasSizeRef.current.width,
+      height: canvasSizeRef.current.height,
       backgroundColor: "transparent",
     });
 
@@ -878,6 +938,28 @@ export default function CustomizerPage() {
       fabricCanvasRef.current = null;
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!isReady) return;
+
+    const syncCanvasToStage = () => {
+      const nextSize = calculateCanvasSize();
+      resizeCanvasTo(nextSize.width, nextSize.height);
+    };
+
+    const rafId = window.requestAnimationFrame(syncCanvasToStage);
+    const observer = new ResizeObserver(syncCanvasToStage);
+    if (previewStageRef.current) {
+      observer.observe(previewStageRef.current);
+    }
+    window.addEventListener("resize", syncCanvasToStage);
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      observer.disconnect();
+      window.removeEventListener("resize", syncCanvasToStage);
+    };
+  }, [isReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!shouldDebugLog) return;
@@ -1157,8 +1239,8 @@ export default function CustomizerPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#0e0e0e] text-white">
-      <aside className="w-[360px] shrink-0 overflow-y-auto border-r border-[#222] bg-[#111] p-5">
+    <div className="flex min-h-screen flex-col bg-[#0e0e0e] text-white lg:grid lg:h-screen lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)] lg:overflow-hidden">
+      <aside className="order-2 border-t border-[#222] bg-[#111] p-4 md:p-5 lg:order-1 lg:h-screen lg:overflow-y-auto lg:border-t-0 lg:border-r">
         <h1 className="text-xl font-bold">DTF Designer Pro</h1>
         <p className="mt-1 text-sm text-gray-400">
           Upload artwork, add text, design print areas, and send custom design details to Shopify checkout.
@@ -1310,22 +1392,37 @@ export default function CustomizerPage() {
         </div>
       </aside>
 
-      <main className="flex flex-1 flex-col">
+      <main className="order-1 flex flex-col lg:order-2 lg:min-w-0 lg:h-screen">
         <div className="flex h-[60px] items-center border-b border-[#222] bg-[#111] px-5">
           <span className="text-sm text-gray-300">Current view: <strong className="text-white">{VIEW_LABELS[currentView]}</strong></span>
           {!isReady && <span className="ml-4 text-sm text-yellow-400">Loading canvas...</span>}
         </div>
 
-        <div className="flex flex-1 items-center justify-center bg-[#181818] p-6">
-          <div className="relative overflow-hidden rounded border border-[#333] bg-white shadow-2xl" style={{ width: `${CANVAS_DEFAULT_WIDTH}px`, height: `${CANVAS_DEFAULT_HEIGHT}px` }}>
+        <div className="flex flex-1 bg-[#181818] p-3 sm:p-4 lg:overflow-hidden lg:p-5">
+          <div
+            ref={previewStageRef}
+            className="relative mx-auto flex h-full min-h-[420px] w-full items-center justify-center rounded-xl border border-[#2c2c2c] bg-[#101010] p-[10px] shadow-[0_0_30px_rgba(56,189,248,0.08)] sm:p-3 md:min-h-[520px] md:p-4 lg:min-h-[650px] lg:p-5"
+          >
+            <div
+              className="relative overflow-hidden rounded-lg border border-[#3a3a3a] bg-white shadow-2xl"
+              style={{
+                width: `${canvasSize.width}px`,
+                height: `${canvasSize.height}px`,
+                maxWidth: "100%",
+                maxHeight: "100%",
+              }}
+            >
             {mockupUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={mockupUrl} alt={`${VIEW_LABELS[currentView]} mockup`} className="absolute inset-0 z-0 h-full w-full object-contain" />
             ) : (
-              <div className="absolute inset-0 z-0 flex items-center justify-center bg-[#f3f3f3] text-sm font-medium text-gray-500">Mockup not configured</div>
+              <div className="absolute inset-0 z-0 flex items-center justify-center bg-[#f3f3f3] px-4 text-center text-sm font-medium text-gray-500">
+                {isReady ? "Mockup not configured for this product." : "Mockup preview loading"}
+              </div>
             )}
             <div className="pointer-events-none absolute z-20 border border-dashed border-cyan-400" style={{ left: `${designArea.x}%`, top: `${designArea.y}%`, width: `${designArea.width}%`, height: `${designArea.height}%` }} />
             <canvas ref={canvasElRef} className="relative z-10" />
+            </div>
           </div>
         </div>
       </main>
