@@ -46,6 +46,13 @@ export async function GET(_req, context) {
     return NextResponse.json(product);
   } catch (error) {
     console.error("Product API failed for handle:", handle, error);
-    return NextResponse.json({ error: "Product API request failed" }, { status: 500 });
+
+    return NextResponse.json(
+      {
+        error: "Product API request failed",
+        message: error?.message || String(error),
+      },
+      { status: 500 }
+    );
   }
 }
