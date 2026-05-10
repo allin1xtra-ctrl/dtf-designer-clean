@@ -15,6 +15,7 @@ const SHOPIFY_API_VERSION =
 
 function cleanDomain(domain) {
   return String(domain || "")
+    .trim()
     .replace("https://", "")
     .replace("http://", "")
     .replace(/\/$/, "");
