@@ -89,9 +89,11 @@ type ProductByHandleApiResponse = ProductByHandleResponse & {
 type AiActionResponse = {
   ok?: boolean;
   error?: string;
+  code?: string;
   note?: string;
   imageDataUrl?: string;
   dataUrl?: string;
+  imageUrl?: string;
   suggestions?: string[];
 };
 
@@ -102,6 +104,9 @@ const MAX_CURVE_AMPLITUDE = 220;
 const NEAR_WHITE_THRESHOLD = 245;
 const SOFT_WHITE_THRESHOLD = 225;
 const TRANSFER_SIZE_PRESETS = ["8x8", "10x10", "12x12", "12x16", "14x16", "16x20"];
+const AI_DESIGN_NOT_CONFIGURED_MESSAGE =
+  "AI Design Generation needs to be enabled in Vercel environment variables.";
+const AI_DESIGN_ENABLED = process.env.NEXT_PUBLIC_AI_DESIGN_ENABLED === "true";
 const VIEW_LOCATION_KEYS: Record<ViewName, string[]> = {
   front: ["front"],
   back: ["back"],
@@ -484,6 +489,37 @@ export default function CustomizerPage() {
     return true;
   };
 
+  const addImageToCanvas = async (nextDataUrl: string) => {
+    const canvas = getCanvas();
+    if (!canvas) return false;
+
+    const img = await FabricImage.fromURL(nextDataUrl);
+    const canvasWidth = canvas.getWidth();
+    const canvasHeight = canvas.getHeight();
+    const nextArea = designAreaRef.current;
+
+    const areaLeft = pxFromPercentage(canvasWidth, nextArea.x);
+    const areaTop = pxFromPercentage(canvasHeight, nextArea.y);
+    const areaWidth = pxFromPercentage(canvasWidth, nextArea.width);
+    const areaHeight = pxFromPercentage(canvasHeight, nextArea.height);
+
+    img.scaleToWidth(areaWidth);
+    if (img.getScaledHeight() > areaHeight) {
+      img.scaleToHeight(areaHeight);
+    }
+
+    img.set({
+      left: areaLeft + (areaWidth - img.getScaledWidth()) / 2,
+      top: areaTop + (areaHeight - img.getScaledHeight()) / 2,
+    });
+
+    canvas.add(img);
+    canvas.setActiveObject(img);
+    canvas.requestRenderAll();
+    syncSelectedObject();
+    return true;
+  };
+
   const runAiRouteAction = async (route: string, actionName: string) => {
     const activeObject = getCanvas()?.getActiveObject();
 
@@ -643,6 +679,11 @@ export default function CustomizerPage() {
   const generateDesignIdea = async () => {
     const prompt = designIdeaPrompt.trim();
 
+    if (!AI_DESIGN_ENABLED) {
+      setAiStatus(AI_DESIGN_NOT_CONFIGURED_MESSAGE);
+      return;
+    }
+
     if (!prompt) {
       setAiStatus("Describe your design idea first.");
       return;
@@ -657,7 +698,14 @@ export default function CustomizerPage() {
       });
 
       const raw = await response.text();
-      const result = raw ? (JSON.parse(raw) as AiActionResponse) : {};
+      let result: AiActionResponse = {};
+      if (raw) {
+        try {
+          result = JSON.parse(raw) as AiActionResponse;
+        } catch (error) {
+          console.error("Generate idea response parse failed:", error);
+        }
+      }
 
       logAiDebug("Generate Idea", {
         apiRoute: "/api/ai/generate-design",
@@ -666,17 +714,39 @@ export default function CustomizerPage() {
       });
 
       if (!response.ok || result.ok === false) {
-        setAiStatus(result.error || "AI design generation is not configured yet.");
+        const isNotConfigured =
+          result.code === "AI_DESIGN_NOT_CONFIGURED" || response.status === 503;
+        const message = isNotConfigured
+          ? AI_DESIGN_NOT_CONFIGURED_MESSAGE
+          : result.error || "AI design generation failed.";
+        setAiStatus(message);
         return;
       }
 
-      setAiStatus(result.note || "Design idea generated.");
+      const generatedImageUrl =
+        typeof result.imageDataUrl === "string"
+          ? result.imageDataUrl
+          : typeof result.dataUrl === "string"
+            ? result.dataUrl
+            : typeof result.imageUrl === "string"
+              ? result.imageUrl
+              : "";
+
+      if (generatedImageUrl) {
+        const added = await addImageToCanvas(generatedImageUrl);
+        setAiStatus(
+          added ? result.note || "Design idea generated and added to canvas." : "Design idea generated."
+        );
+      } else {
+        setAiStatus(result.note || "Design idea generated.");
+      }
+
       if (result.suggestions?.length) {
         setAiSuggestions(result.suggestions);
       }
     } catch (error) {
       console.error("Generate idea failed:", error);
-      setAiStatus("AI design generation is not configured yet.");
+      setAiStatus("AI design generation failed.");
     }
   };
 
@@ -1190,7 +1260,10 @@ export default function CustomizerPage() {
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-300">Design Idea</h3>
             <label htmlFor="design-idea-input" className="sr-only">Design idea prompt</label>
             <input id="design-idea-input" name="designIdeaPrompt" type="text" value={designIdeaPrompt} onChange={(e) => setDesignIdeaPrompt(e.target.value)} placeholder="Describe your design style and key elements" className="mb-2 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm" />
-            <button type="button" onClick={generateDesignIdea} className="w-full rounded bg-[#1f1f1f] px-2 py-2 text-left text-xs hover:bg-[#333]" title="AI Generate Design Idea">Generate Idea</button>
+            <button type="button" onClick={generateDesignIdea} disabled={!AI_DESIGN_ENABLED} className={`w-full rounded px-2 py-2 text-left text-xs ${AI_DESIGN_ENABLED ? "bg-[#1f1f1f] hover:bg-[#333]" : "cursor-not-allowed bg-[#1f1f1f]/50 text-gray-400"}`} title="AI Generate Design Idea">Generate Idea</button>
+            {!AI_DESIGN_ENABLED ? (
+              <p className="mt-2 text-xs text-yellow-300">{AI_DESIGN_NOT_CONFIGURED_MESSAGE}</p>
+            ) : null}
           </div>
 
           {aiStatus ? <p className="mt-3 text-xs text-gray-300">{aiStatus}</p> : null}
