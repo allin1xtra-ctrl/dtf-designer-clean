@@ -35,6 +35,22 @@ export async function GET(_req, context) {
     return NextResponse.json(product);
   } catch (error) {
     console.error("Product API failed for handle:", handle, error);
-    return NextResponse.json({ error: "Product API request failed" }, { status: 500 });
+
+    return NextResponse.json(
+      {
+        error: "Product API request failed",
+        message: error?.message || String(error),
+        debug: {
+          tokenSet: Boolean(storefrontToken),
+          tokenSource: process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN
+            ? "SHOPIFY_STOREFRONT_ACCESS_TOKEN"
+            : process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN
+              ? "NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN"
+              : "missing",
+          domain: storefrontDomain || "missing",
+        },
+      },
+      { status: 500 }
+    );
   }
 }
