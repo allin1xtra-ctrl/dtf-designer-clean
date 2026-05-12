@@ -110,12 +110,48 @@ const MAX_CURVE_AMPLITUDE = 220;
 const NEAR_WHITE_THRESHOLD = 245;
 const SOFT_WHITE_THRESHOLD = 225;
 const TRANSFER_SIZE_PRESETS = ["8x8", "10x10", "12x12", "12x16", "14x16", "16x20"];
+const BLANK_MOCKUP_SVG_WIDTH = 1000;
+const BLANK_MOCKUP_SVG_HEIGHT = 1200;
+const BLANK_MOCKUP_FRAME = { x: 160, y: 120, width: 680, height: 960, radius: 24 };
 const VIEW_LOCATION_KEYS: Record<ViewName, string[]> = {
   front: ["front"],
   back: ["back"],
   leftSleeve: ["leftSleeve", "left_sleeve"],
   rightSleeve: ["rightSleeve", "right_sleeve"],
   neck: ["neck", "neckLabel", "neck_label", "neck_tag"],
+};
+// Optional per-product overrides for known product handles.
+// Generic view-specific blank mockups are used when no product override exists.
+const PRODUCT_BLANK_MOCKUPS: Record<string, Partial<Record<ViewName, string>>> = {
+  // Example:
+  // "custom-hoodie": { front: "/mockups/hoodie-front-blank.png" },
+};
+
+function escapeSvgText(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function createBlankMockupDataUrl(label: string) {
+  const safeLabel = escapeSvgText(label);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${BLANK_MOCKUP_SVG_WIDTH}" height="${BLANK_MOCKUP_SVG_HEIGHT}" viewBox="0 0 ${BLANK_MOCKUP_SVG_WIDTH} ${BLANK_MOCKUP_SVG_HEIGHT}">
+    <rect width="100%" height="100%" fill="#f3f3f3"/>
+    <rect x="${BLANK_MOCKUP_FRAME.x}" y="${BLANK_MOCKUP_FRAME.y}" width="${BLANK_MOCKUP_FRAME.width}" height="${BLANK_MOCKUP_FRAME.height}" rx="${BLANK_MOCKUP_FRAME.radius}" fill="none" stroke="#d4d4d8" stroke-width="8" stroke-dasharray="20 14"/>
+    <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="#71717a" font-family="Arial, sans-serif" font-size="34">${safeLabel} blank mockup</text>
+  </svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+const GENERIC_BLANK_MOCKUPS: Record<ViewName, string> = {
+  front: createBlankMockupDataUrl("Front"),
+  back: createBlankMockupDataUrl("Back"),
+  leftSleeve: createBlankMockupDataUrl("Left sleeve"),
+  rightSleeve: createBlankMockupDataUrl("Right sleeve"),
+  neck: createBlankMockupDataUrl("Neck label"),
 };
 
 function clampPercentage(value: unknown, fallback: number) {
@@ -162,17 +198,19 @@ function normalizePrintLimit(value: unknown) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
-function hasConfiguredMockup(location?: PrintLocationData) {
-  return Boolean(location?.mockupUrl && String(location.mockupUrl).trim());
+function hasLocationObject(location?: PrintLocationData) {
+  return Boolean(location && typeof location === "object");
 }
 
 function hasMetafieldLocationData(printLocations: PrintLocationsMap) {
-  return Object.values(printLocations).some((location) => hasConfiguredMockup(location));
+  return (Object.keys(VIEW_LOCATION_KEYS) as ViewName[]).some((view) =>
+    VIEW_LOCATION_KEYS[view].some((key) => hasLocationObject(printLocations[key]))
+  );
 }
 
 function getAvailableViews(printLocations: PrintLocationsMap) {
   return (Object.keys(VIEW_LABELS) as ViewName[]).filter((view) =>
-    VIEW_LOCATION_KEYS[view].some((key) => hasConfiguredMockup(printLocations[key]))
+    VIEW_LOCATION_KEYS[view].some((key) => hasLocationObject(printLocations[key]))
   );
 }
 
@@ -207,6 +245,21 @@ function getPrintLocationDataForView(
     activeLocation: keys[0] || view,
     activeLocationData: {},
   };
+}
+
+function resolveMockupUrl(
+  metafieldMockupUrl: string | undefined,
+  view: ViewName,
+  productHandle: string
+) {
+  const trimmedMetafieldMockup = String(metafieldMockupUrl || "").trim();
+  if (trimmedMetafieldMockup) return trimmedMetafieldMockup;
+
+  const normalizedHandle = productHandle.trim().toLowerCase();
+  const productFallback = normalizedHandle ? PRODUCT_BLANK_MOCKUPS[normalizedHandle]?.[view] : undefined;
+  if (productFallback) return productFallback;
+
+  return GENERIC_BLANK_MOCKUPS[view] || "";
 }
 
 function createDesignId() {
@@ -286,7 +339,6 @@ export default function CustomizerPage() {
   const [hasVariantInQuery, setHasVariantInQuery] = useState(false);
   const [printLocations, setPrintLocations] = useState<PrintLocationsMap>({});
   const [printLocationsError, setPrintLocationsError] = useState("");
-  const [shouldDebugLog, setShouldDebugLog] = useState(false);
   const [shouldDebugAiLog, setShouldDebugAiLog] = useState(false);
   const [selectedObjectType, setSelectedObjectType] = useState("none");
   const [selectedLocked, setSelectedLocked] = useState(false);
@@ -733,8 +785,6 @@ export default function CustomizerPage() {
     const rawVariant = params.get("variant") || params.get("variantId") || params.get("variant_id");
     const normalized = normalizeVariantId(rawVariant);
     const handleFromUrl = params.get("product") || params.get("handle") || "";
-    const debugFlag = params.get("debugMockup") || params.get("debug");
-    const debugEnabled = debugFlag === "1" || debugFlag === "true";
     const debugAiFlag = params.get("debugAI");
 
     setHasVariantInQuery(Boolean(normalized));
@@ -742,7 +792,6 @@ export default function CustomizerPage() {
     setSelectedSize(params.get("size") || "Custom");
     setTransferSize(params.get("transferSize") || params.get("transfer_size") || "12x12");
     setProductHandle(handleFromUrl);
-    setShouldDebugLog(debugEnabled);
     setShouldDebugAiLog(debugAiFlag === "1" || debugAiFlag === "true");
   }, []);
 
@@ -778,7 +827,6 @@ export default function CustomizerPage() {
     const fetchProductByHandle = async () => {
       try {
         const apiPath = `/api/products/${encodeURIComponent(productHandle)}`;
-        console.log("[DTF] Fetching product from API:", apiPath, "| handle:", productHandle);
         const response = await fetch(apiPath, { signal: controller.signal });
         const raw = await response.text();
         let result = {} as ProductByHandleApiResponse;
@@ -801,21 +849,8 @@ export default function CustomizerPage() {
 
         if (!isMounted) return;
 
-        // Debug: confirm product identity and raw metafield data reaching the customizer
-        console.log("[DTF] Product handle:", result.handle);
-        console.log("[DTF] Product ID:", result.id);
-
         const metafieldValue = result.metafield?.value;
-        console.log("[DTF] Raw dtf.print_locations:", metafieldValue ?? null);
-        console.log("[DTF] Metafield type reported by Shopify:", result.metafield?.type ?? "(no metafield returned)");
-
         const parsedLocations = parsePrintLocations(metafieldValue);
-        console.log("[DTF] Parsed print_locations:", parsedLocations);
-
-        // Log the mockupUrl for each configured location
-        for (const [key, loc] of Object.entries(parsedLocations)) {
-          console.log(`[DTF] mockupUrl for "${key}":`, (loc as PrintLocationData)?.mockupUrl ?? "(not set)");
-        }
 
         setPrintLocations(parsedLocations);
         if (!metafieldValue || !hasMetafieldLocationData(parsedLocations)) {
@@ -852,6 +887,7 @@ export default function CustomizerPage() {
   const locationInfo = getPrintLocationDataForView(printLocations, currentView);
   const { activeLocation, activeLocationData } = locationInfo;
   const mockupUrl = activeLocationData?.mockupUrl;
+  const resolvedMockupUrl = resolveMockupUrl(mockupUrl, currentView, productHandle);
   const designArea = normalizeDesignArea(activeLocationData);
   const maxPrintWidth = normalizePrintLimit(activeLocationData?.maxPrintWidth);
   const maxPrintHeight = normalizePrintLimit(activeLocationData?.maxPrintHeight);
@@ -871,12 +907,6 @@ export default function CustomizerPage() {
     if (!availableViews.length || availableViews.includes(currentView)) return;
     setCurrentView(availableViews[0]);
   }, [availableViews, currentView]);
-
-  useEffect(() => {
-    console.log("[DTF] Active view:", currentView, "| resolved location key:", activeLocation);
-    console.log("[DTF] Selected mockupUrl:", mockupUrl ?? "(none)");
-    console.log("[DTF] Design area:", designArea);
-  }, [currentView, activeLocation, mockupUrl, designArea]);
 
   useEffect(() => {
     designAreaRef.current = designArea;
@@ -932,15 +962,6 @@ export default function CustomizerPage() {
       fabricCanvasRef.current = null;
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (!shouldDebugLog) return;
-    console.log("productHandle", productHandle);
-    console.log("printLocations", printLocations);
-    console.log("activeLocation", activeLocation);
-    console.log("activeLocationData", printLocations?.[activeLocation]);
-    console.log("mockupUrl", printLocations?.[activeLocation]?.mockupUrl);
-  }, [activeLocation, printLocations, productHandle, shouldDebugLog]);
 
   const handleUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -1194,7 +1215,7 @@ export default function CustomizerPage() {
           "Print Location": activeLocation,
           "Artwork URL": uploadedArtworkUrl,
           "Preview URL": uploadedArtworkUrl,
-          "Mockup URL": mockupUrl || "",
+          "Mockup URL": resolvedMockupUrl || "",
           "Max Print Width (in)": maxPrintWidth ?? "",
           "Max Print Height (in)": maxPrintHeight ?? "",
           "Boundary Warning": boundaryWarning || "None",
@@ -1393,12 +1414,8 @@ export default function CustomizerPage() {
 
         <div className="flex flex-1 items-center justify-center bg-[#181818] p-6">
           <div className="relative overflow-hidden rounded border border-[#333] bg-white shadow-2xl" style={{ width: `${CANVAS_DEFAULT_WIDTH}px`, height: `${CANVAS_DEFAULT_HEIGHT}px` }}>
-            {mockupUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={mockupUrl} alt={`${VIEW_LABELS[currentView]} mockup`} className="absolute inset-0 z-0 h-full w-full object-contain" />
-            ) : (
-              <div className="absolute inset-0 z-0 flex items-center justify-center bg-[#f3f3f3] text-sm font-medium text-gray-500">No mockup configured for this location</div>
-            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={resolvedMockupUrl} alt={`${VIEW_LABELS[currentView]} mockup`} className="absolute inset-0 z-0 h-full w-full object-contain" />
             <div className="pointer-events-none absolute z-20 border border-dashed border-cyan-400" style={{ left: `${designArea.x}%`, top: `${designArea.y}%`, width: `${designArea.width}%`, height: `${designArea.height}%` }} />
             <canvas ref={canvasElRef} className="relative z-10" />
           </div>

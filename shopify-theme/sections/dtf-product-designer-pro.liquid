@@ -596,11 +596,6 @@
           return;
         }
 
-        console.log('DTF CART DEBUG:', {
-          variantId: variantId,
-          payload: payload
-        });
-
         var numericVariantId = Number(variantId);
         if (!Number.isFinite(numericVariantId) || numericVariantId <= 0) {
           iframe.contentWindow?.postMessage({
