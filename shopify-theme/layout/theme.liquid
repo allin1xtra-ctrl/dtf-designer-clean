@@ -137,10 +137,7 @@
       "https://dtf-designer-clean.vercel.app"
     ];
 
-    if (!allowedOrigins.includes(event.origin)) {
-      console.log("Blocked message from:", event.origin);
-      return;
-    }
+    if (!allowedOrigins.includes(event.origin)) return;
 
     const message = event.data || {};
 
@@ -181,7 +178,6 @@
         return;
       }
 
-      console.log("✅ Added to cart from customizer:", result);
       window.location.href = "/cart";
 
     } catch (error) {
