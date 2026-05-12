@@ -110,6 +110,9 @@ const MAX_CURVE_AMPLITUDE = 220;
 const NEAR_WHITE_THRESHOLD = 245;
 const SOFT_WHITE_THRESHOLD = 225;
 const TRANSFER_SIZE_PRESETS = ["8x8", "10x10", "12x12", "12x16", "14x16", "16x20"];
+const BLANK_MOCKUP_SVG_WIDTH = 1000;
+const BLANK_MOCKUP_SVG_HEIGHT = 1200;
+const BLANK_MOCKUP_FRAME = { x: 160, y: 120, width: 680, height: 960, radius: 24 };
 const VIEW_LOCATION_KEYS: Record<ViewName, string[]> = {
   front: ["front"],
   back: ["back"],
@@ -117,11 +120,29 @@ const VIEW_LOCATION_KEYS: Record<ViewName, string[]> = {
   rightSleeve: ["rightSleeve", "right_sleeve"],
   neck: ["neck", "neckLabel", "neck_label", "neck_tag"],
 };
-const PRODUCT_BLANK_MOCKUPS: Record<string, Partial<Record<ViewName, string>>> = {};
+// Optional per-product overrides for known product handles.
+// Generic view-specific blank mockups are used when no product override exists.
+const PRODUCT_BLANK_MOCKUPS: Record<string, Partial<Record<ViewName, string>>> = {
+  // Example:
+  // "custom-hoodie": { front: "/mockups/hoodie-front-blank.png" },
+};
+
+function escapeSvgText(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 function createBlankMockupDataUrl(label: string) {
-  const safeLabel = label.replace(/[<>&"]/g, "");
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1200" viewBox="0 0 1000 1200"><rect width="100%" height="100%" fill="#f3f3f3"/><rect x="160" y="120" width="680" height="960" rx="24" fill="none" stroke="#d4d4d8" stroke-width="8" stroke-dasharray="20 14"/><text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="#71717a" font-family="Arial, sans-serif" font-size="34">${safeLabel} blank mockup</text></svg>`;
+  const safeLabel = escapeSvgText(label);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${BLANK_MOCKUP_SVG_WIDTH}" height="${BLANK_MOCKUP_SVG_HEIGHT}" viewBox="0 0 ${BLANK_MOCKUP_SVG_WIDTH} ${BLANK_MOCKUP_SVG_HEIGHT}">
+    <rect width="100%" height="100%" fill="#f3f3f3"/>
+    <rect x="${BLANK_MOCKUP_FRAME.x}" y="${BLANK_MOCKUP_FRAME.y}" width="${BLANK_MOCKUP_FRAME.width}" height="${BLANK_MOCKUP_FRAME.height}" rx="${BLANK_MOCKUP_FRAME.radius}" fill="none" stroke="#d4d4d8" stroke-width="8" stroke-dasharray="20 14"/>
+    <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="#71717a" font-family="Arial, sans-serif" font-size="34">${safeLabel} blank mockup</text>
+  </svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
@@ -177,19 +198,19 @@ function normalizePrintLimit(value: unknown) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
-function hasLocationConfig(location?: PrintLocationData) {
+function hasLocationObject(location?: PrintLocationData) {
   return Boolean(location && typeof location === "object");
 }
 
 function hasMetafieldLocationData(printLocations: PrintLocationsMap) {
   return (Object.keys(VIEW_LOCATION_KEYS) as ViewName[]).some((view) =>
-    VIEW_LOCATION_KEYS[view].some((key) => hasLocationConfig(printLocations[key]))
+    VIEW_LOCATION_KEYS[view].some((key) => hasLocationObject(printLocations[key]))
   );
 }
 
 function getAvailableViews(printLocations: PrintLocationsMap) {
   return (Object.keys(VIEW_LABELS) as ViewName[]).filter((view) =>
-    VIEW_LOCATION_KEYS[view].some((key) => hasLocationConfig(printLocations[key]))
+    VIEW_LOCATION_KEYS[view].some((key) => hasLocationObject(printLocations[key]))
   );
 }
 
@@ -1393,12 +1414,8 @@ export default function CustomizerPage() {
 
         <div className="flex flex-1 items-center justify-center bg-[#181818] p-6">
           <div className="relative overflow-hidden rounded border border-[#333] bg-white shadow-2xl" style={{ width: `${CANVAS_DEFAULT_WIDTH}px`, height: `${CANVAS_DEFAULT_HEIGHT}px` }}>
-            {resolvedMockupUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={resolvedMockupUrl} alt={`${VIEW_LABELS[currentView]} mockup`} className="absolute inset-0 z-0 h-full w-full object-contain" />
-            ) : (
-              <div className="absolute inset-0 z-0 flex items-center justify-center bg-[#f3f3f3] text-sm font-medium text-gray-500">No mockup configured for this location</div>
-            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={resolvedMockupUrl} alt={`${VIEW_LABELS[currentView]} mockup`} className="absolute inset-0 z-0 h-full w-full object-contain" />
             <div className="pointer-events-none absolute z-20 border border-dashed border-cyan-400" style={{ left: `${designArea.x}%`, top: `${designArea.y}%`, width: `${designArea.width}%`, height: `${designArea.height}%` }} />
             <canvas ref={canvasElRef} className="relative z-10" />
           </div>
