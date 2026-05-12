@@ -797,8 +797,21 @@ export default function CustomizerPage() {
 
         if (!isMounted) return;
 
+        // Debug: confirm product identity and raw metafield data reaching the customizer
+        console.log("[DTF] Product handle:", result.handle);
+        console.log("[DTF] Product ID:", result.id);
+
         const metafieldValue = result.metafield?.value;
+        console.log("[DTF] Raw dtf.print_locations:", metafieldValue ?? null);
+
         const parsedLocations = parsePrintLocations(metafieldValue);
+        console.log("[DTF] Parsed print_locations:", parsedLocations);
+
+        // Log the mockupUrl for each configured location
+        for (const [key, loc] of Object.entries(parsedLocations)) {
+          console.log(`[DTF] mockupUrl for "${key}":`, (loc as PrintLocationData)?.mockupUrl ?? "(not set)");
+        }
+
         setPrintLocations(parsedLocations);
         if (!metafieldValue || !hasMetafieldLocationData(parsedLocations)) {
           setPrintLocationsError(
