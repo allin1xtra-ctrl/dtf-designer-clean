@@ -301,6 +301,7 @@
       var productHandle = mount.dataset.productHandle || '';
       var launchMode = (mount.dataset.defaultMode || 'apparel').toLowerCase() === 'transfer' ? 'transfer' : 'apparel';
       var startUpload = mount.dataset.startUpload === '1' || mount.dataset.startUpload === 'true';
+      var minIframeHeight = window.matchMedia('(max-width: 768px)').matches ? 520 : 620;
 
 
       // CLS/LCP fix: wrap iframe in a container with min-height and aspect-ratio
@@ -308,7 +309,7 @@
       wrapper.className = 'dtf-iframe-wrapper';
       wrapper.style.position = 'relative';
       wrapper.style.width = '100%';
-      wrapper.style.minHeight = '900px';
+      wrapper.style.minHeight = minIframeHeight + 'px';
       wrapper.style.aspectRatio = '4/3'; // fallback for browsers that support it
 
       var iframe = document.createElement('iframe');
@@ -330,7 +331,7 @@
 
       iframe.src = url.toString();
       iframe.style.width = '100%';
-      iframe.style.height = '900px';
+      iframe.style.height = minIframeHeight + 'px';
       iframe.style.border = 'none';
       iframe.style.borderRadius = '12px';
       iframe.loading = 'lazy';
@@ -358,7 +359,7 @@
         var message = event.data || {};
 
         if (message.type === 'dtf:resize' && message.payload && message.payload.height) {
-          iframe.style.height = Math.max(700, Number(message.payload.height)) + 'px';
+          iframe.style.height = Math.max(minIframeHeight, Number(message.payload.height)) + 'px';
           return;
         }
 
