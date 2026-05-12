@@ -175,7 +175,8 @@
       const productTitle = getProductTitle(container);
       const launchMode = getLaunchMode(container);
       const startUpload = shouldStartUpload(container);
-      const minIframeHeight = window.matchMedia("(max-width: 768px)").matches ? 520 : 620;
+      const getMinIframeHeight = () =>
+        window.matchMedia("(max-width: 768px)").matches ? 520 : 620;
       let variantId = getCurrentVariantId(container);
       const productForm = getProductForm(container);
 
@@ -197,7 +198,7 @@
 
     iframe.src = url.toString();
     iframe.style.width = "100%";
-    iframe.style.height = `${minIframeHeight}px`;
+    iframe.style.height = `${getMinIframeHeight()}px`;
     iframe.style.border = "none";
     iframe.style.borderRadius = "12px";
     iframe.loading = "lazy";
@@ -248,7 +249,7 @@
         const message = event.data || {};
 
         if (message.type === "dtf:resize" && message.payload?.height) {
-          iframe.style.height = `${Math.max(minIframeHeight, Number(message.payload.height))}px`;
+          iframe.style.height = `${Math.max(getMinIframeHeight(), Number(message.payload.height))}px`;
           return;
         }
 

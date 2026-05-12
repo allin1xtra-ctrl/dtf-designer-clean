@@ -58,7 +58,9 @@
     mount.dataset.dtfInitialized = 'true';
     var designerUrl = (mount.dataset.designerUrl || '').replace(/\/$/, '');
     if (!designerUrl) return;
-    var minIframeHeight = window.matchMedia('(max-width: 768px)').matches ? 520 : 620;
+    var getMinIframeHeight = function () {
+      return window.matchMedia('(max-width: 768px)').matches ? 520 : 620;
+    };
     var iframe = document.createElement('iframe');
     var url = new URL(designerUrl, window.location.origin);
     url.searchParams.set('mode', 'apparel');
@@ -66,7 +68,7 @@
     url.searchParams.set('v', mount.dataset.appVersion || '2026-04-15-3');
     iframe.src = url.toString();
     iframe.style.width = '100%';
-    iframe.style.height = minIframeHeight + 'px';
+    iframe.style.height = getMinIframeHeight() + 'px';
     iframe.style.border = 'none';
     iframe.style.borderRadius = '12px';
     iframe.loading = 'lazy';

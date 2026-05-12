@@ -508,7 +508,9 @@
       var productId = mount.dataset.productId || '';
       var launchMode = (mount.dataset.defaultMode || 'apparel').toLowerCase() === 'transfer' ? 'transfer' : 'apparel';
       var startUpload = mount.dataset.startUpload === '1' || mount.dataset.startUpload === 'true';
-      var minIframeHeight = window.matchMedia('(max-width: 768px)').matches ? 520 : 620;
+      var getMinIframeHeight = function () {
+        return window.matchMedia('(max-width: 768px)').matches ? 520 : 620;
+      };
 
       var iframe = document.createElement('iframe');
       var url = new URL(designerUrl, window.location.origin);
@@ -525,7 +527,7 @@
 
       iframe.src = url.toString();
       iframe.style.width = '100%';
-      iframe.style.height = minIframeHeight + 'px';
+      iframe.style.height = getMinIframeHeight() + 'px';
       iframe.style.border = 'none';
       iframe.style.borderRadius = '12px';
       iframe.loading = 'lazy';
@@ -549,7 +551,7 @@
         var message = event.data || {};
 
         if (message.type === 'dtf:resize' && message.payload && message.payload.height) {
-          iframe.style.height = Math.max(minIframeHeight, Number(message.payload.height)) + 'px';
+          iframe.style.height = Math.max(getMinIframeHeight(), Number(message.payload.height)) + 'px';
           return;
         }
 
