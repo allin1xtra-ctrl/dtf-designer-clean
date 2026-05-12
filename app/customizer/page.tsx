@@ -78,10 +78,12 @@ type PrintLocationData = {
 type PrintLocationsMap = Record<string, PrintLocationData>;
 
 type ProductByHandleResponse = {
+  id?: string;
   title?: string;
   handle?: string;
   metafield?: {
     value?: string;
+    type?: string;
   };
   variants?: Array<{
     id?: string;
@@ -775,7 +777,9 @@ export default function CustomizerPage() {
 
     const fetchProductByHandle = async () => {
       try {
-        const response = await fetch(`/api/products/${encodeURIComponent(productHandle)}`, { signal: controller.signal });
+        const apiPath = `/api/products/${encodeURIComponent(productHandle)}`;
+        console.log("[DTF] Fetching product from API:", apiPath, "| handle:", productHandle);
+        const response = await fetch(apiPath, { signal: controller.signal });
         const raw = await response.text();
         let result = {} as ProductByHandleApiResponse;
 
@@ -803,6 +807,7 @@ export default function CustomizerPage() {
 
         const metafieldValue = result.metafield?.value;
         console.log("[DTF] Raw dtf.print_locations:", metafieldValue ?? null);
+        console.log("[DTF] Metafield type reported by Shopify:", result.metafield?.type ?? "(no metafield returned)");
 
         const parsedLocations = parsePrintLocations(metafieldValue);
         console.log("[DTF] Parsed print_locations:", parsedLocations);
@@ -866,6 +871,12 @@ export default function CustomizerPage() {
     if (!availableViews.length || availableViews.includes(currentView)) return;
     setCurrentView(availableViews[0]);
   }, [availableViews, currentView]);
+
+  useEffect(() => {
+    console.log("[DTF] Active view:", currentView, "| resolved location key:", activeLocation);
+    console.log("[DTF] Selected mockupUrl:", mockupUrl ?? "(none)");
+    console.log("[DTF] Design area:", designArea);
+  }, [currentView, activeLocation, mockupUrl, designArea]);
 
   useEffect(() => {
     designAreaRef.current = designArea;
