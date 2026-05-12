@@ -66,16 +66,24 @@ type PrintArea = {
 
 type PrintLocationData = {
   mockupUrl?: string;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  maxPrintWidth?: number;
+  maxPrintHeight?: number;
   designArea?: Partial<PrintArea>;
 };
 
 type PrintLocationsMap = Record<string, PrintLocationData>;
 
 type ProductByHandleResponse = {
+  id?: string;
   title?: string;
   handle?: string;
   metafield?: {
     value?: string;
+    type?: string;
   };
   variants?: Array<{
     id?: string;
@@ -116,12 +124,21 @@ function clampPercentage(value: unknown, fallback: number) {
   return Math.max(0, Math.min(100, parsed));
 }
 
-function normalizeDesignArea(value?: Partial<PrintArea>): PrintArea {
+function normalizeBoundPercent(value: unknown, fallback: number) {
+  // Accept both normalized decimals (0-1) and percentages (0-100) from metafield payloads.
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  if (parsed >= 0 && parsed <= 1) return clampPercentage(parsed * 100, fallback);
+  return clampPercentage(parsed, fallback);
+}
+
+function normalizeDesignArea(value?: Partial<PrintLocationData>): PrintArea {
+  const nestedArea = value?.designArea;
   return {
-    x: clampPercentage(value?.x, DEFAULT_DESIGN_AREA.x),
-    y: clampPercentage(value?.y, DEFAULT_DESIGN_AREA.y),
-    width: clampPercentage(value?.width, DEFAULT_DESIGN_AREA.width),
-    height: clampPercentage(value?.height, DEFAULT_DESIGN_AREA.height),
+    x: normalizeBoundPercent(value?.x ?? nestedArea?.x, DEFAULT_DESIGN_AREA.x),
+    y: normalizeBoundPercent(value?.y ?? nestedArea?.y, DEFAULT_DESIGN_AREA.y),
+    width: normalizeBoundPercent(value?.width ?? nestedArea?.width, DEFAULT_DESIGN_AREA.width),
+    height: normalizeBoundPercent(value?.height ?? nestedArea?.height, DEFAULT_DESIGN_AREA.height),
   };
 }
 
@@ -138,6 +155,36 @@ function parsePrintLocations(value?: string): PrintLocationsMap {
     });
     return {};
   }
+}
+
+function normalizePrintLimit(value: unknown) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function hasConfiguredMockup(location?: PrintLocationData) {
+  return Boolean(location?.mockupUrl && String(location.mockupUrl).trim());
+}
+
+function hasMetafieldLocationData(printLocations: PrintLocationsMap) {
+  return Object.values(printLocations).some((location) => hasConfiguredMockup(location));
+}
+
+function getAvailableViews(printLocations: PrintLocationsMap) {
+  return (Object.keys(VIEW_LABELS) as ViewName[]).filter((view) =>
+    VIEW_LOCATION_KEYS[view].some((key) => hasConfiguredMockup(printLocations[key]))
+  );
+}
+
+function parseTransferSize(value: string) {
+  const match = String(value || "")
+    .trim()
+    .match(/^(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)$/i);
+  if (!match) return null;
+  return {
+    width: Number(match[1]),
+    height: Number(match[2]),
+  };
 }
 
 function getPrintLocationDataForView(
@@ -238,6 +285,7 @@ export default function CustomizerPage() {
   const [productHandle, setProductHandle] = useState("");
   const [hasVariantInQuery, setHasVariantInQuery] = useState(false);
   const [printLocations, setPrintLocations] = useState<PrintLocationsMap>({});
+  const [printLocationsError, setPrintLocationsError] = useState("");
   const [shouldDebugLog, setShouldDebugLog] = useState(false);
   const [shouldDebugAiLog, setShouldDebugAiLog] = useState(false);
   const [selectedObjectType, setSelectedObjectType] = useState("none");
@@ -699,6 +747,29 @@ export default function CustomizerPage() {
   }, []);
 
   useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      const message = event.data;
+      if (message?.type !== "dtf:shopify-context") return;
+      const payload = message.payload || {};
+
+      const nextVariantId = normalizeVariantId(payload.variantId);
+      const nextProductHandle =
+        typeof payload.productHandle === "string" ? payload.productHandle.trim() : "";
+
+      if (nextVariantId && !hasVariantInQuery) {
+        setVariantId(nextVariantId);
+      }
+
+      if (nextProductHandle) {
+        setProductHandle(nextProductHandle);
+      }
+    };
+
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [hasVariantInQuery]);
+
+  useEffect(() => {
     if (!productHandle) return;
 
     let isMounted = true;
@@ -706,7 +777,9 @@ export default function CustomizerPage() {
 
     const fetchProductByHandle = async () => {
       try {
-        const response = await fetch(`/api/products/${encodeURIComponent(productHandle)}`, { signal: controller.signal });
+        const apiPath = `/api/products/${encodeURIComponent(productHandle)}`;
+        console.log("[DTF] Fetching product from API:", apiPath, "| handle:", productHandle);
+        const response = await fetch(apiPath, { signal: controller.signal });
         const raw = await response.text();
         let result = {} as ProductByHandleApiResponse;
 
@@ -728,8 +801,30 @@ export default function CustomizerPage() {
 
         if (!isMounted) return;
 
-        const parsedLocations = parsePrintLocations(result.metafield?.value);
+        // Debug: confirm product identity and raw metafield data reaching the customizer
+        console.log("[DTF] Product handle:", result.handle);
+        console.log("[DTF] Product ID:", result.id);
+
+        const metafieldValue = result.metafield?.value;
+        console.log("[DTF] Raw dtf.print_locations:", metafieldValue ?? null);
+        console.log("[DTF] Metafield type reported by Shopify:", result.metafield?.type ?? "(no metafield returned)");
+
+        const parsedLocations = parsePrintLocations(metafieldValue);
+        console.log("[DTF] Parsed print_locations:", parsedLocations);
+
+        // Log the mockupUrl for each configured location
+        for (const [key, loc] of Object.entries(parsedLocations)) {
+          console.log(`[DTF] mockupUrl for "${key}":`, (loc as PrintLocationData)?.mockupUrl ?? "(not set)");
+        }
+
         setPrintLocations(parsedLocations);
+        if (!metafieldValue || !hasMetafieldLocationData(parsedLocations)) {
+          setPrintLocationsError(
+            "DTF print preview setup is missing. Configure product metafield dtf.print_locations to continue."
+          );
+        } else {
+          setPrintLocationsError("");
+        }
 
         if (!hasVariantInQuery && result.variants?.[0]?.id) {
           const fallbackVariant = normalizeVariantId(result.variants[0].id);
@@ -738,6 +833,11 @@ export default function CustomizerPage() {
       } catch (error) {
         if (controller.signal.aborted) return;
         console.error("Failed to fetch product by handle:", error);
+        if (isMounted) {
+          setPrintLocationsError(
+            "Unable to load DTF print preview settings for this product. Please try again."
+          );
+        }
       }
     };
 
@@ -752,7 +852,31 @@ export default function CustomizerPage() {
   const locationInfo = getPrintLocationDataForView(printLocations, currentView);
   const { activeLocation, activeLocationData } = locationInfo;
   const mockupUrl = activeLocationData?.mockupUrl;
-  const designArea = normalizeDesignArea(activeLocationData?.designArea);
+  const designArea = normalizeDesignArea(activeLocationData);
+  const maxPrintWidth = normalizePrintLimit(activeLocationData?.maxPrintWidth);
+  const maxPrintHeight = normalizePrintLimit(activeLocationData?.maxPrintHeight);
+  const availableViews = getAvailableViews(printLocations);
+  const transferDimensions = parseTransferSize(transferSize);
+  const exceedsPrintWidth = Boolean(maxPrintWidth && transferDimensions && transferDimensions.width > maxPrintWidth);
+  const exceedsPrintHeight = Boolean(maxPrintHeight && transferDimensions && transferDimensions.height > maxPrintHeight);
+  const exceedsPrintLimits = exceedsPrintWidth || exceedsPrintHeight;
+  const isAddToCartDisabled = isSubmitting || Boolean(printLocationsError) || exceedsPrintLimits;
+  const addToCartDescriptionId = printLocationsError
+    ? "print-locations-error"
+    : exceedsPrintLimits
+      ? "print-limit-warning"
+      : undefined;
+
+  useEffect(() => {
+    if (!availableViews.length || availableViews.includes(currentView)) return;
+    setCurrentView(availableViews[0]);
+  }, [availableViews, currentView]);
+
+  useEffect(() => {
+    console.log("[DTF] Active view:", currentView, "| resolved location key:", activeLocation);
+    console.log("[DTF] Selected mockupUrl:", mockupUrl ?? "(none)");
+    console.log("[DTF] Design area:", designArea);
+  }, [currentView, activeLocation, mockupUrl, designArea]);
 
   useEffect(() => {
     designAreaRef.current = designArea;
@@ -1027,6 +1151,16 @@ export default function CustomizerPage() {
   };
 
   const handleAddToCart = async () => {
+    if (printLocationsError) {
+      setCartStatus(printLocationsError);
+      return;
+    }
+
+    if (exceedsPrintLimits) {
+      setCartStatus("Selected transfer size exceeds this location's print size limit.");
+      return;
+    }
+
     const numericId = parseInt(variantId, 10);
     if (isNaN(numericId)) {
       console.error("Invalid variant ID:", variantId);
@@ -1061,6 +1195,8 @@ export default function CustomizerPage() {
           "Artwork URL": uploadedArtworkUrl,
           "Preview URL": uploadedArtworkUrl,
           "Mockup URL": mockupUrl || "",
+          "Max Print Width (in)": maxPrintWidth ?? "",
+          "Max Print Height (in)": maxPrintHeight ?? "",
           "Boundary Warning": boundaryWarning || "None",
         },
       };
@@ -1208,16 +1344,23 @@ export default function CustomizerPage() {
             {TRANSFER_SIZE_PRESETS.map((size) => <option key={size} value={size}>{size}</option>)}
           </select>
           <p className="text-xs text-gray-400">Live transfer size: <span className="font-semibold text-white">{transferSize}</span></p>
+          {(maxPrintWidth || maxPrintHeight) ? (
+            <p className="mt-2 text-xs text-gray-400">
+              Max print size: <span className="font-semibold text-white">{maxPrintWidth ?? "—"} in × {maxPrintHeight ?? "—"} in</span>
+            </p>
+          ) : null}
+          {exceedsPrintLimits ? <p id="print-limit-warning" role="alert" aria-live="polite" className="mt-2 text-xs text-yellow-300">⚠ Selected transfer size exceeds this location&apos;s print size limit.</p> : null}
           {boundaryWarning ? <p className="mt-2 text-xs text-yellow-300">⚠ {boundaryWarning}</p> : null}
         </div>
 
         <div className="mt-5">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">Print Areas</h2>
           <div className="grid gap-2">
-            {(Object.keys(VIEW_LABELS) as ViewName[]).map((view) => (
+            {availableViews.map((view) => (
               <button key={view} type="button" onClick={() => loadView(view)} className={`rounded px-4 py-3 text-left ${currentView === view ? "bg-white text-black" : "bg-[#1f1f1f] hover:bg-[#333]"}`}>{VIEW_LABELS[view]}</button>
             ))}
           </div>
+          {!availableViews.length ? <p className="mt-2 text-xs text-gray-400">No print locations are configured for this product.</p> : null}
         </div>
 
         <div className="mt-5">
@@ -1232,7 +1375,7 @@ export default function CustomizerPage() {
           <label htmlFor="checkout-quantity-input" className="mb-2 block text-sm text-gray-300">Quantity</label>
           <input id="checkout-quantity-input" name="quantity" type="number" min="1" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white" />
 
-          <button type="button" onClick={handleAddToCart} disabled={isSubmitting} className="w-full rounded bg-white px-4 py-3 font-semibold text-black hover:bg-gray-200">{isSubmitting ? "Uploading..." : "Add Custom Design to Cart"}</button>
+          <button type="button" onClick={handleAddToCart} disabled={isAddToCartDisabled} aria-describedby={addToCartDescriptionId} className="w-full rounded bg-white px-4 py-3 font-semibold text-black hover:bg-gray-200 disabled:cursor-not-allowed disabled:bg-gray-500">{isSubmitting ? "Uploading..." : "Add Custom Design to Cart"}</button>
           {cartStatus ? <p className="mt-3 text-sm text-gray-300">{cartStatus}</p> : null}
         </div>
       </aside>
@@ -1242,6 +1385,11 @@ export default function CustomizerPage() {
           <span className="text-sm text-gray-300">Current view: <strong className="text-white">{VIEW_LABELS[currentView]}</strong></span>
           {!isReady && <span className="ml-4 text-sm text-yellow-400">Loading canvas...</span>}
         </div>
+        {printLocationsError ? (
+          <div id="print-locations-error" role="alert" aria-live="polite" className="border-b border-red-700 bg-red-950 px-6 py-3 text-sm text-red-200">
+            {printLocationsError}
+          </div>
+        ) : null}
 
         <div className="flex flex-1 items-center justify-center bg-[#181818] p-6">
           <div className="relative overflow-hidden rounded border border-[#333] bg-white shadow-2xl" style={{ width: `${CANVAS_DEFAULT_WIDTH}px`, height: `${CANVAS_DEFAULT_HEIGHT}px` }}>
@@ -1249,7 +1397,7 @@ export default function CustomizerPage() {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={mockupUrl} alt={`${VIEW_LABELS[currentView]} mockup`} className="absolute inset-0 z-0 h-full w-full object-contain" />
             ) : (
-              <div className="absolute inset-0 z-0 flex items-center justify-center bg-[#f3f3f3] text-sm font-medium text-gray-500">Mockup not configured</div>
+              <div className="absolute inset-0 z-0 flex items-center justify-center bg-[#f3f3f3] text-sm font-medium text-gray-500">No mockup configured for this location</div>
             )}
             <div className="pointer-events-none absolute z-20 border border-dashed border-cyan-400" style={{ left: `${designArea.x}%`, top: `${designArea.y}%`, width: `${designArea.width}%`, height: `${designArea.height}%` }} />
             <canvas ref={canvasElRef} className="relative z-10" />

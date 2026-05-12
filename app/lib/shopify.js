@@ -177,6 +177,7 @@ export async function getProductByHandle(handle) {
         }
         metafield(namespace: "dtf", key: "print_locations") {
           value
+          type
         }
         variants(first: 50) {
           edges {
@@ -215,6 +216,7 @@ export async function getProductByHandle(handle) {
     metafield: product.metafield
       ? {
           value: product.metafield.value,
+          type: product.metafield.type,
         }
       : null,
     variants:
