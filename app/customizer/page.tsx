@@ -140,6 +140,10 @@ const PRODUCT_PRINT_LOCATION_OVERRIDES: Record<string, Partial<Record<string, Pa
   "custom-t-shirt-upload-customize": {
     front: { x: 33, y: 24, width: 34, height: 44 },
     back: { x: 31, y: 22, width: 38, height: 48 },
+    neck: { x: 41, y: 13, width: 18, height: 12 },
+    neck_tag: { x: 41, y: 13, width: 18, height: 12 },
+    neckLabel: { x: 41, y: 13, width: 18, height: 12 },
+    neck_label: { x: 41, y: 13, width: 18, height: 12 },
   },
 };
 
@@ -257,6 +261,29 @@ function getMockupRenderDimensions(naturalWidth: number, naturalHeight: number, 
     scale,
     renderedWidth: imgWidth * scale,
     renderedHeight: imgHeight * scale,
+  };
+}
+
+function getMockupBounds(mockupRender: ReturnType<typeof getMockupRenderDimensions>) {
+  return {
+    left: (CANVAS_DEFAULT_WIDTH - mockupRender.renderedWidth) / 2,
+    top: (CANVAS_DEFAULT_HEIGHT - mockupRender.renderedHeight) / 2,
+    width: mockupRender.renderedWidth,
+    height: mockupRender.renderedHeight,
+  };
+}
+
+function getResolvedPrintAreaBounds(
+  designArea: PrintArea,
+  mockupRender: ReturnType<typeof getMockupRenderDimensions>
+) {
+  const mockupBounds = getMockupBounds(mockupRender);
+
+  return {
+    left: mockupBounds.left + pxFromPercentage(mockupBounds.width, designArea.x),
+    top: mockupBounds.top + pxFromPercentage(mockupBounds.height, designArea.y),
+    width: pxFromPercentage(mockupBounds.width, designArea.width),
+    height: pxFromPercentage(mockupBounds.height, designArea.height),
   };
 }
 
@@ -502,7 +529,7 @@ export default function CustomizerPage() {
   const [previewScale, setPreviewScale] = useState(1);
   const [mockupNaturalSize, setMockupNaturalSize] = useState({ width: 0, height: 0 });
   const [textControls, setTextControls] = useState<TextControlsState>(DEFAULT_TEXT_CONTROLS);
-  const designAreaRef = useRef<PrintArea>(DEFAULT_DESIGN_AREA);
+  const printableAreaRef = useRef({ left: 0, top: 0, width: 0, height: 0 });
   const shouldDebugAiLogRef = useRef(false);
 
   const viewsRef = useRef<Record<ViewName, CanvasSnapshot | null>>({
@@ -562,17 +589,8 @@ export default function CustomizerPage() {
       return;
     }
 
-    const canvasWidth = canvas.getWidth();
-    const canvasHeight = canvas.getHeight();
-    const printableArea = {
-      left: pxFromPercentage(canvasWidth, designAreaRef.current.x),
-      top: pxFromPercentage(canvasHeight, designAreaRef.current.y),
-      width: pxFromPercentage(canvasWidth, designAreaRef.current.width),
-      height: pxFromPercentage(canvasHeight, designAreaRef.current.height),
-    };
-
     const bounds = activeObject.getBoundingRect();
-    const overflow = distanceFromPrintableArea(bounds, printableArea);
+    const overflow = distanceFromPrintableArea(bounds, printableAreaRef.current);
 
     if (overflow > 0) {
       setBoundaryWarning("Selected design exceeds this location's print size limit.");
@@ -749,12 +767,7 @@ export default function CustomizerPage() {
     if (!canvas) return false;
 
     const nextImage = await FabricImage.fromURL(nextDataUrl);
-    const canvasWidth = canvas.getWidth();
-    const canvasHeight = canvas.getHeight();
-    const areaLeft = pxFromPercentage(canvasWidth, designAreaRef.current.x);
-    const areaTop = pxFromPercentage(canvasHeight, designAreaRef.current.y);
-    const areaWidth = pxFromPercentage(canvasWidth, designAreaRef.current.width);
-    const areaHeight = pxFromPercentage(canvasHeight, designAreaRef.current.height);
+    const { left: areaLeft, top: areaTop, width: areaWidth, height: areaHeight } = printableAreaRef.current;
 
     nextImage.scaleToWidth(areaWidth);
     if (nextImage.getScaledHeight() > areaHeight) {
@@ -911,15 +924,10 @@ export default function CustomizerPage() {
 
     const activeObject = canvas.getActiveObject();
     if (activeObject) {
-      const canvasWidth = canvas.getWidth();
-      const canvasHeight = canvas.getHeight();
-      const printableArea = {
-        left: pxFromPercentage(canvasWidth, designAreaRef.current.x),
-        top: pxFromPercentage(canvasHeight, designAreaRef.current.y),
-        width: pxFromPercentage(canvasWidth, designAreaRef.current.width),
-        height: pxFromPercentage(canvasHeight, designAreaRef.current.height),
-      };
-      const overflow = distanceFromPrintableArea(activeObject.getBoundingRect(), printableArea);
+      const overflow = distanceFromPrintableArea(
+        activeObject.getBoundingRect(),
+        printableAreaRef.current
+      );
       if (overflow > 0) {
         suggestions.unshift("Move artwork back inside printable area for best print result.");
       }
@@ -1210,7 +1218,13 @@ export default function CustomizerPage() {
     activeLocationData?.mockupUrl;
   const resolvedMockupUrl = resolveMockupUrl(mockupUrl, currentView, productHandle);
   const designArea = normalizeDesignArea(activeLocationData);
-  const mockupRender = getMockupRenderDimensions(mockupNaturalSize.width, mockupNaturalSize.height);
+  const mockupFitRatio = previewScale < 1 ? 0.92 : MOCKUP_FIT_RATIO;
+  const mockupRender = getMockupRenderDimensions(
+    mockupNaturalSize.width,
+    mockupNaturalSize.height,
+    mockupFitRatio
+  );
+  const resolvedPrintAreaBounds = getResolvedPrintAreaBounds(designArea, mockupRender);
   const maxPrintWidth = normalizePrintLimit(activeLocationData?.maxPrintWidth);
   const maxPrintHeight = normalizePrintLimit(activeLocationData?.maxPrintHeight);
   const availableViews = getAvailableViews(printLocations);
@@ -1286,24 +1300,27 @@ export default function CustomizerPage() {
 
   useEffect(() => {
     if (!shouldDebugAiLogRef.current) return;
-    console.log("[DTF MOCKUP FIT]", {
+    console.log("[Customizer Mockup Fit]", {
       activePrintLocation: activeLocation,
       mockupNaturalWidth: mockupRender.imgWidth,
       mockupNaturalHeight: mockupRender.imgHeight,
       renderedMockupWidth: Number(mockupRender.renderedWidth.toFixed(2)),
       renderedMockupHeight: Number(mockupRender.renderedHeight.toFixed(2)),
-      resolvedDesignArea: designArea,
+      resolvedDesignArea: resolvedPrintAreaBounds,
       canvasWidth: Number((CANVAS_DEFAULT_WIDTH * previewScale).toFixed(2)),
       canvasHeight: Number((CANVAS_DEFAULT_HEIGHT * previewScale).toFixed(2)),
     });
   }, [
     activeLocation,
-    designArea,
     mockupRender.imgHeight,
     mockupRender.imgWidth,
     mockupRender.renderedHeight,
     mockupRender.renderedWidth,
     previewScale,
+    resolvedPrintAreaBounds.height,
+    resolvedPrintAreaBounds.left,
+    resolvedPrintAreaBounds.top,
+    resolvedPrintAreaBounds.width,
   ]);
 
   useEffect(() => {
@@ -1329,8 +1346,8 @@ export default function CustomizerPage() {
   ]);
 
   useEffect(() => {
-    designAreaRef.current = designArea;
-  }, [designArea]);
+    printableAreaRef.current = resolvedPrintAreaBounds;
+  }, [resolvedPrintAreaBounds]);
 
   useEffect(() => {
     shouldDebugAiLogRef.current = shouldDebugAiLog;
@@ -1398,13 +1415,7 @@ export default function CustomizerPage() {
 
       try {
         const img = await FabricImage.fromURL(result);
-        const canvasWidth = canvas.getWidth();
-        const canvasHeight = canvas.getHeight();
-
-        const areaLeft = pxFromPercentage(canvasWidth, designArea.x);
-        const areaTop = pxFromPercentage(canvasHeight, designArea.y);
-        const areaWidth = pxFromPercentage(canvasWidth, designArea.width);
-        const areaHeight = pxFromPercentage(canvasHeight, designArea.height);
+        const { left: areaLeft, top: areaTop, width: areaWidth, height: areaHeight } = printableAreaRef.current;
 
         img.scaleToWidth(areaWidth);
         if (img.getScaledHeight() > areaHeight) {
@@ -1873,7 +1884,7 @@ export default function CustomizerPage() {
               ))}
             </select>
           ) : (
-            <input id="checkout-size-input" name="size" type="text" value={selectedSize} onChange={(e) => setSelectedSize(e.target.value)} className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white" />
+            <input id="checkout-size-input" name="size" type="text" value={selectedSize} onChange={(e) => handleSizeChange(e.target.value)} className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white" />
           )}
 
           <label htmlFor="checkout-quantity-input" className="mb-2 block text-sm text-gray-300">Quantity</label>
@@ -1929,7 +1940,15 @@ export default function CustomizerPage() {
                   );
                 }}
               />
-              <div className="pointer-events-none absolute z-20 border border-dashed border-cyan-400" style={{ left: `${designArea.x}%`, top: `${designArea.y}%`, width: `${designArea.width}%`, height: `${designArea.height}%` }} />
+              <div
+                className="pointer-events-none absolute z-20 border border-dashed border-cyan-400"
+                style={{
+                  left: `${resolvedPrintAreaBounds.left}px`,
+                  top: `${resolvedPrintAreaBounds.top}px`,
+                  width: `${resolvedPrintAreaBounds.width}px`,
+                  height: `${resolvedPrintAreaBounds.height}px`,
+                }}
+              />
               <canvas ref={canvasElRef} className="relative z-10" />
             </div>
           </div>
