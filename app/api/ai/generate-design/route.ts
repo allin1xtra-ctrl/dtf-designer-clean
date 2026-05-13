@@ -90,7 +90,7 @@ function shouldRetryWithFallback(
   fallbackModel: string | undefined,
   error: OpenAIErrorInfo
 ) {
-  if (model !== PRIMARY_GPT_IMAGE_MODEL) {
+  if (model.trim().toLowerCase() !== PRIMARY_GPT_IMAGE_MODEL) {
     return false;
   }
 
@@ -102,9 +102,10 @@ function shouldRetryWithFallback(
 }
 
 function buildImageGenerateParams(model: string, prompt: string): ImageGenerateParamsNonStreaming {
-  const normalizedModel = model.toLowerCase();
+  const cleanModel = model.trim();
+  const normalizedModel = cleanModel.toLowerCase();
   const baseParams: ImageGenerateParamsNonStreaming = {
-    model,
+    model: cleanModel,
     prompt: createEnhancedPrompt(prompt),
     size: "1024x1024",
     stream: false,
