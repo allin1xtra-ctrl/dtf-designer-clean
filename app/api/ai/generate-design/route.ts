@@ -15,7 +15,6 @@ type GenerateDesignBody = {
 };
 
 const PRIMARY_GPT_IMAGE_MODEL = "gpt-image-1";
-const DALL_E_2_MODEL = "dall-e-2";
 const DALL_E_3_MODEL = "dall-e-3";
 
 type OpenAIErrorInfo = {
@@ -112,12 +111,7 @@ function buildImageGenerateParams(model: string, prompt: string): ImageGenerateP
   };
 
   if (normalizedModel.startsWith("dall-e")) {
-    const quality =
-      normalizedModel === DALL_E_3_MODEL
-        ? "hd"
-        : normalizedModel === DALL_E_2_MODEL
-          ? "standard"
-          : undefined;
+    const quality = normalizedModel === DALL_E_3_MODEL ? "hd" : undefined;
 
     return {
       ...baseParams,
