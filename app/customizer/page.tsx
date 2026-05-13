@@ -247,6 +247,14 @@ function getMockupImageClassName(view: ViewName) {
   return "absolute inset-0 z-0 h-full w-full object-contain";
 }
 
+function getPreviewStageClassName(view: ViewName) {
+  const base = "relative overflow-hidden rounded border border-[#333] bg-white shadow-2xl max-w-full";
+  if (view === "leftSleeve" || view === "rightSleeve" || view === "neck") {
+    return `${base} origin-top scale-95 sm:scale-100`;
+  }
+  return base;
+}
+
 function getPrintLocationDataForView(
   printLocations: PrintLocationsMap,
   view: ViewName
@@ -1571,8 +1579,8 @@ export default function CustomizerPage() {
           </div>
         ) : null}
 
-        <div className="flex flex-1 items-center justify-center bg-[#181818] p-6">
-          <div className="relative overflow-hidden rounded border border-[#333] bg-white shadow-2xl" style={{ width: `${CANVAS_DEFAULT_WIDTH}px`, height: `${CANVAS_DEFAULT_HEIGHT}px` }}>
+        <div className="flex flex-1 items-start justify-center bg-[#181818] p-2 sm:p-4">
+          <div className={getPreviewStageClassName(currentView)} style={{ width: `${CANVAS_DEFAULT_WIDTH}px`, height: `${CANVAS_DEFAULT_HEIGHT}px` }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={resolvedMockupUrl} alt={`${VIEW_LABELS[currentView]} mockup`} className={getMockupImageClassName(currentView)} />
             <div className="pointer-events-none absolute z-20 border border-dashed border-cyan-400" style={{ left: `${designArea.x}%`, top: `${designArea.y}%`, width: `${designArea.width}%`, height: `${designArea.height}%` }} />
