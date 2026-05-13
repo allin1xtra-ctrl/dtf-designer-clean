@@ -1,5 +1,5 @@
 {% liquid
-  assign product_url = section.settings.product_url | default: '/products/custom-dtf-designer'
+  assign product_url = section.settings.product_url | default: '/pages/customizer'
   assign query_joiner = '?'
   if product_url contains '?'
     assign query_joiner = '&'
@@ -70,18 +70,18 @@
   "name": "DTF Pro process",
   "settings": [
     { "type": "text", "id": "kicker", "label": "Kicker", "default": "HOW TO ORDER" },
-    { "type": "text", "id": "heading", "label": "Heading", "default": "Move Flora shoppers from product choice to checkout in three clear steps" },
-    { "type": "textarea", "id": "subtext", "label": "Subtext", "default": "Keep the flow simple so buyers can pick Custom Drip, transfers, gang sheets, or starter packs without confusion." },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "How Your Custom DTF Order Works" },
+    { "type": "textarea", "id": "subtext", "label": "Subtext", "default": "Choose your product, upload artwork, customize your print, checkout securely, and we print and ship with fast turnaround." },
     { "type": "url", "id": "product_url", "label": "Designer product URL" },
-    { "type": "text", "id": "cta_label", "label": "CTA label", "default": "Open the designer" }
+    { "type": "text", "id": "cta_label", "label": "CTA label", "default": "Start Upload" }
   ],
   "blocks": [
     {
       "type": "step",
       "name": "Step",
       "settings": [
-        { "type": "text", "id": "title", "label": "Title", "default": "Upload or customize" },
-        { "type": "textarea", "id": "text", "label": "Text", "default": "Start from artwork you already have or build the product visually with the live designer." }
+        { "type": "text", "id": "title", "label": "Title", "default": "Choose your product" },
+        { "type": "textarea", "id": "text", "label": "Text", "default": "Select a DTF transfer, gang sheet, custom t-shirt, hoodie, or apparel option." }
       ]
     }
   ],

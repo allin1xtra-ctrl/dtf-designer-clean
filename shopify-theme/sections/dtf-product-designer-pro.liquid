@@ -1,9 +1,9 @@
 {% liquid
-  assign apparel_url = section.settings.custom_drip_url | default: '/collections/custom-drip'
-  assign transfer_url = section.settings.custom_transfers_url | default: '/products/custom-transfers'
-  assign premade_transfer_url = section.settings.premade_transfers_url | default: '/products/pre-made-transfers'
-  assign gang_sheet_url = section.settings.gang_sheets_url | default: '/products/gang-sheets'
-  assign starter_pack_url = section.settings.starter_packs_url | default: '/products/starter-packs'
+  assign apparel_url = section.settings.custom_drip_url | default: '/collections/custom-apparel'
+  assign transfer_url = section.settings.custom_transfers_url | default: '/collections/dtf-transfers-by-size'
+  assign premade_transfer_url = section.settings.premade_transfers_url | default: '/collections/dtf-transfers-by-size'
+  assign gang_sheet_url = section.settings.gang_sheets_url | default: '/products/dtf-gang-sheet-builder-build-your-own-sheet'
+  assign starter_pack_url = section.settings.starter_packs_url | default: '/pages/customizer'
   assign transfer_joiner = '?'
   if transfer_url contains '?'
     assign transfer_joiner = '&'
@@ -253,7 +253,7 @@
       </div>
 
       <div class="dtf-cta-cluster">
-        <a href="{{ section.settings.designer_url }}?product={{ product.handle }}&variant={{ product.selected_or_first_available_variant.id }}" class="dtf-button dtf-button-primary">Start Customizing</a>
+        <a href="{{ section.settings.designer_url }}?product={{ product.handle }}&variant={{ product.selected_or_first_available_variant.id }}" class="dtf-button dtf-button-primary">Customize &amp; Upload Design</a>
         <a href="{{ gang_sheet_url }}" class="dtf-button dtf-button-secondary">{{ section.settings.gang_sheet_label }}</a>
         <a href="{{ starter_pack_url }}" class="dtf-button dtf-button-secondary">{{ section.settings.starter_pack_label }}</a>
       </div>
@@ -262,56 +262,56 @@
         <a href="{{ apparel_url }}" class="dtf-launch-card">
           {% if section.settings.custom_drip_image != blank %}
             <div class="dtf-launch-card-media">
-              {{ section.settings.custom_drip_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Custom Drip collection' }}
+              {{ section.settings.custom_drip_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Custom t-shirt and hoodie printing collection with DTF transfers' }}
             </div>
           {% endif %}
-          <strong>Custom Drip collection</strong>
-          <span>Send shoppers into your full apparel collection</span>
+          <strong>Custom apparel collection</strong>
+          <span>Shop custom t-shirts and hoodies with full-color DTF printing</span>
         </a>
         <a href="{{ premade_transfer_url }}" class="dtf-launch-card">
           {% if section.settings.premade_transfers_image != blank %}
             <div class="dtf-launch-card-media">
-              {{ section.settings.premade_transfers_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Pre-made transfers' }}
+              {{ section.settings.premade_transfers_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Premium custom DTF transfer sheet with vibrant full color print' }}
             </div>
           {% endif %}
-          <strong>Pre-made transfers</strong>
-          <span>Send shoppers to your ready-to-press designs</span>
+          <strong>Print-ready DTF transfers</strong>
+          <span>Choose transfer options ready for pressing on apparel</span>
         </a>
         <a href="{{ transfer_url }}" class="dtf-launch-card">
           {% if section.settings.custom_transfers_image != blank %}
             <div class="dtf-launch-card-media">
-              {{ section.settings.custom_transfers_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Custom transfers' }}
+              {{ section.settings.custom_transfers_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'No minimum custom DTF transfers for apparel brands' }}
             </div>
           {% endif %}
-          <strong>Custom transfers</strong>
-          <span>Open the live custom transfer designer flow</span>
+          <strong>Custom DTF transfers</strong>
+          <span>Upload DTF artwork and order with no minimums</span>
         </a>
         <a href="{{ gang_sheet_url }}" class="dtf-launch-card dtf-launch-card-highlight">
           {% if section.settings.gang_sheets_image != blank %}
             <div class="dtf-launch-card-media">
-              {{ section.settings.gang_sheets_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Gang sheets' }}
+              {{ section.settings.gang_sheets_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Build your own DTF gang sheet online' }}
             </div>
           {% endif %}
-          <strong>Gang sheets</strong>
-          <span>Start a sheet-based custom order with one click</span>
+          <strong>DTF gang sheets</strong>
+          <span>Maximize sheet space and save on bulk transfer orders</span>
         </a>
         <a href="{{ starter_pack_url }}" class="dtf-launch-card dtf-launch-card-highlight">
           {% if section.settings.starter_packs_image != blank %}
             <div class="dtf-launch-card-media">
-              {{ section.settings.starter_packs_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Starter packs' }}
+              {{ section.settings.starter_packs_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Custom hoodie DTF print placement mockup' }}
             </div>
           {% endif %}
-          <strong>Starter packs</strong>
-          <span>Guide new buyers into an easy first order bundle</span>
+          <strong>Custom hoodie printing</strong>
+          <span>Launch hoodie customization with premium DTF print quality</span>
         </a>
         <a href="{{ upload_url }}" class="dtf-launch-card">
           {% if section.settings.upload_order_image != blank %}
             <div class="dtf-launch-card-media">
-              {{ section.settings.upload_order_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Upload and order' }}
+              {{ section.settings.upload_order_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Custom t-shirt upload and customize DTF printing' }}
             </div>
           {% endif %}
-          <strong>Upload and order</strong>
-          <span>Jump straight into the custom transfers upload flow</span>
+          <strong>Upload artwork online</strong>
+          <span>Start custom transfer and apparel orders in one flow</span>
         </a>
       </div>
 
@@ -349,9 +349,9 @@
       <div class="dtf-side-card">
         <p class="dtf-side-kicker">HOW IT WORKS</p>
         <ol class="dtf-step-list">
-          <li><strong>Choose your order path.</strong><span>Pick apparel, transfers, or fast upload.</span></li>
-          <li><strong>Customize your product.</strong><span>Add artwork, colors, sizes, and options.</span></li>
-          <li><strong>Send it to Shopify cart.</strong><span>Checkout happens in your existing store flow.</span></li>
+          <li><strong>Choose your product.</strong><span>Select a DTF transfer, gang sheet, t-shirt, hoodie, or apparel option.</span></li>
+          <li><strong>Upload your artwork and customize.</strong><span>Adjust size, placement, and print location inside DTF Designer Pro.</span></li>
+          <li><strong>Checkout securely.</strong><span>Your artwork details and preview are saved with your order in Shopify.</span></li>
         </ol>
       </div>
     </aside>
@@ -540,6 +540,7 @@
       url.searchParams.set('v', mount.dataset.appVersion || '2026-04-15-4');
 
       iframe.src = url.toString();
+      iframe.title = 'DTF Designer Pro customizer iframe';
       iframe.style.width = '100%';
       iframe.style.height = '900px';
       iframe.style.border = 'none';
@@ -648,8 +649,8 @@
     "templates": ["product"]
   },
   "settings": [
-    { "type": "text", "id": "heading", "label": "Heading", "default": "Create your order with a premium designer flow" },
-    { "type": "textarea", "id": "subtext", "label": "Subtext", "default": "Give shoppers a polished transfer-company experience with quick launch choices, trust content, and a designer that adds straight to Shopify cart." },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Upload Artwork and Customize DTF Transfers, Gang Sheets, and Apparel" },
+    { "type": "textarea", "id": "subtext", "label": "Subtext", "default": "Create custom DTF transfers, gang sheets, t-shirts, and hoodies in one place with no minimums and fast turnaround." },
     {
       "type": "url",
       "id": "designer_url",
@@ -667,20 +668,20 @@
     { "type": "image_picker", "id": "gang_sheets_image", "label": "Gang Sheets lifestyle image" },
     { "type": "image_picker", "id": "starter_packs_image", "label": "Starter Packs lifestyle image" },
     { "type": "image_picker", "id": "upload_order_image", "label": "Upload and order lifestyle image" },
-    { "type": "text", "id": "trust_badge_one", "label": "Trust badge 1", "default": "Fast turnaround" },
-    { "type": "text", "id": "trust_badge_two", "label": "Trust badge 2", "default": "Live product preview" },
+    { "type": "text", "id": "trust_badge_one", "label": "Trust badge 1", "default": "No minimum DTF transfers" },
+    { "type": "text", "id": "trust_badge_two", "label": "Trust badge 2", "default": "Fast turnaround DTF printing" },
     { "type": "text", "id": "trust_badge_three", "label": "Trust badge 3", "default": "Secure Shopify checkout" },
-    { "type": "text", "id": "gang_sheet_label", "label": "Gang sheet button label", "default": "Start gang sheets" },
-    { "type": "text", "id": "starter_pack_label", "label": "Starter pack button label", "default": "Shop starter packs" },
+    { "type": "text", "id": "gang_sheet_label", "label": "Gang sheet button label", "default": "Build a Gang Sheet" },
+    { "type": "text", "id": "starter_pack_label", "label": "Starter pack button label", "default": "Customize Apparel" },
     { "type": "checkbox", "id": "enable_mobile_sticky_bar", "label": "Enable sticky mobile order bar", "default": true },
     { "type": "text", "id": "mobile_gang_sheet_label", "label": "Mobile gang sheet label", "default": "Gang Sheets" },
-    { "type": "text", "id": "mobile_starter_pack_label", "label": "Mobile starter pack label", "default": "Starter Packs" },
-    { "type": "text", "id": "mobile_apparel_label", "label": "Mobile apparel label", "default": "Custom Drip" },
-    { "type": "text", "id": "sidebar_heading", "label": "Sidebar heading", "default": "Built for high-intent shoppers" },
-    { "type": "text", "id": "sidebar_point_one", "label": "Sidebar point 1", "default": "Instant entry into your design or upload flow" },
-    { "type": "text", "id": "sidebar_point_two", "label": "Sidebar point 2", "default": "Clear order paths for transfers and apparel" },
-    { "type": "text", "id": "sidebar_point_three", "label": "Sidebar point 3", "default": "Premium trust signals around the buying area" },
-    { "type": "text", "id": "sidebar_point_four", "label": "Sidebar point 4", "default": "Cart handoff stays inside Shopify" },
+    { "type": "text", "id": "mobile_starter_pack_label", "label": "Mobile starter pack label", "default": "Customize Apparel" },
+    { "type": "text", "id": "mobile_apparel_label", "label": "Mobile apparel label", "default": "Custom Apparel" },
+    { "type": "text", "id": "sidebar_heading", "label": "Sidebar heading", "default": "Trusted custom DTF printing for brands and creators" },
+    { "type": "text", "id": "sidebar_point_one", "label": "Sidebar point 1", "default": "Upload print-ready transfers in PNG, PDF, or high-resolution artwork formats" },
+    { "type": "text", "id": "sidebar_point_two", "label": "Sidebar point 2", "default": "Customize placement for front, back, sleeve, and neck label print areas" },
+    { "type": "text", "id": "sidebar_point_three", "label": "Sidebar point 3", "default": "Full-color DTF prints with soft hand feel and durable wash performance" },
+    { "type": "text", "id": "sidebar_point_four", "label": "Sidebar point 4", "default": "Design preview and artwork metadata stay attached to your Shopify order" },
     {
       "type": "select",
       "id": "default_mode",

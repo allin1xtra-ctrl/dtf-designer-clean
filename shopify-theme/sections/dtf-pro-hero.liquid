@@ -1,9 +1,9 @@
 {% liquid
-  assign apparel_url = section.settings.custom_drip_url | default: '/collections/custom-drip'
-  assign transfer_url = section.settings.custom_transfers_url | default: '/products/custom-transfers'
-  assign premade_transfer_url = section.settings.premade_transfers_url | default: '/products/pre-made-transfers'
-  assign gang_sheet_url = section.settings.gang_sheets_url | default: '/products/gang-sheets'
-  assign starter_pack_url = section.settings.starter_packs_url | default: '/products/starter-packs'
+  assign apparel_url = section.settings.custom_drip_url | default: '/collections/custom-apparel'
+  assign transfer_url = section.settings.custom_transfers_url | default: '/collections/dtf-transfers-by-size'
+  assign premade_transfer_url = section.settings.premade_transfers_url | default: '/collections/dtf-transfers-by-size'
+  assign gang_sheet_url = section.settings.gang_sheets_url | default: '/products/dtf-gang-sheet-builder-build-your-own-sheet'
+  assign starter_pack_url = section.settings.starter_packs_url | default: '/pages/customizer'
   assign transfer_joiner = '?'
   if transfer_url contains '?'
     assign transfer_joiner = '&'
@@ -177,24 +177,24 @@
 
       <div class="dtf-order-rail">
         <a href="{{ customize_url }}" class="dtf-order-card">
-          <span class="dtf-order-title">Custom Drip</span>
-          <small>Browse your apparel collection</small>
+          <span class="dtf-order-title">Custom apparel</span>
+          <small>Shop custom t-shirts and hoodies</small>
         </a>
         <a href="{{ premade_transfer_url }}" class="dtf-order-card">
-          <span class="dtf-order-title">Pre-made transfers</span>
-          <small>Shop ready-to-press transfer designs</small>
+          <span class="dtf-order-title">DTF transfers</span>
+          <small>Order print-ready transfer sizes fast</small>
         </a>
         <a href="{{ transfer_url }}" class="dtf-order-card">
-          <span class="dtf-order-title">Custom transfers</span>
-          <small>Open the live custom designer product</small>
+          <span class="dtf-order-title">Upload DTF artwork</span>
+          <small>Start a no-minimum custom transfer order</small>
         </a>
         <a href="{{ gang_sheet_url }}" class="dtf-order-card">
-          <span class="dtf-order-title">Gang sheets</span>
-          <small>Start a sheet-based order flow</small>
+          <span class="dtf-order-title">DTF gang sheets</span>
+          <small>Build your own gang sheet online</small>
         </a>
         <a href="{{ starter_pack_url }}" class="dtf-order-card">
-          <span class="dtf-order-title">Starter packs</span>
-          <small>Guide new customers into an easy first buy</small>
+          <span class="dtf-order-title">Customize &amp; upload design</span>
+          <small>Launch the DTF Designer Pro workflow</small>
         </a>
       </div>
     </div>
@@ -206,25 +206,25 @@
   "name": "DTF Pro hero",
   "settings": [
     { "type": "text", "id": "kicker", "label": "Kicker", "default": "YOUR FAVORITE DTF PLUG" },
-    { "type": "text", "id": "heading", "label": "Heading", "default": "Shop Custom Drip, Custom Transfers, Gang Sheets, and Starter Packs from one premium storefront" },
-    { "type": "richtext", "id": "text", "label": "Text", "default": "<p>Give Flora a polished custom-print experience with clean entry points for apparel, transfers, gang sheets, and starter packs.</p>" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Custom DTF Transfers Made Easy" },
+    { "type": "richtext", "id": "text", "label": "Text", "default": "<p>Upload your artwork, build gang sheets, customize apparel, and get vibrant ready-to-press transfers with no minimums and fast turnaround.</p>" },
     { "type": "url", "id": "custom_drip_url", "label": "Custom Drip collection URL" },
     { "type": "url", "id": "custom_transfers_url", "label": "Custom Transfers designer product URL" },
     { "type": "url", "id": "premade_transfers_url", "label": "Pre-made Transfers product URL" },
     { "type": "url", "id": "gang_sheets_url", "label": "Gang Sheets product URL" },
     { "type": "url", "id": "starter_packs_url", "label": "Starter Packs product URL" },
-    { "type": "text", "id": "customize_label", "label": "Customize button label", "default": "Shop Custom Drip" },
-    { "type": "text", "id": "upload_label", "label": "Upload button label", "default": "Shop Custom Transfers" },
+    { "type": "text", "id": "customize_label", "label": "Customize button label", "default": "Customize Apparel" },
+    { "type": "text", "id": "upload_label", "label": "Upload button label", "default": "Order DTF Transfers" },
     { "type": "image_picker", "id": "hero_image", "label": "Hero image" },
-    { "type": "text", "id": "stat_one_value", "label": "Stat 1 value", "default": "24–48 hr" },
-    { "type": "text", "id": "stat_one_label", "label": "Stat 1 label", "default": "Typical production" },
-    { "type": "text", "id": "stat_two_value", "label": "Stat 2 value", "default": "No setup" },
-    { "type": "text", "id": "stat_two_label", "label": "Stat 2 label", "default": "Easy custom ordering" },
-    { "type": "text", "id": "stat_three_value", "label": "Stat 3 value", "default": "Live preview" },
-    { "type": "text", "id": "stat_three_label", "label": "Stat 3 label", "default": "Designer-first experience" },
-    { "type": "text", "id": "point_one", "label": "Point 1", "default": "Bold color and retail-ready detail" },
-    { "type": "text", "id": "point_two", "label": "Point 2", "default": "Original storefront flow built for conversions" },
-    { "type": "text", "id": "point_three", "label": "Point 3", "default": "Cart-ready orders sent straight into Shopify" },
+    { "type": "text", "id": "stat_one_value", "label": "Stat 1 value", "default": "No minimums" },
+    { "type": "text", "id": "stat_one_label", "label": "Stat 1 label", "default": "Order any quantity" },
+    { "type": "text", "id": "stat_two_value", "label": "Stat 2 value", "default": "Fast turnaround" },
+    { "type": "text", "id": "stat_two_label", "label": "Stat 2 label", "default": "Production starts quickly" },
+    { "type": "text", "id": "stat_three_value", "label": "Stat 3 value", "default": "Vibrant color" },
+    { "type": "text", "id": "stat_three_label", "label": "Stat 3 label", "default": "Premium ready-to-press quality" },
+    { "type": "text", "id": "point_one", "label": "Point 1", "default": "Custom DTF transfers and gang sheets for every order size" },
+    { "type": "text", "id": "point_two", "label": "Point 2", "default": "Custom t-shirts and hoodies with full-color artwork upload" },
+    { "type": "text", "id": "point_three", "label": "Point 3", "default": "Simple online design flow with secure Shopify checkout" },
     { "type": "range", "id": "overlay_opacity", "label": "Overlay opacity", "min": 0, "max": 70, "step": 5, "default": 20, "unit": "%" }
   ],
   "presets": [

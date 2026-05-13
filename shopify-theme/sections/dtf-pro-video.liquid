@@ -1,5 +1,5 @@
 {% liquid
-  assign cta_url = section.settings.cta_url | default: '/collections/custom-drip'
+  assign cta_url = section.settings.cta_url | default: '/collections/custom-apparel'
 %}
 
 <style>
@@ -61,11 +61,11 @@
   "settings": [
     { "type": "text", "id": "kicker", "label": "Kicker", "default": "WATCH THE PROCESS" },
     { "type": "text", "id": "heading", "label": "Heading", "default": "Upload a promo video directly into your Shopify theme" },
-    { "type": "textarea", "id": "subtext", "label": "Subtext", "default": "Use this Flora-friendly section for a brand video, gang sheet demo, transfer tutorial, or starter pack showcase." },
+    { "type": "textarea", "id": "subtext", "label": "Subtext", "default": "Use this section for a brand video, gang sheet demo, transfer tutorial, or custom apparel showcase." },
     { "type": "video", "id": "shop_video", "label": "Upload video" },
     { "type": "checkbox", "id": "enable_loop", "label": "Loop video", "default": false },
     { "type": "text", "id": "point_one", "label": "Point 1", "default": "Show print quality and close-up details" },
-    { "type": "text", "id": "point_two", "label": "Point 2", "default": "Highlight gang sheets and starter pack offers" },
+    { "type": "text", "id": "point_two", "label": "Point 2", "default": "Highlight gang sheets, transfer sizing, and apparel options" },
     { "type": "text", "id": "point_three", "label": "Point 3", "default": "Keep shoppers engaged longer on the page" },
     { "type": "url", "id": "cta_url", "label": "Button link" },
     { "type": "text", "id": "cta_label", "label": "Button label", "default": "Shop now" }

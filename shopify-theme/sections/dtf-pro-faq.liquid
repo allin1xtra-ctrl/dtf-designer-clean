@@ -1,5 +1,5 @@
 {% liquid
-  assign product_url = section.settings.product_url | default: '/products/custom-dtf-designer'
+  assign product_url = section.settings.product_url | default: '/pages/customizer'
 %}
 
 <style>
@@ -63,23 +63,69 @@
   </div>
 </section>
 
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {% if section.blocks.size > 0 %}
+      {% for block in section.blocks %}
+        {
+          "@type": "Question",
+          "name": {{ block.settings.question | strip_html | json }},
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": {{ block.settings.answer | strip_html | json }}
+          }
+        }{% unless forloop.last %},{% endunless %}
+      {% endfor %}
+    {% else %}
+      {
+        "@type": "Question",
+        "name": "Can customers upload their own artwork?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. The flow supports upload-first ordering as well as live customization on product pages."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does checkout stay on Shopify?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Orders are added to the Shopify cart so payment happens inside your normal storefront checkout."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can this work for more than shirts?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. The designer supports multiple product templates, colors, sizes, and option combinations."
+        }
+      }
+    {% endif %}
+  ]
+}
+</script>
+
 {% schema %}
 {
   "name": "DTF Pro FAQ",
   "settings": [
     { "type": "text", "id": "kicker", "label": "Kicker", "default": "FREQUENTLY ASKED QUESTIONS" },
-    { "type": "text", "id": "heading", "label": "Heading", "default": "Handle the final questions before customers place their order" },
-    { "type": "textarea", "id": "subtext", "label": "Subtext", "default": "Answer common questions about your Custom Drip collection, transfers, gang sheets, and starter packs right inside the Flora storefront." },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "FAQ: Custom DTF Transfers, Gang Sheets, and Apparel Printing" },
+    { "type": "textarea", "id": "subtext", "label": "Subtext", "default": "Answer top buyer questions about artwork requirements, turnaround, pressing, and ordering before checkout." },
     { "type": "url", "id": "product_url", "label": "Designer product URL" },
-    { "type": "text", "id": "cta_label", "label": "CTA button label", "default": "Shop custom orders" }
+    { "type": "text", "id": "cta_label", "label": "CTA button label", "default": "Customize Now" }
   ],
   "blocks": [
     {
       "type": "faq",
       "name": "FAQ item",
       "settings": [
-        { "type": "text", "id": "question", "label": "Question", "default": "How do I place a custom order?" },
-        { "type": "textarea", "id": "answer", "label": "Answer", "default": "Open the designer, upload your artwork or customize the product, then add it to your Shopify cart." }
+        { "type": "text", "id": "question", "label": "Question", "default": "How do I place a custom DTF order?" },
+        { "type": "textarea", "id": "answer", "label": "Answer", "default": "Choose your product, upload print-ready artwork, customize size and placement, then add the order to your Shopify cart." }
       ]
     }
   ],
