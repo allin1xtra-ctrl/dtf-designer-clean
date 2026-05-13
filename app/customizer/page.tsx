@@ -99,6 +99,7 @@ type ProductByHandleResponse = {
 type ProductByHandleApiResponse = ProductByHandleResponse & {
   error?: string;
 };
+type ProductVariant = NonNullable<ProductByHandleResponse["variants"]>[number];
 
 type AiActionResponse = {
   ok?: boolean;
@@ -118,7 +119,8 @@ const SOFT_WHITE_THRESHOLD = 225;
 const TRANSFER_SIZE_PRESETS = ["3x3", "4x5", "8x8", "10x10", "12x12", "12x16", "14x16", "16x20"];
 const BLANK_MOCKUP_SVG_WIDTH = 1000;
 const BLANK_MOCKUP_SVG_HEIGHT = 1200;
-const BLANK_MOCKUP_FRAME = { x: 160, y: 120, width: 680, height: 960, radius: 24 };
+const BLANK_MOCKUP_FRAME = { x: 120, y: 70, width: 760, height: 1060, radius: 24 };
+const MOCKUP_FIT_RATIO = 0.9;
 const VIEW_LOCATION_KEYS: Record<ViewName, string[]> = {
   front: ["front"],
   back: ["back"],
@@ -133,6 +135,12 @@ const SIZE_OPTION_NAMES = ["size"];
 const PRODUCT_BLANK_MOCKUPS: Record<string, Partial<Record<ViewName, string>>> = {
   // Example:
   // "custom-hoodie": { front: "/mockups/hoodie-front-blank.png" },
+};
+const PRODUCT_PRINT_LOCATION_OVERRIDES: Record<string, Partial<Record<string, Partial<PrintLocationData>>>> = {
+  "custom-t-shirt-upload-customize": {
+    front: { x: 33, y: 24, width: 34, height: 44 },
+    back: { x: 31, y: 22, width: 38, height: 48 },
+  },
 };
 
 function escapeSvgText(value: string) {
@@ -159,7 +167,7 @@ function normalizeOptionLabel(value: string) {
 }
 
 function getVariantSelectedOptionValue(
-  variant: ProductByHandleResponse["variants"] extends Array<infer Variant> ? Variant : never,
+  variant: ProductVariant | null | undefined,
   optionNames: string[]
 ) {
   const normalizedOptionNames = optionNames.map(normalizeOptionLabel);
@@ -171,22 +179,20 @@ function getVariantSelectedOptionValue(
 }
 
 function getVariantColor(
-  variant: ProductByHandleResponse["variants"] extends Array<infer Variant> ? Variant : never
+  variant: ProductVariant | null | undefined
 ) {
   return getVariantSelectedOptionValue(variant, COLOR_OPTION_NAMES);
 }
 
 function getVariantSize(
-  variant: ProductByHandleResponse["variants"] extends Array<infer Variant> ? Variant : never
+  variant: ProductVariant | null | undefined
 ) {
   return getVariantSelectedOptionValue(variant, SIZE_OPTION_NAMES);
 }
 
 function getUniqueVariantOptionValues(
   variants: NonNullable<ProductByHandleResponse["variants"]>,
-  getValue: (
-    variant: ProductByHandleResponse["variants"] extends Array<infer Variant> ? Variant : never
-  ) => string
+  getValue: (variant: ProductVariant) => string
 ) {
   const seen = new Set<string>();
   const values: string[] = [];
@@ -231,6 +237,27 @@ function findMatchingVariant(
       return true;
     }) || null
   );
+}
+
+function getMockupRenderDimensions(naturalWidth: number, naturalHeight: number, fitRatio = MOCKUP_FIT_RATIO) {
+  const canvasWidth = CANVAS_DEFAULT_WIDTH;
+  const canvasHeight = CANVAS_DEFAULT_HEIGHT;
+  const imgWidth = naturalWidth || 1;
+  const imgHeight = naturalHeight || 1;
+  const maxWidth = canvasWidth * fitRatio;
+  const maxHeight = canvasHeight * fitRatio;
+  const scale = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
+
+  return {
+    canvasWidth,
+    canvasHeight,
+    imgWidth,
+    imgHeight,
+    fitRatio,
+    scale,
+    renderedWidth: imgWidth * scale,
+    renderedHeight: imgHeight * scale,
+  };
 }
 
 const GENERIC_BLANK_MOCKUPS: Record<ViewName, string> = {
@@ -329,38 +356,43 @@ function getSmallPrintAreaLabel(view: ViewName) {
 }
 
 function getMockupImageClassName(view: ViewName) {
-  if (view === "neck") return "absolute inset-0 z-0 h-full w-full object-contain scale-125 transition-transform";
-  if (view === "leftSleeve" || view === "rightSleeve") return "absolute inset-0 z-0 h-full w-full object-contain scale-110 transition-transform";
-  return "absolute inset-0 z-0 h-full w-full object-contain";
+  if (view === "neck") return "absolute z-0 object-contain transition-all duration-200";
+  if (view === "leftSleeve" || view === "rightSleeve") return "absolute z-0 object-contain transition-all duration-200";
+  return "absolute z-0 object-contain transition-all duration-200";
 }
 
 function getPreviewStageClassName(view: ViewName) {
-  const base = "relative overflow-hidden rounded border border-[#333] bg-white shadow-2xl max-w-full";
+  const base = "relative overflow-hidden rounded border border-[#333] bg-white shadow-2xl";
   if (view === "leftSleeve" || view === "rightSleeve" || view === "neck") {
-    return `${base} origin-top scale-95 sm:scale-100`;
+    return `${base} origin-top`;
   }
   return base;
 }
 
 function getPrintLocationDataForView(
   printLocations: PrintLocationsMap,
-  view: ViewName
+  view: ViewName,
+  productHandle: string
 ): { activeLocation: string; activeLocationData: PrintLocationData } {
   const keys = VIEW_LOCATION_KEYS[view];
+  const normalizedHandle = productHandle.trim().toLowerCase();
+  const handleOverrides = normalizedHandle ? PRODUCT_PRINT_LOCATION_OVERRIDES[normalizedHandle] : undefined;
 
   for (const key of keys) {
     const location = printLocations[key];
     if (location && typeof location === "object") {
+      const override = handleOverrides?.[key];
       return {
         activeLocation: key,
-        activeLocationData: location,
+        activeLocationData: override ? { ...location, ...override } : location,
       };
     }
   }
 
+  const fallbackKey = keys[0] || view;
   return {
-    activeLocation: keys[0] || view,
-    activeLocationData: {},
+    activeLocation: fallbackKey,
+    activeLocationData: handleOverrides?.[fallbackKey] ? { ...handleOverrides[fallbackKey] } : {},
   };
 }
 
@@ -443,6 +475,7 @@ export default function CustomizerPage() {
   const canvasElRef = useRef<HTMLCanvasElement | null>(null);
   const fabricCanvasRef = useRef<Canvas | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const previewPaneRef = useRef<HTMLDivElement | null>(null);
 
   const [currentView, setCurrentView] = useState<ViewName>("front");
   const [isReady, setIsReady] = useState(false);
@@ -466,6 +499,8 @@ export default function CustomizerPage() {
   const [aiStatus, setAiStatus] = useState("");
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [designIdeaPrompt, setDesignIdeaPrompt] = useState("");
+  const [previewScale, setPreviewScale] = useState(1);
+  const [mockupNaturalSize, setMockupNaturalSize] = useState({ width: 0, height: 0 });
   const [textControls, setTextControls] = useState<TextControlsState>(DEFAULT_TEXT_CONTROLS);
   const designAreaRef = useRef<PrintArea>(DEFAULT_DESIGN_AREA);
   const shouldDebugAiLogRef = useRef(false);
@@ -1140,7 +1175,7 @@ export default function CustomizerPage() {
       setVariantId(nextVariantId);
     }
 
-    const matchedSize = getVariantSize(matchedVariant || undefined);
+    const matchedSize = getVariantSize(matchedVariant);
     if (matchedSize) {
       setSelectedSize(matchedSize);
     }
@@ -1162,19 +1197,20 @@ export default function CustomizerPage() {
       setVariantId(nextVariantId);
     }
 
-    const matchedColor = getVariantColor(matchedVariant || undefined);
+    const matchedColor = getVariantColor(matchedVariant);
     if (matchedColor) {
       setSelectedColor(matchedColor);
     }
   };
 
-  const locationInfo = getPrintLocationDataForView(printLocations, currentView);
+  const locationInfo = getPrintLocationDataForView(printLocations, currentView, productHandle);
   const { activeLocation, activeLocationData } = locationInfo;
   const mockupUrl =
     resolveColorMockupUrl(activeLocationData?.colorMockups, selectedColor) ||
     activeLocationData?.mockupUrl;
   const resolvedMockupUrl = resolveMockupUrl(mockupUrl, currentView, productHandle);
   const designArea = normalizeDesignArea(activeLocationData);
+  const mockupRender = getMockupRenderDimensions(mockupNaturalSize.width, mockupNaturalSize.height);
   const maxPrintWidth = normalizePrintLimit(activeLocationData?.maxPrintWidth);
   const maxPrintHeight = normalizePrintLimit(activeLocationData?.maxPrintHeight);
   const availableViews = getAvailableViews(printLocations);
@@ -1216,6 +1252,57 @@ export default function CustomizerPage() {
       resolvedMockupUrl,
     });
   }, [activeLocation, resolvedMockupUrl, selectedColor, variantId]);
+
+  useEffect(() => {
+    if (!previewPaneRef.current || typeof ResizeObserver === "undefined") return;
+
+    const updateScale = () => {
+      const rect = previewPaneRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const nextScale = Math.min(
+        1,
+        Math.max((rect.width - 8) / CANVAS_DEFAULT_WIDTH, 0.01),
+        Math.max((rect.height - 8) / CANVAS_DEFAULT_HEIGHT, 0.01)
+      );
+      setPreviewScale((prev) => (Math.abs(prev - nextScale) < 0.001 ? prev : nextScale));
+    };
+
+    updateScale();
+    const observer = new ResizeObserver(() => updateScale());
+    observer.observe(previewPaneRef.current);
+    window.addEventListener("resize", updateScale);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateScale);
+    };
+  }, []);
+
+  useEffect(() => {
+    setMockupNaturalSize({ width: 0, height: 0 });
+  }, [resolvedMockupUrl]);
+
+  useEffect(() => {
+    console.log("[DTF MOCKUP FIT]", {
+      activePrintLocation: activeLocation,
+      mockupNaturalWidth: mockupRender.imgWidth,
+      mockupNaturalHeight: mockupRender.imgHeight,
+      renderedMockupWidth: Number(mockupRender.renderedWidth.toFixed(2)),
+      renderedMockupHeight: Number(mockupRender.renderedHeight.toFixed(2)),
+      resolvedDesignArea: designArea,
+      canvasWidth: Number((CANVAS_DEFAULT_WIDTH * previewScale).toFixed(2)),
+      canvasHeight: Number((CANVAS_DEFAULT_HEIGHT * previewScale).toFixed(2)),
+    });
+  }, [
+    activeLocation,
+    designArea,
+    mockupRender.imgHeight,
+    mockupRender.imgWidth,
+    mockupRender.renderedHeight,
+    mockupRender.renderedWidth,
+    previewScale,
+  ]);
 
   useEffect(() => {
     if (!shouldDebugAiLogRef.current) return;
@@ -1806,12 +1893,43 @@ export default function CustomizerPage() {
           </div>
         ) : null}
 
-        <div className="flex flex-1 items-start justify-center bg-[#181818] p-2 sm:p-4">
-          <div className={getPreviewStageClassName(currentView)} style={{ width: `${CANVAS_DEFAULT_WIDTH}px`, height: `${CANVAS_DEFAULT_HEIGHT}px` }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={resolvedMockupUrl} alt={`${VIEW_LABELS[currentView]} mockup`} className={getMockupImageClassName(currentView)} />
-            <div className="pointer-events-none absolute z-20 border border-dashed border-cyan-400" style={{ left: `${designArea.x}%`, top: `${designArea.y}%`, width: `${designArea.width}%`, height: `${designArea.height}%` }} />
-            <canvas ref={canvasElRef} className="relative z-10" />
+        <div ref={previewPaneRef} className="flex flex-1 items-center justify-center bg-[#181818] p-1 sm:p-3">
+          <div style={{ width: `${CANVAS_DEFAULT_WIDTH * previewScale}px`, height: `${CANVAS_DEFAULT_HEIGHT * previewScale}px` }}>
+            <div
+              className={getPreviewStageClassName(currentView)}
+              style={{
+                width: `${CANVAS_DEFAULT_WIDTH}px`,
+                height: `${CANVAS_DEFAULT_HEIGHT}px`,
+                transform: `scale(${previewScale})`,
+                transformOrigin: "top left",
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={resolvedMockupUrl}
+                alt={`${VIEW_LABELS[currentView]} mockup`}
+                className={getMockupImageClassName(currentView)}
+                style={{
+                  width: `${mockupRender.renderedWidth}px`,
+                  height: `${mockupRender.renderedHeight}px`,
+                  left: "50%",
+                  top: "50%",
+                  transform: "translate(-50%, -50%)",
+                }}
+                onLoad={(event) => {
+                  const image = event.currentTarget;
+                  const naturalWidth = image.naturalWidth || 0;
+                  const naturalHeight = image.naturalHeight || 0;
+                  setMockupNaturalSize((prev) =>
+                    prev.width === naturalWidth && prev.height === naturalHeight
+                      ? prev
+                      : { width: naturalWidth, height: naturalHeight }
+                  );
+                }}
+              />
+              <div className="pointer-events-none absolute z-20 border border-dashed border-cyan-400" style={{ left: `${designArea.x}%`, top: `${designArea.y}%`, width: `${designArea.width}%`, height: `${designArea.height}%` }} />
+              <canvas ref={canvasElRef} className="relative z-10" />
+            </div>
           </div>
         </div>
       </main>
