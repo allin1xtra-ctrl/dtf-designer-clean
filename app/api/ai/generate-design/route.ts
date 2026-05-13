@@ -171,8 +171,8 @@ export async function POST(request: Request) {
         openaiMessage: primaryError.message,
       });
 
-      if (shouldRetryWithFallback(usedModel, fallbackModel, primaryError)) {
-        usedModel = fallbackModel as string;
+      if (fallbackModel && shouldRetryWithFallback(usedModel, fallbackModel, primaryError)) {
+        usedModel = fallbackModel;
 
         try {
           const fallbackGenerated = await generateImage(openai, usedModel, prompt);
