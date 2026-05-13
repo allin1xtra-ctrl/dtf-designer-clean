@@ -3,23 +3,44 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ shop.name }}</title>
-  <meta name="description" content="{{ shop.description | escape }}">
-  <meta property="og:title" content="{{ shop.name }}">
-  <meta property="og:description" content="{{ shop.description | escape }}">
-  <meta property="og:image" content="{{ shop.logo | image_url }}">
-
+  <title>{% if page_title %}{{ page_title | escape }}{% else %}{{ shop.name | escape }}{% endif %}</title>
+  <meta name="description" content="{% if page_description %}{{ page_description | escape }}{% else %}Your Favorite DTF Plug offers premium custom DTF transfers, gang sheets, and custom apparel printing with no minimums, vibrant color, easy artwork upload, and fast turnaround.{% endif %}">
+  <link rel="canonical" href="{{ canonical_url }}">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{% if page_title %}{{ page_title | escape }}{% else %}{{ shop.name | escape }}{% endif %}">
+  <meta property="og:description" content="{% if page_description %}{{ page_description | escape }}{% else %}Your Favorite DTF Plug offers premium custom DTF transfers, gang sheets, and custom apparel printing with no minimums, vibrant color, easy artwork upload, and fast turnaround.{% endif %}">
+  <meta property="og:url" content="{{ canonical_url }}">
+  <meta property="og:site_name" content="{{ shop.name | escape }}">
+  <meta property="og:image" content="{% if page_image %}{{ page_image | image_url: width: 1200 }}{% elsif shop.brand.logo %}{{ shop.brand.logo | image_url: width: 1200 }}{% else %}{{ shop.logo | image_url }}{% endif %}">
   <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{% if page_title %}{{ page_title | escape }}{% else %}{{ shop.name | escape }}{% endif %}">
+  <meta name="twitter:description" content="{% if page_description %}{{ page_description | escape }}{% else %}Your Favorite DTF Plug offers premium custom DTF transfers, gang sheets, and custom apparel printing with no minimums, vibrant color, easy artwork upload, and fast turnaround.{% endif %}">
+  <meta name="twitter:image" content="{% if page_image %}{{ page_image | image_url: width: 1200 }}{% elsif shop.brand.logo %}{{ shop.brand.logo | image_url: width: 1200 }}{% else %}{{ shop.logo | image_url }}{% endif %}">
   <link rel="icon" type="image/png" href="{{ 'favicon.png' | asset_url }}">
   {{ content_for_header }}
   <link rel="stylesheet" href="{{ 'theme.css' | asset_url }}">
-
-  <!-- SEO & Social Meta Tags -->
-  <meta name="description" content="{% if page_description %}{{ page_description | escape }}{% else %}Your Favorite DTF Plug offers premium custom DTF transfers, gang sheets, and print-ready apparel designs with fast turnaround, vibrant color, and professional-quality results.{% endif %}">
-  <meta property="og:description" content="{% if page_description %}{{ page_description | escape }}{% else %}Your Favorite DTF Plug offers premium custom DTF transfers, gang sheets, and print-ready apparel designs with fast turnaround, vibrant color, and professional-quality results.{% endif %}">
-  <meta property="og:title" content="{% if page_title %}{{ page_title }} · {% endif %}{{ shop.name }}">
-  <meta property="og:type" content="website">
-  <link rel="canonical" href="{{ canonical_url }}">
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": {{ shop.name | json }},
+      "url": {{ shop.url | json }},
+      "logo": {{ shop.brand.logo | image_url: width: 600 | json }}
+    }
+  </script>
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": {{ shop.name | json }},
+      "url": {{ shop.url | json }},
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {{ shop.url | append: "/search?q={search_term_string}" | json }},
+        "query-input": "required name=search_term_string"
+      }
+    }
+  </script>
 
 </head>
 
@@ -36,7 +57,10 @@
       <a href="/" style="font-size:1.5rem;font-weight:900;color:#00fff7;text-decoration:none;">{{ shop.name }}</a>
       <nav class="site-nav" aria-label="Main navigation">
         <a href="/" aria-label="Go to homepage" style="color:#fff;margin-right:2rem;">Home</a>
-        <a href="/collections/all" aria-label="Browse all products" style="color:#fff;margin-right:2rem;">Shop</a>
+        <a href="/pages/customizer" aria-label="Open the customizer page" style="color:#fff;margin-right:2rem;">Customize</a>
+        <a href="/products/dtf-gang-sheet-builder-build-your-own-sheet" aria-label="Shop gang sheets" style="color:#fff;margin-right:2rem;">Gang Sheets</a>
+        <a href="/collections/dtf-transfers-by-size" aria-label="Shop DTF transfers" style="color:#fff;margin-right:2rem;">DTF Transfers</a>
+        <a href="/collections/custom-apparel" aria-label="Shop custom apparel" style="color:#fff;margin-right:2rem;">Apparel</a>
         <a href="/pages/contact" aria-label="Contact us" style="color:#fff;margin-right:2rem;">Contact</a>
         <a class="nav-pill" href="/cart" aria-label="View your shopping cart" style="color:#fff;">Cart</a>
       </nav>
@@ -51,6 +75,20 @@
   <main id="main-content">
     {{ content_for_layout }}
   </main>
+
+  <footer style="border-top:1px solid #2a2a2a;background:#121212;color:#d1d5db;padding:1.2rem 0;">
+    <div style="max-width:1200px;margin:0 auto;display:flex;flex-wrap:wrap;gap:0.8rem 1.4rem;align-items:center;justify-content:space-between;">
+      <span>{{ shop.name }}</span>
+      <nav aria-label="Footer navigation">
+        <a href="/collections/all" style="color:#fff;margin-right:1rem;">Shop</a>
+        <a href="/pages/contact" style="color:#fff;margin-right:1rem;">Contact</a>
+        <a href="/policies/shipping-policy" style="color:#fff;margin-right:1rem;">Shipping</a>
+        <a href="/policies/refund-policy" style="color:#fff;margin-right:1rem;">Refunds</a>
+        <a href="/policies/privacy-policy" style="color:#fff;margin-right:1rem;">Privacy</a>
+        <a href="/policies/terms-of-service" style="color:#fff;">Terms</a>
+      </nav>
+    </div>
+  </footer>
 
 
   <!-- DTF Designer Pro postMessage cart receiver + Cart Drawer Notification -->
@@ -83,48 +121,6 @@
       });
     });
   </script>
-
-  <!-- Google Analytics (replace with your GA ID) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=UA-XXXXXXX-X"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'UA-XXXXXXX-X');
-  </script>
-
-  <!-- Facebook Pixel (replace with your Pixel ID) -->
-  <script>
-    !function(f,b,e,v,n,t,s)
-    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-    n.queue=[];t=b.createElement(e);t.async=!0;
-    t.src=v;s=b.getElementsByTagName(e)[0];
-    s.parentNode.insertBefore(t,s)}(window, document,'script',
-    'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', 'XXXXXXXXXXXXXXX');
-    fbq('track', 'PageView');
-  </script>
-  <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=XXXXXXXXXXXXXXX&ev=PageView&noscript=1"/></noscript>
-
-  <!-- Hotjar Tracking Code (replace with your Hotjar ID) -->
-  <script>
-    (function(h,o,t,j,a,r){
-        h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
-        h._hjSettings={hjid:1234567,hjsv:6};
-        a=o.getElementsByTagName('head')[0];
-        r=o.createElement('script');r.async=1;
-        r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
-        a.appendChild(r);
-    })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
-  </script>
-
-  <!-- Klaviyo Signup Forms (replace with your public API key) -->
-  <script async type="text/javascript" src="https://static.klaviyo.com/onsite/js/klaviyo.js?company_id=YOUR_KLAVIYO_PUBLIC_KEY"></script>
-
-  <!-- Tidio Live Chat Widget (example, replace with your Tidio public key) -->
-  <script src="//code.tidio.co/yourtidioid.js" async></script>
 
   {{ content_for_footer }}
 

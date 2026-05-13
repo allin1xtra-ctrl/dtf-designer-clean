@@ -46,7 +46,7 @@ export default function CustomProductMain() {
           <div className="w-full aspect-square bg-[#181818] rounded-lg overflow-hidden flex items-center justify-center relative group cursor-zoom-in">
             <img
               src={images[selectedImage]}
-              alt="Product"
+              alt="Custom apparel product mockup with DTF print placement"
               className="object-contain w-full h-full transition-transform duration-200 group-hover:scale-105"
               onClick={() => window.open(images[selectedImage], "_blank")}
             />
@@ -58,7 +58,7 @@ export default function CustomProductMain() {
                 className={`w-16 h-16 rounded border-2 ${selectedImage === i ? "border-cyan-400" : "border-[#222]"}`}
                 onClick={() => setSelectedImage(i)}
               >
-                <img src={img} alt="Thumb" className="object-cover w-full h-full rounded" />
+                <img src={img} alt="Custom DTF product thumbnail preview" className="object-cover w-full h-full rounded" />
               </button>
             ))}
           </div>

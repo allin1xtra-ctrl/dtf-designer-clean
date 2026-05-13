@@ -1,5 +1,5 @@
 {% liquid
-  assign product_url = section.settings.product_url | default: '/products/custom-dtf-designer'
+  assign product_url = section.settings.product_url | default: '/pages/customizer'
   assign query_joiner = '?'
   if product_url contains '?'
     assign query_joiner = '&'
@@ -91,8 +91,8 @@
   "name": "DTF Pro benefits",
   "settings": [
     { "type": "text", "id": "kicker", "label": "Kicker", "default": "WHY SHOP WITH YOUR FAVORITE DTF PLUG" },
-    { "type": "text", "id": "heading", "label": "Heading", "default": "A Flora-ready storefront built for custom print sales" },
-    { "type": "textarea", "id": "subtext", "label": "Subtext", "default": "Use these cards to sell speed, quality, and simplicity across Custom Drip, Custom Transfers, Gang Sheets, and Starter Packs." },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Premium custom DTF printing built for conversion" },
+    { "type": "textarea", "id": "subtext", "label": "Subtext", "default": "Showcase speed, quality, and easy ordering across custom DTF transfers, gang sheets, and custom apparel." },
     { "type": "url", "id": "product_url", "label": "Designer product URL" },
     { "type": "text", "id": "cta_heading", "label": "CTA heading", "default": "Ready to place a custom order?" },
     { "type": "text", "id": "cta_text", "label": "CTA text", "default": "Launch the designer and send your job straight to checkout." },

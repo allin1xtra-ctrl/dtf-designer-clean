@@ -1,9 +1,9 @@
 {% liquid
-  assign apparel_url = section.settings.custom_drip_url | default: '/collections/custom-drip'
-  assign transfer_url = section.settings.custom_transfers_url | default: '/products/custom-transfers'
-  assign premade_transfer_url = section.settings.premade_transfers_url | default: '/products/pre-made-transfers'
-  assign gang_sheet_url = section.settings.gang_sheets_url | default: '/products/gang-sheets'
-  assign starter_pack_url = section.settings.starter_packs_url | default: '/products/starter-packs'
+  assign apparel_url = section.settings.custom_drip_url | default: '/collections/custom-apparel'
+  assign transfer_url = section.settings.custom_transfers_url | default: '/collections/dtf-transfers-by-size'
+  assign premade_transfer_url = section.settings.premade_transfers_url | default: '/collections/dtf-transfers-by-size'
+  assign gang_sheet_url = section.settings.gang_sheets_url | default: '/products/dtf-gang-sheet-builder-build-your-own-sheet'
+  assign starter_pack_url = section.settings.starter_packs_url | default: '/pages/customizer'
   assign transfer_joiner = '?'
   if transfer_url contains '?'
     assign transfer_joiner = '&'
@@ -260,19 +260,19 @@
         <a href="{{ apparel_url }}" class="dtf-launch-card">
           {% if section.settings.custom_drip_image != blank %}
             <div class="dtf-launch-card-media">
-              {{ section.settings.custom_drip_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Custom Drip collection' }}
+              {{ section.settings.custom_drip_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Custom t-shirt and hoodie printing collection with DTF transfers' }}
             </div>
           {% endif %}
-          <strong>Custom Drip collection</strong>
+          <strong>Custom apparel collection</strong>
           <span>Send shoppers into your full apparel collection</span>
         </a>
         <a href="{{ premade_transfer_url }}" class="dtf-launch-card">
           {% if section.settings.premade_transfers_image != blank %}
             <div class="dtf-launch-card-media">
-              {{ section.settings.premade_transfers_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Pre-made transfers' }}
+              {{ section.settings.premade_transfers_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Premium custom DTF transfer sheet with vibrant full color print' }}
             </div>
           {% endif %}
-          <strong>Pre-made transfers</strong>
+          <strong>Print-ready DTF transfers</strong>
           <span>Send shoppers to your ready-to-press designs</span>
         </a>
         <a href="{{ transfer_url }}" class="dtf-launch-card">
@@ -287,29 +287,29 @@
         <a href="{{ gang_sheet_url }}" class="dtf-launch-card dtf-launch-card-highlight">
           {% if section.settings.gang_sheets_image != blank %}
             <div class="dtf-launch-card-media">
-              {{ section.settings.gang_sheets_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Gang sheets' }}
+              {{ section.settings.gang_sheets_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Build your own DTF gang sheet online' }}
             </div>
           {% endif %}
-          <strong>Gang sheets</strong>
+          <strong>DTF gang sheets</strong>
           <span>Start a sheet-based custom order with one click</span>
         </a>
         <a href="{{ starter_pack_url }}" class="dtf-launch-card dtf-launch-card-highlight">
           {% if section.settings.starter_packs_image != blank %}
             <div class="dtf-launch-card-media">
-              {{ section.settings.starter_packs_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Starter packs' }}
+              {{ section.settings.starter_packs_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Custom hoodie DTF print placement mockup' }}
             </div>
           {% endif %}
-          <strong>Starter packs</strong>
+          <strong>Custom hoodie printing</strong>
           <span>Guide new buyers into an easy first order bundle</span>
         </a>
         <a href="{{ upload_url }}" class="dtf-launch-card">
           {% if section.settings.upload_order_image != blank %}
             <div class="dtf-launch-card-media">
-              {{ section.settings.upload_order_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Upload and order' }}
+              {{ section.settings.upload_order_image | image_url: width: 900 | image_tag: loading: 'lazy', alt: 'Custom t-shirt upload and customize DTF printing' }}
             </div>
           {% endif %}
-          <strong>Upload and order</strong>
-          <span>Jump straight into the custom transfers upload flow</span>
+          <strong>Upload artwork online</strong>
+          <span>Jump straight into the custom transfer and apparel design flow</span>
         </a>
       </div>
 
@@ -624,11 +624,11 @@
     { "type": "text", "id": "trust_badge_two", "label": "Trust badge 2", "default": "Live product preview" },
     { "type": "text", "id": "trust_badge_three", "label": "Trust badge 3", "default": "Secure Shopify checkout" },
     { "type": "text", "id": "gang_sheet_label", "label": "Gang sheet button label", "default": "Start gang sheets" },
-    { "type": "text", "id": "starter_pack_label", "label": "Starter pack button label", "default": "Shop starter packs" },
+    { "type": "text", "id": "starter_pack_label", "label": "Starter pack button label", "default": "Customize apparel" },
     { "type": "checkbox", "id": "enable_mobile_sticky_bar", "label": "Enable sticky mobile order bar", "default": true },
     { "type": "text", "id": "mobile_gang_sheet_label", "label": "Mobile gang sheet label", "default": "Gang Sheets" },
-    { "type": "text", "id": "mobile_starter_pack_label", "label": "Mobile starter pack label", "default": "Starter Packs" },
-    { "type": "text", "id": "mobile_apparel_label", "label": "Mobile apparel label", "default": "Custom Drip" },
+    { "type": "text", "id": "mobile_starter_pack_label", "label": "Mobile starter pack label", "default": "Customize Apparel" },
+    { "type": "text", "id": "mobile_apparel_label", "label": "Mobile apparel label", "default": "Custom Apparel" },
     { "type": "text", "id": "sidebar_heading", "label": "Sidebar heading", "default": "Built for high-intent shoppers" },
     { "type": "text", "id": "sidebar_point_one", "label": "Sidebar point 1", "default": "Instant entry into your design or upload flow" },
     { "type": "text", "id": "sidebar_point_two", "label": "Sidebar point 2", "default": "Clear order paths for transfers and apparel" },

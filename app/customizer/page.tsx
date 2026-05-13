@@ -1386,7 +1386,9 @@ export default function CustomizerPage() {
       <aside className="w-[360px] shrink-0 overflow-y-auto border-r border-[#222] bg-[#111] p-5">
         <h1 className="text-xl font-bold">DTF Designer Pro</h1>
         <p className="mt-1 text-sm text-gray-400">
-          Upload artwork, add text, design print areas, and send custom design details to Shopify checkout.
+          Upload artwork, customize DTF transfers and gang sheets, place designs
+          on custom t-shirts and hoodies, then send your order details to
+          Shopify checkout.
         </p>
 
         <div className="mt-5">

@@ -13,9 +13,27 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "DTF Designer Pro | Your Favorite DTF Plug",
+  metadataBase: new URL("https://dtf-designer-clean.vercel.app"),
+  title: {
+    default: "Custom DTF Transfers, Gang Sheets & Custom Apparel | Your Favorite DTF Plug",
+    template: "%s | Your Favorite DTF Plug",
+  },
   description:
-    "Create custom DTF transfers, apparel designs, sleeve prints, neck labels, and live product previews before checkout.",
+    "Order premium custom DTF transfers, gang sheets, custom t-shirts, and hoodies with no minimums, vibrant color, fast turnaround, and easy online artwork upload.",
+  openGraph: {
+    type: "website",
+    title: "Custom DTF Transfers, Gang Sheets & Custom Apparel | Your Favorite DTF Plug",
+    description:
+      "Order premium custom DTF transfers, gang sheets, custom t-shirts, and hoodies with no minimums, vibrant color, fast turnaround, and easy online artwork upload.",
+    url: "https://dtf-designer-clean.vercel.app",
+    siteName: "Your Favorite DTF Plug",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Custom DTF Transfers, Gang Sheets & Custom Apparel | Your Favorite DTF Plug",
+    description:
+      "Order premium custom DTF transfers, gang sheets, custom t-shirts, and hoodies with no minimums, vibrant color, fast turnaround, and easy online artwork upload.",
+  },
 };
 
 export default function RootLayout({
