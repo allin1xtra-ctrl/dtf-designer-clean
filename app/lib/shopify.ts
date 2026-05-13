@@ -9,7 +9,7 @@ export const SHOPIFY_STORE_DOMAIN = cleanDomain(
 );
 
 export function getShopifyCartAddUrl() {
-  return `https://${SHOPIFY_STORE_DOMAIN.replace(/^https?:\/\//, "")}/cart/add`;
+  return `https://${SHOPIFY_STORE_DOMAIN}/cart/add`;
 }
 
 export function normalizeVariantId(variant?: string | null) {
