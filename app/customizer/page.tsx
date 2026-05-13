@@ -1245,6 +1245,7 @@ export default function CustomizerPage() {
   }, [availableViews, currentView]);
 
   useEffect(() => {
+    if (!shouldDebugAiLogRef.current) return;
     console.log("[Customizer] Mockup resolution", {
       selectedVariantId: variantId,
       selectedColor,
@@ -1284,6 +1285,7 @@ export default function CustomizerPage() {
   }, [resolvedMockupUrl]);
 
   useEffect(() => {
+    if (!shouldDebugAiLogRef.current) return;
     console.log("[DTF MOCKUP FIT]", {
       activePrintLocation: activeLocation,
       mockupNaturalWidth: mockupRender.imgWidth,
