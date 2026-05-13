@@ -1,6 +1,10 @@
 "use client";
 import { useState, useEffect } from 'react';
 
+const cleanEnv = (value) => String(value || '').trim();
+const cleanDomain = (value) =>
+  cleanEnv(value).replace(/^https?:\/\//, '').replace(/\/$/, '');
+
 function extractNumericId(gid) {
   return Number(gid.split('/').pop());
 }
@@ -12,14 +16,18 @@ export default function ProductSelector({ onVariantSelect }) {
 
   useEffect(() => {
     const fetchProducts = async () => {
+      const storefrontDomain = cleanDomain(process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN);
+      const storefrontToken = cleanEnv(
+        process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN ||
+          process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_TOKEN
+      );
       const res = await fetch(
-        `https://${process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN}/api/2024-01/graphql.json`,
+        `https://${storefrontDomain}/api/2024-01/graphql.json`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Shopify-Storefront-Access-Token':
-              process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_TOKEN,
+            'X-Shopify-Storefront-Access-Token': storefrontToken,
           },
           body: JSON.stringify({
             query: `{

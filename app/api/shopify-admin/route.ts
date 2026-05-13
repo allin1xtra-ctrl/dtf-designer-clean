@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const SHOPIFY_STORE_DOMAIN = process.env.SHOPIFY_STORE_DOMAIN;
-const SHOPIFY_ADMIN_API_KEY = process.env.SHOPIFY_ADMIN_API_KEY;
-const SHOPIFY_ADMIN_API_PASSWORD = process.env.SHOPIFY_ADMIN_API_PASSWORD;
-const SHOPIFY_ADMIN_API_VERSION = process.env.SHOPIFY_ADMIN_API_VERSION || "2023-01";
+const cleanEnv = (value: unknown) => String(value || "").trim();
+const cleanDomain = (value: unknown) =>
+  cleanEnv(value).replace(/^https?:\/\//, "").replace(/\/$/, "");
+
+const SHOPIFY_STORE_DOMAIN = cleanDomain(process.env.SHOPIFY_STORE_DOMAIN);
+const SHOPIFY_ADMIN_API_KEY = cleanEnv(process.env.SHOPIFY_ADMIN_API_KEY);
+const SHOPIFY_ADMIN_API_PASSWORD = cleanEnv(process.env.SHOPIFY_ADMIN_API_PASSWORD);
+const SHOPIFY_ADMIN_API_VERSION = cleanEnv(process.env.SHOPIFY_ADMIN_API_VERSION) || "2023-01";
 
 const getAuthHeader = () => {
   const token = Buffer.from(`${SHOPIFY_ADMIN_API_KEY}:${SHOPIFY_ADMIN_API_PASSWORD}`).toString("base64");

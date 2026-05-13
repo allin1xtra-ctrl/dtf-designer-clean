@@ -1,10 +1,15 @@
-export const SHOPIFY_STORE_DOMAIN =
+const cleanEnv = (value: unknown) => String(value || "").trim();
+const cleanDomain = (value: unknown) =>
+  cleanEnv(value).replace(/^https?:\/\//, "").replace(/\/$/, "");
+
+export const SHOPIFY_STORE_DOMAIN = cleanDomain(
   process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN ||
-  process.env.SHOPIFY_STORE_DOMAIN ||
-  "yourdtfplug.com";
+    process.env.SHOPIFY_STORE_DOMAIN ||
+    "yourdtfplug.com"
+);
 
 export function getShopifyCartAddUrl() {
-  return `https://${SHOPIFY_STORE_DOMAIN.replace(/^https?:\/\//, "")}/cart/add`;
+  return `https://${SHOPIFY_STORE_DOMAIN}/cart/add`;
 }
 
 export function normalizeVariantId(variant?: string | null) {

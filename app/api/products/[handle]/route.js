@@ -1,4 +1,4 @@
-import { getProductByHandle } from "../../../lib/shopify.js";
+import { cleanEnv, getProductByHandle } from "../../../lib/shopify.js";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -13,12 +13,19 @@ const NO_STORE_HEADERS = {
 export async function GET(req, context) {
   const params = await context.params;
   const rawHandle = params?.handle;
-  const storefrontDomain =
-    process.env.SHOPIFY_STORE_DOMAIN ||
-    process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN;
-  const storefrontToken =
-    process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN ||
-    process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN;
+  const storefrontDomain = cleanEnv(
+    process.env.SHOPIFY_STORE_DOMAIN || process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN
+  )
+    .replace(/^https?:\/\//, "")
+    .replace(/\/$/, "");
+  const privateStorefrontToken = cleanEnv(process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN);
+  const publicStorefrontToken = cleanEnv(process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN);
+  const storefrontToken = privateStorefrontToken || publicStorefrontToken;
+  const tokenSource = privateStorefrontToken
+    ? "SHOPIFY_STOREFRONT_ACCESS_TOKEN"
+    : publicStorefrontToken
+      ? "NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN"
+      : "missing";
   const shouldDebug =
     req.nextUrl.searchParams.get("debugAI") === "1" ||
     req.nextUrl.searchParams.get("debugAI") === "true" ||
@@ -68,11 +75,7 @@ export async function GET(req, context) {
         message: error?.message || String(error),
         debug: {
           tokenSet: Boolean(storefrontToken),
-          tokenSource: process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN
-            ? "SHOPIFY_STOREFRONT_ACCESS_TOKEN"
-            : process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN
-              ? "NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN"
-              : "missing",
+          tokenSource,
           domain: storefrontDomain || "missing",
         },
       },

@@ -10,6 +10,10 @@ export async function OPTIONS() {
 }
 import { NextResponse } from "next/server";
 
+const cleanEnv = (value: unknown) => String(value || "").trim();
+const cleanDomain = (value: unknown) =>
+  cleanEnv(value).replace(/^https?:\/\//, "").replace(/\/$/, "");
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -25,8 +29,15 @@ export async function POST(req: Request) {
       );
     }
 
-    const shopDomain = process.env.SHOPIFY_STORE_DOMAIN?.trim();
-    const token = process.env.SHOPIFY_STOREFRONT_TOKEN?.trim();
+    const shopDomain = cleanDomain(
+      process.env.SHOPIFY_STORE_DOMAIN || process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN
+    );
+    const token = cleanEnv(
+      process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN ||
+        process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN ||
+        process.env.SHOPIFY_STOREFRONT_TOKEN ||
+        process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_TOKEN
+    );
 
     if (!shopDomain || !token) {
       return NextResponse.json(
