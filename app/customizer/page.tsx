@@ -1683,8 +1683,8 @@ export default function CustomizerPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#0e0e0e] text-white">
-      <aside className="w-[360px] shrink-0 overflow-y-auto border-r border-[#222] bg-[#111] p-5">
+    <div className="flex h-dvh flex-col overflow-hidden bg-[#0e0e0e] text-white md:flex-row">
+      <aside className="w-full shrink-0 overflow-y-auto border-b border-[#222] bg-[#111] p-5 max-h-[45dvh] md:w-[360px] md:max-h-none md:border-b-0 md:border-r">
         <h1 className="text-xl font-bold">DTF Designer Pro</h1>
         <p className="mt-1 text-sm text-gray-400">
           Upload artwork, customize DTF transfers and gang sheets, place designs
@@ -1905,7 +1905,7 @@ export default function CustomizerPage() {
         </div>
       </aside>
 
-      <main className="flex flex-1 flex-col">
+      <main className="flex min-h-0 flex-1 flex-col">
         <div className="flex h-[60px] items-center border-b border-[#222] bg-[#111] px-5">
           <span className="text-sm text-gray-300">Current view: <strong className="text-white">{VIEW_LABELS[currentView]}</strong></span>
           {!isReady && <span className="ml-4 text-sm text-yellow-400">Loading canvas...</span>}
@@ -1916,7 +1916,7 @@ export default function CustomizerPage() {
           </div>
         ) : null}
 
-        <div ref={previewPaneRef} className="flex flex-1 items-center justify-center bg-[#181818] p-1 sm:p-3">
+        <div ref={previewPaneRef} className="flex min-h-0 flex-1 items-center justify-center bg-[#181818] p-1 md:p-3">
           <div style={{ width: `${CANVAS_DEFAULT_WIDTH * previewScale}px`, height: `${CANVAS_DEFAULT_HEIGHT * previewScale}px` }}>
             <div
               className={getPreviewStageClassName(currentView)}
