@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, FabricImage, Path, Shadow, Textbox } from "fabric";
 import { normalizeVariantId } from "../lib/shopify";
 
@@ -66,6 +66,7 @@ type PrintArea = {
 
 type PrintLocationData = {
   mockupUrl?: string;
+  colorMockups?: Record<string, string>;
   x?: number;
   y?: number;
   width?: number;
@@ -87,12 +88,18 @@ type ProductByHandleResponse = {
   };
   variants?: Array<{
     id?: string;
+    title?: string;
+    selectedOptions?: Array<{
+      name?: string;
+      value?: string;
+    }>;
   }>;
 };
 
 type ProductByHandleApiResponse = ProductByHandleResponse & {
   error?: string;
 };
+type ProductVariant = NonNullable<ProductByHandleResponse["variants"]>[number];
 
 type AiActionResponse = {
   ok?: boolean;
@@ -112,7 +119,13 @@ const SOFT_WHITE_THRESHOLD = 225;
 const TRANSFER_SIZE_PRESETS = ["3x3", "4x5", "8x8", "10x10", "12x12", "12x16", "14x16", "16x20"];
 const BLANK_MOCKUP_SVG_WIDTH = 1000;
 const BLANK_MOCKUP_SVG_HEIGHT = 1200;
-const BLANK_MOCKUP_FRAME = { x: 160, y: 120, width: 680, height: 960, radius: 24 };
+// Expanded to leave a roughly 12% side margin and 6% top margin so fallback blank garments read larger in the preview.
+const BLANK_MOCKUP_FRAME = { x: 120, y: 70, width: 760, height: 1060, radius: 24 };
+const MOCKUP_FIT_RATIO = 0.9;
+const MOCKUP_FIT_RATIO_SMALL_SCREEN = 0.92;
+const PREVIEW_PADDING = 8;
+const MIN_PREVIEW_SCALE = 0.01;
+const SCALE_CHANGE_THRESHOLD = 0.001;
 const VIEW_LOCATION_KEYS: Record<ViewName, string[]> = {
   front: ["front"],
   back: ["back"],
@@ -120,11 +133,23 @@ const VIEW_LOCATION_KEYS: Record<ViewName, string[]> = {
   rightSleeve: ["rightSleeve", "right_sleeve"],
   neck: ["neck", "neckLabel", "neck_label", "neck_tag"],
 };
+const COLOR_OPTION_NAMES = ["color", "colour"];
+const SIZE_OPTION_NAMES = ["size"];
 // Optional per-product overrides for known product handles.
 // Generic view-specific blank mockups are used when no product override exists.
 const PRODUCT_BLANK_MOCKUPS: Record<string, Partial<Record<ViewName, string>>> = {
   // Example:
   // "custom-hoodie": { front: "/mockups/hoodie-front-blank.png" },
+};
+const PRODUCT_PRINT_LOCATION_OVERRIDES: Record<string, Partial<Record<string, Partial<PrintLocationData>>>> = {
+  "custom-t-shirt-upload-customize": {
+    front: { x: 33, y: 24, width: 34, height: 44 },
+    back: { x: 31, y: 22, width: 38, height: 48 },
+    neck: { x: 41, y: 13, width: 18, height: 12 },
+    neck_tag: { x: 41, y: 13, width: 18, height: 12 },
+    neckLabel: { x: 41, y: 13, width: 18, height: 12 },
+    neck_label: { x: 41, y: 13, width: 18, height: 12 },
+  },
 };
 
 function escapeSvgText(value: string) {
@@ -144,6 +169,127 @@ function createBlankMockupDataUrl(label: string) {
     <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="#71717a" font-family="Arial, sans-serif" font-size="34">${safeLabel} blank mockup</text>
   </svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+function normalizeOptionLabel(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function getVariantSelectedOptionValue(
+  variant: ProductVariant | null | undefined,
+  optionNames: string[]
+) {
+  const normalizedOptionNames = optionNames.map(normalizeOptionLabel);
+  const matchedOption = variant?.selectedOptions?.find((option) =>
+    normalizedOptionNames.includes(normalizeOptionLabel(String(option?.name || "")))
+  );
+  const optionValue = String(matchedOption?.value || "").trim();
+  return optionValue || "";
+}
+
+function getVariantColor(
+  variant: ProductVariant | null | undefined
+) {
+  return getVariantSelectedOptionValue(variant, COLOR_OPTION_NAMES);
+}
+
+function getVariantSize(
+  variant: ProductVariant | null | undefined
+) {
+  return getVariantSelectedOptionValue(variant, SIZE_OPTION_NAMES);
+}
+
+function getUniqueVariantOptionValues(
+  variants: NonNullable<ProductByHandleResponse["variants"]>,
+  getValue: (variant: ProductVariant) => string
+) {
+  const seen = new Set<string>();
+  const values: string[] = [];
+
+  for (const variant of variants) {
+    const value = getValue(variant);
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    values.push(value);
+  }
+
+  return values;
+}
+
+function resolveColorMockupUrl(colorMockups: Record<string, string> | undefined, selectedColor: string) {
+  const normalizedSelectedColor = String(selectedColor || "").trim();
+  if (!colorMockups || !normalizedSelectedColor) return "";
+
+  const exactMatch = Object.entries(colorMockups).find(([color]) => color.trim() === normalizedSelectedColor);
+  if (exactMatch?.[1]) return exactMatch[1].trim();
+
+  const fallbackMatch = Object.entries(colorMockups).find(
+    ([color]) => color.trim().toLowerCase() === normalizedSelectedColor.toLowerCase()
+  );
+  return String(fallbackMatch?.[1] || "").trim();
+}
+
+function findMatchingVariant(
+  variants: NonNullable<ProductByHandleResponse["variants"]>,
+  selection: { color?: string; size?: string }
+) {
+  const normalizedColor = String(selection.color || "").trim();
+  const normalizedSize = String(selection.size || "").trim();
+
+  return (
+    variants.find((variant) => {
+      const variantColor = getVariantColor(variant);
+      const variantSize = getVariantSize(variant);
+
+      if (normalizedColor && variantColor !== normalizedColor) return false;
+      if (normalizedSize && variantSize && variantSize !== normalizedSize) return false;
+      return true;
+    }) || null
+  );
+}
+
+function getMockupRenderDimensions(naturalWidth: number, naturalHeight: number, fitRatio = MOCKUP_FIT_RATIO) {
+  const canvasWidth = CANVAS_DEFAULT_WIDTH;
+  const canvasHeight = CANVAS_DEFAULT_HEIGHT;
+  const imgWidth = naturalWidth || 1;
+  const imgHeight = naturalHeight || 1;
+  const maxWidth = canvasWidth * fitRatio;
+  const maxHeight = canvasHeight * fitRatio;
+  const scale = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
+
+  return {
+    canvasWidth,
+    canvasHeight,
+    imgWidth,
+    imgHeight,
+    fitRatio,
+    scale,
+    renderedWidth: imgWidth * scale,
+    renderedHeight: imgHeight * scale,
+  };
+}
+
+function getMockupBounds(mockupRender: ReturnType<typeof getMockupRenderDimensions>) {
+  return {
+    left: (CANVAS_DEFAULT_WIDTH - mockupRender.renderedWidth) / 2,
+    top: (CANVAS_DEFAULT_HEIGHT - mockupRender.renderedHeight) / 2,
+    width: mockupRender.renderedWidth,
+    height: mockupRender.renderedHeight,
+  };
+}
+
+function getResolvedPrintAreaBounds(
+  designArea: PrintArea,
+  mockupRender: ReturnType<typeof getMockupRenderDimensions>
+) {
+  const mockupBounds = getMockupBounds(mockupRender);
+
+  return {
+    left: mockupBounds.left + pxFromPercentage(mockupBounds.width, designArea.x),
+    top: mockupBounds.top + pxFromPercentage(mockupBounds.height, designArea.y),
+    width: pxFromPercentage(mockupBounds.width, designArea.width),
+    height: pxFromPercentage(mockupBounds.height, designArea.height),
+  };
 }
 
 const GENERIC_BLANK_MOCKUPS: Record<ViewName, string> = {
@@ -242,38 +388,43 @@ function getSmallPrintAreaLabel(view: ViewName) {
 }
 
 function getMockupImageClassName(view: ViewName) {
-  if (view === "neck") return "absolute inset-0 z-0 h-full w-full object-contain scale-125 transition-transform";
-  if (view === "leftSleeve" || view === "rightSleeve") return "absolute inset-0 z-0 h-full w-full object-contain scale-110 transition-transform";
-  return "absolute inset-0 z-0 h-full w-full object-contain";
+  if (view === "neck") return "absolute z-0 object-contain transition-all duration-200";
+  if (view === "leftSleeve" || view === "rightSleeve") return "absolute z-0 object-contain transition-all duration-200";
+  return "absolute z-0 object-contain transition-all duration-200";
 }
 
 function getPreviewStageClassName(view: ViewName) {
-  const base = "relative overflow-hidden rounded border border-[#333] bg-white shadow-2xl max-w-full";
+  const base = "relative overflow-hidden rounded border border-[#333] bg-white shadow-2xl";
   if (view === "leftSleeve" || view === "rightSleeve" || view === "neck") {
-    return `${base} origin-top scale-95 sm:scale-100`;
+    return `${base} origin-top`;
   }
   return base;
 }
 
 function getPrintLocationDataForView(
   printLocations: PrintLocationsMap,
-  view: ViewName
+  view: ViewName,
+  productHandle: string
 ): { activeLocation: string; activeLocationData: PrintLocationData } {
   const keys = VIEW_LOCATION_KEYS[view];
+  const normalizedHandle = productHandle.trim().toLowerCase();
+  const handleOverrides = normalizedHandle ? PRODUCT_PRINT_LOCATION_OVERRIDES[normalizedHandle] : undefined;
 
   for (const key of keys) {
     const location = printLocations[key];
     if (location && typeof location === "object") {
+      const override = handleOverrides?.[key];
       return {
         activeLocation: key,
-        activeLocationData: location,
+        activeLocationData: override ? { ...location, ...override } : location,
       };
     }
   }
 
+  const fallbackKey = keys[0] || view;
   return {
-    activeLocation: keys[0] || view,
-    activeLocationData: {},
+    activeLocation: fallbackKey,
+    activeLocationData: handleOverrides?.[fallbackKey] ? { ...handleOverrides[fallbackKey] } : {},
   };
 }
 
@@ -356,16 +507,19 @@ export default function CustomizerPage() {
   const canvasElRef = useRef<HTMLCanvasElement | null>(null);
   const fabricCanvasRef = useRef<Canvas | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const previewPaneRef = useRef<HTMLDivElement | null>(null);
 
   const [currentView, setCurrentView] = useState<ViewName>("front");
   const [isReady, setIsReady] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [variantId, setVariantId] = useState(FALLBACK_VARIANT_ID);
+  const [selectedColor, setSelectedColor] = useState("");
   const [selectedSize, setSelectedSize] = useState("Custom");
   const [transferSize, setTransferSize] = useState("12x12");
   const [cartStatus, setCartStatus] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [productHandle, setProductHandle] = useState("");
+  const [productData, setProductData] = useState<ProductByHandleResponse | null>(null);
   const [hasVariantInQuery, setHasVariantInQuery] = useState(false);
   const [printLocations, setPrintLocations] = useState<PrintLocationsMap>({});
   const [rawPrintLocations, setRawPrintLocations] = useState("");
@@ -377,8 +531,10 @@ export default function CustomizerPage() {
   const [aiStatus, setAiStatus] = useState("");
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [designIdeaPrompt, setDesignIdeaPrompt] = useState("");
+  const [previewScale, setPreviewScale] = useState(1);
+  const [mockupNaturalSize, setMockupNaturalSize] = useState({ width: 0, height: 0 });
   const [textControls, setTextControls] = useState<TextControlsState>(DEFAULT_TEXT_CONTROLS);
-  const designAreaRef = useRef<PrintArea>(DEFAULT_DESIGN_AREA);
+  const printableAreaRef = useRef({ left: 0, top: 0, width: 0, height: 0 });
   const shouldDebugAiLogRef = useRef(false);
 
   const viewsRef = useRef<Record<ViewName, CanvasSnapshot | null>>({
@@ -438,17 +594,8 @@ export default function CustomizerPage() {
       return;
     }
 
-    const canvasWidth = canvas.getWidth();
-    const canvasHeight = canvas.getHeight();
-    const printableArea = {
-      left: pxFromPercentage(canvasWidth, designAreaRef.current.x),
-      top: pxFromPercentage(canvasHeight, designAreaRef.current.y),
-      width: pxFromPercentage(canvasWidth, designAreaRef.current.width),
-      height: pxFromPercentage(canvasHeight, designAreaRef.current.height),
-    };
-
     const bounds = activeObject.getBoundingRect();
-    const overflow = distanceFromPrintableArea(bounds, printableArea);
+    const overflow = distanceFromPrintableArea(bounds, printableAreaRef.current);
 
     if (overflow > 0) {
       setBoundaryWarning("Selected design exceeds this location's print size limit.");
@@ -625,12 +772,7 @@ export default function CustomizerPage() {
     if (!canvas) return false;
 
     const nextImage = await FabricImage.fromURL(nextDataUrl);
-    const canvasWidth = canvas.getWidth();
-    const canvasHeight = canvas.getHeight();
-    const areaLeft = pxFromPercentage(canvasWidth, designAreaRef.current.x);
-    const areaTop = pxFromPercentage(canvasHeight, designAreaRef.current.y);
-    const areaWidth = pxFromPercentage(canvasWidth, designAreaRef.current.width);
-    const areaHeight = pxFromPercentage(canvasHeight, designAreaRef.current.height);
+    const { left: areaLeft, top: areaTop, width: areaWidth, height: areaHeight } = printableAreaRef.current;
 
     nextImage.scaleToWidth(areaWidth);
     if (nextImage.getScaledHeight() > areaHeight) {
@@ -787,15 +929,10 @@ export default function CustomizerPage() {
 
     const activeObject = canvas.getActiveObject();
     if (activeObject) {
-      const canvasWidth = canvas.getWidth();
-      const canvasHeight = canvas.getHeight();
-      const printableArea = {
-        left: pxFromPercentage(canvasWidth, designAreaRef.current.x),
-        top: pxFromPercentage(canvasHeight, designAreaRef.current.y),
-        width: pxFromPercentage(canvasWidth, designAreaRef.current.width),
-        height: pxFromPercentage(canvasHeight, designAreaRef.current.height),
-      };
-      const overflow = distanceFromPrintableArea(activeObject.getBoundingRect(), printableArea);
+      const overflow = distanceFromPrintableArea(
+        activeObject.getBoundingRect(),
+        printableAreaRef.current
+      );
       if (overflow > 0) {
         suggestions.unshift("Move artwork back inside printable area for best print result.");
       }
@@ -899,6 +1036,7 @@ export default function CustomizerPage() {
 
   useEffect(() => {
     if (!productHandle) {
+      setProductData(null);
       setPrintLocations({});
       setRawPrintLocations("");
       setPrintLocationsError("");
@@ -940,6 +1078,8 @@ export default function CustomizerPage() {
 
         if (!isMounted) return;
 
+        setProductData(result);
+
         const metafieldValue = result.metafield?.value;
         const parsedLocations = parsePrintLocations(metafieldValue);
 
@@ -961,14 +1101,22 @@ export default function CustomizerPage() {
           setPrintLocationsError("");
         }
 
-        if (!hasVariantInQuery && result.variants?.[0]?.id) {
-          const fallbackVariant = normalizeVariantId(result.variants[0].id);
-          if (fallbackVariant) setVariantId(fallbackVariant);
+        const matchingVariant = result.variants?.find(
+          (variant) => normalizeVariantId(variant.id) === variantId
+        );
+        const fallbackVariant = matchingVariant || result.variants?.[0];
+        const normalizedFallbackVariantId = normalizeVariantId(fallbackVariant?.id);
+
+        if (normalizedFallbackVariantId && normalizedFallbackVariantId !== variantId) {
+          if (!hasVariantInQuery || !matchingVariant) {
+            setVariantId(normalizedFallbackVariantId);
+          }
         }
       } catch (error) {
         if (controller.signal.aborted) return;
         console.error("Failed to fetch product by handle:", error);
         if (isMounted) {
+          setProductData(null);
           setPrintLocations({});
           setRawPrintLocations("");
           setPrintLocationsError(
@@ -986,11 +1134,102 @@ export default function CustomizerPage() {
     };
   }, [hasVariantInQuery, productHandle]);
 
-  const locationInfo = getPrintLocationDataForView(printLocations, currentView);
+  const productVariants = useMemo(
+    () => (Array.isArray(productData?.variants) ? productData.variants : []),
+    [productData]
+  );
+  const selectedVariant = useMemo(
+    () =>
+      productVariants.find((variant) => normalizeVariantId(variant.id) === variantId) || null,
+    [productVariants, variantId]
+  );
+  const availableColors = useMemo(
+    () => getUniqueVariantOptionValues(productVariants, getVariantColor),
+    [productVariants]
+  );
+  const availableSizes = useMemo(
+    () => getUniqueVariantOptionValues(productVariants, getVariantSize),
+    [productVariants]
+  );
+  const hasColorOptions = availableColors.length > 0;
+  const hasSizeOptions = availableSizes.length > 0;
+
+  useEffect(() => {
+    if (!selectedVariant) {
+      if (!hasColorOptions && selectedColor) {
+        setSelectedColor("");
+      }
+      return;
+    }
+
+    const variantColor = getVariantColor(selectedVariant);
+    const variantSize = getVariantSize(selectedVariant);
+
+    if (variantColor !== selectedColor) {
+      setSelectedColor(variantColor);
+    }
+
+    if (hasSizeOptions && variantSize && variantSize !== selectedSize) {
+      setSelectedSize(variantSize);
+    }
+  }, [hasColorOptions, hasSizeOptions, selectedColor, selectedSize, selectedVariant]);
+
+  const handleColorChange = (nextColor: string) => {
+    setSelectedColor(nextColor);
+
+    const matchedVariant =
+      findMatchingVariant(productVariants, {
+        color: nextColor,
+        size: hasSizeOptions ? selectedSize : undefined,
+      }) || findMatchingVariant(productVariants, { color: nextColor });
+
+    const nextVariantId = normalizeVariantId(matchedVariant?.id);
+    if (nextVariantId) {
+      setVariantId(nextVariantId);
+    }
+
+    const matchedSize = getVariantSize(matchedVariant);
+    if (matchedSize) {
+      setSelectedSize(matchedSize);
+    }
+  };
+
+  const handleSizeChange = (nextSize: string) => {
+    setSelectedSize(nextSize);
+
+    if (!hasSizeOptions) return;
+
+    const matchedVariant =
+      findMatchingVariant(productVariants, {
+        color: hasColorOptions ? selectedColor : undefined,
+        size: nextSize,
+      }) || findMatchingVariant(productVariants, { size: nextSize });
+
+    const nextVariantId = normalizeVariantId(matchedVariant?.id);
+    if (nextVariantId) {
+      setVariantId(nextVariantId);
+    }
+
+    const matchedColor = getVariantColor(matchedVariant);
+    if (matchedColor) {
+      setSelectedColor(matchedColor);
+    }
+  };
+
+  const locationInfo = getPrintLocationDataForView(printLocations, currentView, productHandle);
   const { activeLocation, activeLocationData } = locationInfo;
-  const mockupUrl = activeLocationData?.mockupUrl;
+  const mockupUrl =
+    resolveColorMockupUrl(activeLocationData?.colorMockups, selectedColor) ||
+    activeLocationData?.mockupUrl;
   const resolvedMockupUrl = resolveMockupUrl(mockupUrl, currentView, productHandle);
   const designArea = normalizeDesignArea(activeLocationData);
+  const mockupFitRatio = previewScale < 1 ? MOCKUP_FIT_RATIO_SMALL_SCREEN : MOCKUP_FIT_RATIO;
+  const mockupRender = getMockupRenderDimensions(
+    mockupNaturalSize.width,
+    mockupNaturalSize.height,
+    mockupFitRatio
+  );
+  const resolvedPrintAreaBounds = getResolvedPrintAreaBounds(designArea, mockupRender);
   const maxPrintWidth = normalizePrintLimit(activeLocationData?.maxPrintWidth);
   const maxPrintHeight = normalizePrintLimit(activeLocationData?.maxPrintHeight);
   const availableViews = getAvailableViews(printLocations);
@@ -1026,6 +1265,74 @@ export default function CustomizerPage() {
 
   useEffect(() => {
     if (!shouldDebugAiLogRef.current) return;
+    console.log("[Customizer] Mockup resolution", {
+      selectedVariantId: variantId,
+      selectedColor,
+      activePrintLocation: activeLocation,
+      resolvedMockupUrl,
+    });
+  }, [activeLocation, resolvedMockupUrl, selectedColor, variantId]);
+
+  useEffect(() => {
+    if (!previewPaneRef.current || typeof ResizeObserver === "undefined") return;
+
+    const updateScale = () => {
+      const rect = previewPaneRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const nextScale = Math.min(
+        1,
+        Math.max((rect.width - PREVIEW_PADDING) / CANVAS_DEFAULT_WIDTH, MIN_PREVIEW_SCALE),
+        Math.max((rect.height - PREVIEW_PADDING) / CANVAS_DEFAULT_HEIGHT, MIN_PREVIEW_SCALE)
+      );
+      // Ignore tiny float-only changes so ResizeObserver doesn't trigger unnecessary re-renders.
+      setPreviewScale((prev) =>
+        Math.abs(prev - nextScale) < SCALE_CHANGE_THRESHOLD ? prev : nextScale
+      );
+    };
+
+    updateScale();
+    const observer = new ResizeObserver(() => updateScale());
+    observer.observe(previewPaneRef.current);
+    window.addEventListener("resize", updateScale);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateScale);
+    };
+  }, []);
+
+  useEffect(() => {
+    setMockupNaturalSize({ width: 0, height: 0 });
+  }, [resolvedMockupUrl]);
+
+  useEffect(() => {
+    if (!shouldDebugAiLogRef.current) return;
+    console.log("[Customizer Mockup Fit]", {
+      activePrintLocation: activeLocation,
+      mockupNaturalWidth: mockupRender.imgWidth,
+      mockupNaturalHeight: mockupRender.imgHeight,
+      renderedMockupWidth: Number(mockupRender.renderedWidth.toFixed(2)),
+      renderedMockupHeight: Number(mockupRender.renderedHeight.toFixed(2)),
+      resolvedDesignArea: resolvedPrintAreaBounds,
+      canvasWidth: Number((CANVAS_DEFAULT_WIDTH * previewScale).toFixed(2)),
+      canvasHeight: Number((CANVAS_DEFAULT_HEIGHT * previewScale).toFixed(2)),
+    });
+  }, [
+    activeLocation,
+    mockupRender.imgHeight,
+    mockupRender.imgWidth,
+    mockupRender.renderedHeight,
+    mockupRender.renderedWidth,
+    previewScale,
+    resolvedPrintAreaBounds.height,
+    resolvedPrintAreaBounds.left,
+    resolvedPrintAreaBounds.top,
+    resolvedPrintAreaBounds.width,
+  ]);
+
+  useEffect(() => {
+    if (!shouldDebugAiLogRef.current) return;
     console.log("[AI DEBUG]", {
       aiActionRequested: "Mockup Resolution",
       requestedHandle: productHandle,
@@ -1047,8 +1354,8 @@ export default function CustomizerPage() {
   ]);
 
   useEffect(() => {
-    designAreaRef.current = designArea;
-  }, [designArea]);
+    printableAreaRef.current = resolvedPrintAreaBounds;
+  }, [resolvedPrintAreaBounds]);
 
   useEffect(() => {
     shouldDebugAiLogRef.current = shouldDebugAiLog;
@@ -1116,13 +1423,7 @@ export default function CustomizerPage() {
 
       try {
         const img = await FabricImage.fromURL(result);
-        const canvasWidth = canvas.getWidth();
-        const canvasHeight = canvas.getHeight();
-
-        const areaLeft = pxFromPercentage(canvasWidth, designArea.x);
-        const areaTop = pxFromPercentage(canvasHeight, designArea.y);
-        const areaWidth = pxFromPercentage(canvasWidth, designArea.width);
-        const areaHeight = pxFromPercentage(canvasHeight, designArea.height);
+        const { left: areaLeft, top: areaTop, width: areaWidth, height: areaHeight } = printableAreaRef.current;
 
         img.scaleToWidth(areaWidth);
         if (img.getScaledHeight() > areaHeight) {
@@ -1557,8 +1858,42 @@ export default function CustomizerPage() {
 
         <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
           <h2 className="mb-2 text-lg font-semibold">Checkout</h2>
+          {hasColorOptions ? (
+            <>
+              <label htmlFor="checkout-color-select" className="mb-2 block text-sm text-gray-300">Color</label>
+              <select
+                id="checkout-color-select"
+                name="color"
+                value={selectedColor}
+                onChange={(e) => handleColorChange(e.target.value)}
+                className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white"
+              >
+                {availableColors.map((color) => (
+                  <option key={color} value={color}>
+                    {color}
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : null}
           <label htmlFor="checkout-size-input" className="mb-2 block text-sm text-gray-300">Size</label>
-          <input id="checkout-size-input" name="size" type="text" value={selectedSize} onChange={(e) => setSelectedSize(e.target.value)} className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white" />
+          {hasSizeOptions ? (
+            <select
+              id="checkout-size-input"
+              name="size"
+              value={selectedSize}
+              onChange={(e) => handleSizeChange(e.target.value)}
+              className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white"
+            >
+              {availableSizes.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input id="checkout-size-input" name="size" type="text" value={selectedSize} onChange={(e) => handleSizeChange(e.target.value)} className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white" />
+          )}
 
           <label htmlFor="checkout-quantity-input" className="mb-2 block text-sm text-gray-300">Quantity</label>
           <input id="checkout-quantity-input" name="quantity" type="number" min="1" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white" />
@@ -1579,12 +1914,51 @@ export default function CustomizerPage() {
           </div>
         ) : null}
 
-        <div className="flex flex-1 items-start justify-center bg-[#181818] p-2 sm:p-4">
-          <div className={getPreviewStageClassName(currentView)} style={{ width: `${CANVAS_DEFAULT_WIDTH}px`, height: `${CANVAS_DEFAULT_HEIGHT}px` }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={resolvedMockupUrl} alt={`${VIEW_LABELS[currentView]} mockup`} className={getMockupImageClassName(currentView)} />
-            <div className="pointer-events-none absolute z-20 border border-dashed border-cyan-400" style={{ left: `${designArea.x}%`, top: `${designArea.y}%`, width: `${designArea.width}%`, height: `${designArea.height}%` }} />
-            <canvas ref={canvasElRef} className="relative z-10" />
+        <div ref={previewPaneRef} className="flex flex-1 items-center justify-center bg-[#181818] p-1 sm:p-3">
+          <div style={{ width: `${CANVAS_DEFAULT_WIDTH * previewScale}px`, height: `${CANVAS_DEFAULT_HEIGHT * previewScale}px` }}>
+            <div
+              className={getPreviewStageClassName(currentView)}
+              style={{
+                width: `${CANVAS_DEFAULT_WIDTH}px`,
+                height: `${CANVAS_DEFAULT_HEIGHT}px`,
+                transform: `scale(${previewScale})`,
+                transformOrigin: "top left",
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={resolvedMockupUrl}
+                alt={`${VIEW_LABELS[currentView]} mockup`}
+                className={getMockupImageClassName(currentView)}
+                style={{
+                  width: `${mockupRender.renderedWidth}px`,
+                  height: `${mockupRender.renderedHeight}px`,
+                  left: "50%",
+                  top: "50%",
+                  transform: "translate(-50%, -50%)",
+                }}
+                onLoad={(event) => {
+                  const image = event.currentTarget;
+                  const naturalWidth = image.naturalWidth || 0;
+                  const naturalHeight = image.naturalHeight || 0;
+                  setMockupNaturalSize((prev) =>
+                    prev.width === naturalWidth && prev.height === naturalHeight
+                      ? prev
+                      : { width: naturalWidth, height: naturalHeight }
+                  );
+                }}
+              />
+              <div
+                className="pointer-events-none absolute z-20 border border-dashed border-cyan-400"
+                style={{
+                  left: `${resolvedPrintAreaBounds.left}px`,
+                  top: `${resolvedPrintAreaBounds.top}px`,
+                  width: `${resolvedPrintAreaBounds.width}px`,
+                  height: `${resolvedPrintAreaBounds.height}px`,
+                }}
+              />
+              <canvas ref={canvasElRef} className="relative z-10" />
+            </div>
           </div>
         </div>
       </main>

@@ -185,6 +185,10 @@ export async function getProductByHandle(handle) {
             node {
               id
               title
+              selectedOptions {
+                name
+                value
+              }
               availableForSale
               price {
                 amount
@@ -224,6 +228,11 @@ export async function getProductByHandle(handle) {
       product.variants?.edges?.map(({ node: v }) => ({
         id: v.id,
         title: v.title,
+        selectedOptions:
+          v.selectedOptions?.map((option) => ({
+            name: option.name,
+            value: option.value,
+          })) || [],
         availableForSale: v.availableForSale,
         price: v.price.amount,
         currencyCode: v.price.currencyCode,
