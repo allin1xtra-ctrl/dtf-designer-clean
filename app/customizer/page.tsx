@@ -109,7 +109,7 @@ const MIN_CURVE_AMPLITUDE = 8;
 const MAX_CURVE_AMPLITUDE = 220;
 const NEAR_WHITE_THRESHOLD = 245;
 const SOFT_WHITE_THRESHOLD = 225;
-const TRANSFER_SIZE_PRESETS = ["8x8", "10x10", "12x12", "12x16", "14x16", "16x20"];
+const TRANSFER_SIZE_PRESETS = ["3x3", "4x5", "8x8", "10x10", "12x12", "12x16", "14x16", "16x20"];
 const BLANK_MOCKUP_SVG_WIDTH = 1000;
 const BLANK_MOCKUP_SVG_HEIGHT = 1200;
 const BLANK_MOCKUP_FRAME = { x: 160, y: 120, width: 680, height: 960, radius: 24 };
@@ -223,6 +223,28 @@ function parseTransferSize(value: string) {
     width: Number(match[1]),
     height: Number(match[2]),
   };
+}
+
+function getSafeTransferSizeForView(view: ViewName) {
+  if (view === "leftSleeve" || view === "rightSleeve") return "4x5";
+  if (view === "neck") return "3x3";
+  return "12x12";
+}
+
+function isSmallPrintLocation(view: ViewName) {
+  return view === "leftSleeve" || view === "rightSleeve" || view === "neck";
+}
+
+function getSmallPrintAreaLabel(view: ViewName) {
+  if (!isSmallPrintLocation(view)) return "";
+  if (view === "neck") return "3 in × 3 in";
+  return "4 in × 5 in";
+}
+
+function getMockupImageClassName(view: ViewName) {
+  if (view === "neck") return "absolute inset-0 z-0 h-full w-full object-contain scale-125 transition-transform";
+  if (view === "leftSleeve" || view === "rightSleeve") return "absolute inset-0 z-0 h-full w-full object-contain scale-110 transition-transform";
+  return "absolute inset-0 z-0 h-full w-full object-contain";
 }
 
 function getPrintLocationDataForView(
@@ -421,7 +443,7 @@ export default function CustomizerPage() {
     const overflow = distanceFromPrintableArea(bounds, printableArea);
 
     if (overflow > 0) {
-      setBoundaryWarning("Selected object is outside the printable area.");
+      setBoundaryWarning("Selected design exceeds this location's print size limit.");
       return;
     }
 
@@ -459,6 +481,11 @@ export default function CustomizerPage() {
 
     setCurrentView(view);
     setAiSuggestions([]);
+    setBoundaryWarning("");
+
+    if (isSmallPrintLocation(view)) {
+      setTransferSize(getSafeTransferSizeForView(view));
+    }
 
     const saved = viewsRef.current[view];
     if (saved?.objects?.length) {
@@ -960,15 +987,29 @@ export default function CustomizerPage() {
   const maxPrintHeight = normalizePrintLimit(activeLocationData?.maxPrintHeight);
   const availableViews = getAvailableViews(printLocations);
   const transferDimensions = parseTransferSize(transferSize);
-  const exceedsPrintWidth = Boolean(maxPrintWidth && transferDimensions && transferDimensions.width > maxPrintWidth);
-  const exceedsPrintHeight = Boolean(maxPrintHeight && transferDimensions && transferDimensions.height > maxPrintHeight);
+  const isSmallLocation = isSmallPrintLocation(currentView);
+  const safePrintAreaLabel = getSmallPrintAreaLabel(currentView);
+  const hasSelectedDesign = selectedObjectType !== "none";
+
+  const exceedsPrintWidth = Boolean(
+    !isSmallLocation &&
+    hasSelectedDesign &&
+    maxPrintWidth &&
+    transferDimensions &&
+    transferDimensions.width > maxPrintWidth
+  );
+
+  const exceedsPrintHeight = Boolean(
+    !isSmallLocation &&
+    hasSelectedDesign &&
+    maxPrintHeight &&
+    transferDimensions &&
+    transferDimensions.height > maxPrintHeight
+  );
+
   const exceedsPrintLimits = exceedsPrintWidth || exceedsPrintHeight;
-  const isAddToCartDisabled = isSubmitting || Boolean(printLocationsError) || exceedsPrintLimits;
-  const addToCartDescriptionId = printLocationsError
-    ? "print-locations-error"
-    : exceedsPrintLimits
-      ? "print-limit-warning"
-      : undefined;
+  const isAddToCartDisabled = isSubmitting || Boolean(printLocationsError);
+  const addToCartDescriptionId = printLocationsError ? "print-locations-error" : undefined;
 
   useEffect(() => {
     if (!availableViews.length || availableViews.includes(currentView)) return;
@@ -1266,8 +1307,8 @@ export default function CustomizerPage() {
       return;
     }
 
-    if (exceedsPrintLimits) {
-      setCartStatus("Selected transfer size exceeds this location's print size limit.");
+    if (boundaryWarning) {
+      setCartStatus("Selected design exceeds this location's print size limit.");
       return;
     }
 
@@ -1449,17 +1490,46 @@ export default function CustomizerPage() {
 
         <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">Transfer Size Preview</h2>
-          <label htmlFor="transfer-size-select" className="sr-only">Transfer size</label>
-          <select id="transfer-size-select" name="transferSize" value={transferSize} onChange={(e) => setTransferSize(e.target.value)} className="mb-3 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm">
-            {TRANSFER_SIZE_PRESETS.map((size) => <option key={size} value={size}>{size}</option>)}
-          </select>
-          <p className="text-xs text-gray-400">Live transfer size: <span className="font-semibold text-white">{transferSize}</span></p>
+
+          {isSmallLocation ? (
+            <div className="rounded bg-[#1f1f1f] px-3 py-3">
+              <p className="text-xs text-gray-400">
+                Live print area: <span className="font-semibold text-white">{safePrintAreaLabel}</span>
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                This location is optimized for small logos, sleeve prints, and neck tag designs.
+              </p>
+            </div>
+          ) : (
+            <>
+              <label htmlFor="transfer-size-select" className="sr-only">Transfer size</label>
+              <select
+                id="transfer-size-select"
+                name="transferSize"
+                value={transferSize}
+                onChange={(e) => setTransferSize(e.target.value)}
+                className="mb-3 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm"
+              >
+                {TRANSFER_SIZE_PRESETS.map((size) => <option key={size} value={size}>{size}</option>)}
+              </select>
+              <p className="text-xs text-gray-400">
+                Live transfer size: <span className="font-semibold text-white">{transferSize}</span>
+              </p>
+            </>
+          )}
+
           {(maxPrintWidth || maxPrintHeight) ? (
             <p className="mt-2 text-xs text-gray-400">
               Max print size: <span className="font-semibold text-white">{maxPrintWidth ?? "—"} in × {maxPrintHeight ?? "—"} in</span>
             </p>
           ) : null}
-          {exceedsPrintLimits ? <p id="print-limit-warning" role="alert" aria-live="polite" className="mt-2 text-xs text-yellow-300">⚠ Selected transfer size exceeds this location&apos;s print size limit.</p> : null}
+
+          {exceedsPrintLimits ? (
+            <p id="print-limit-warning" role="alert" aria-live="polite" className="mt-2 text-xs text-yellow-300">
+              ⚠ Selected design exceeds this location&apos;s print size limit.
+            </p>
+          ) : null}
+
           {boundaryWarning ? <p className="mt-2 text-xs text-yellow-300">⚠ {boundaryWarning}</p> : null}
         </div>
 
@@ -1504,7 +1574,7 @@ export default function CustomizerPage() {
         <div className="flex flex-1 items-center justify-center bg-[#181818] p-6">
           <div className="relative overflow-hidden rounded border border-[#333] bg-white shadow-2xl" style={{ width: `${CANVAS_DEFAULT_WIDTH}px`, height: `${CANVAS_DEFAULT_HEIGHT}px` }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={resolvedMockupUrl} alt={`${VIEW_LABELS[currentView]} mockup`} className="absolute inset-0 z-0 h-full w-full object-contain" />
+            <img src={resolvedMockupUrl} alt={`${VIEW_LABELS[currentView]} mockup`} className={getMockupImageClassName(currentView)} />
             <div className="pointer-events-none absolute z-20 border border-dashed border-cyan-400" style={{ left: `${designArea.x}%`, top: `${designArea.y}%`, width: `${designArea.width}%`, height: `${designArea.height}%` }} />
             <canvas ref={canvasElRef} className="relative z-10" />
           </div>
