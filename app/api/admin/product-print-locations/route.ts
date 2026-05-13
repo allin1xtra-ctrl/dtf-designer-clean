@@ -16,12 +16,16 @@ function cleanDomain(domain: string) {
     .replace(/\/$/, "");
 }
 
+function cleanEnv(value: unknown) {
+  return String(value || "").trim();
+}
+
 function getAdminConfig() {
   const storeDomain = cleanDomain(process.env.SHOPIFY_STORE_DOMAIN || "");
-  const apiVersion = process.env.SHOPIFY_ADMIN_API_VERSION || "2024-10";
-  const apiKey = String(process.env.SHOPIFY_ADMIN_API_KEY || "").trim();
-  const apiPassword = String(process.env.SHOPIFY_ADMIN_API_PASSWORD || "").trim();
-  const panelToken = String(process.env.ADMIN_PANEL_TOKEN || "").trim();
+  const apiVersion = cleanEnv(process.env.SHOPIFY_ADMIN_API_VERSION) || "2024-10";
+  const apiKey = cleanEnv(process.env.SHOPIFY_ADMIN_API_KEY);
+  const apiPassword = cleanEnv(process.env.SHOPIFY_ADMIN_API_PASSWORD);
+  const panelToken = cleanEnv(process.env.ADMIN_PANEL_TOKEN);
 
   return { storeDomain, apiVersion, apiKey, apiPassword, panelToken };
 }
