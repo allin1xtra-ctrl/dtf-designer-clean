@@ -7,6 +7,7 @@ import { Rnd } from "react-rnd";
 const STAGE_WIDTH = 500;
 const STAGE_HEIGHT = 600;
 const LOCATION_KEYS = ["front", "back", "left_sleeve", "right_sleeve", "neck_tag"] as const;
+const COLOR_VARIANT_NAMES = ["Black", "White", "Red", "Navy", "Gray"] as const;
 
 type LocationKey = (typeof LOCATION_KEYS)[number];
 
@@ -422,7 +423,7 @@ function AdminMockupManagerContent() {
           </select>
 
           <label htmlFor="admin-mockup-url" className="mb-2 block text-sm text-gray-300">
-            Mockup Image URL
+            Mockup Image URL (default)
           </label>
           <input
             id="admin-mockup-url"
@@ -432,6 +433,37 @@ function AdminMockupManagerContent() {
             className="mb-4 w-full rounded border border-[#2b2b2b] bg-[#1f1f1f] px-3 py-2 text-white"
             placeholder="https://..."
           />
+
+          <p className="mb-2 text-sm text-gray-300">Color Mockup URLs</p>
+          <div className="mb-4 space-y-2">
+            {COLOR_VARIANT_NAMES.map((color) => (
+              <div key={color}>
+                <label
+                  htmlFor={`admin-color-mockup-${color.toLowerCase()}`}
+                  className="mb-1 block text-xs text-gray-400"
+                >
+                  {color}
+                </label>
+                <input
+                  id={`admin-color-mockup-${color.toLowerCase()}`}
+                  type="url"
+                  value={activeConfig.colorMockups?.[color] ?? ""}
+                  onChange={(event) => {
+                    const url = event.target.value.trim();
+                    const next = { ...(activeConfig.colorMockups || {}) };
+                    if (url) {
+                      next[color] = url;
+                    } else {
+                      delete next[color];
+                    }
+                    updateLocationConfig({ colorMockups: Object.keys(next).length ? next : undefined });
+                  }}
+                  className="w-full rounded border border-[#2b2b2b] bg-[#1f1f1f] px-3 py-2 text-sm text-white"
+                  placeholder="https://cdn.example.com/..."
+                />
+              </div>
+            ))}
+          </div>
 
           <div className="mb-4 grid grid-cols-2 gap-3">
             <div>
@@ -538,6 +570,14 @@ function AdminMockupManagerContent() {
                 {activeConfig.maxPrintWidth} in × {activeConfig.maxPrintHeight} in
               </span>
             </p>
+            {activeConfig.colorMockups && Object.keys(activeConfig.colorMockups).length > 0 ? (
+              <p className="mt-1">
+                Color mockups:{" "}
+                <span className="text-white">
+                  {Object.keys(activeConfig.colorMockups).join(", ")}
+                </span>
+              </p>
+            ) : null}
           </div>
         </section>
       </div>
