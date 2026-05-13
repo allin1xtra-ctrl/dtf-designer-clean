@@ -119,9 +119,13 @@ const SOFT_WHITE_THRESHOLD = 225;
 const TRANSFER_SIZE_PRESETS = ["3x3", "4x5", "8x8", "10x10", "12x12", "12x16", "14x16", "16x20"];
 const BLANK_MOCKUP_SVG_WIDTH = 1000;
 const BLANK_MOCKUP_SVG_HEIGHT = 1200;
-// Expanded so fallback blank garment mockups fill more of the preview stage before the print box is applied.
+// Expanded to leave a roughly 12% side margin and 6% top margin so fallback blank garments read larger in the preview.
 const BLANK_MOCKUP_FRAME = { x: 120, y: 70, width: 760, height: 1060, radius: 24 };
 const MOCKUP_FIT_RATIO = 0.9;
+const MOCKUP_FIT_RATIO_SMALL_SCREEN = 0.92;
+const PREVIEW_PADDING = 8;
+const MIN_PREVIEW_SCALE = 0.01;
+const SCALE_CHANGE_THRESHOLD = 0.001;
 const VIEW_LOCATION_KEYS: Record<ViewName, string[]> = {
   front: ["front"],
   back: ["back"],
@@ -1219,7 +1223,7 @@ export default function CustomizerPage() {
     activeLocationData?.mockupUrl;
   const resolvedMockupUrl = resolveMockupUrl(mockupUrl, currentView, productHandle);
   const designArea = normalizeDesignArea(activeLocationData);
-  const mockupFitRatio = previewScale < 1 ? 0.92 : MOCKUP_FIT_RATIO;
+  const mockupFitRatio = previewScale < 1 ? MOCKUP_FIT_RATIO_SMALL_SCREEN : MOCKUP_FIT_RATIO;
   const mockupRender = getMockupRenderDimensions(
     mockupNaturalSize.width,
     mockupNaturalSize.height,
@@ -1278,11 +1282,13 @@ export default function CustomizerPage() {
 
       const nextScale = Math.min(
         1,
-        Math.max((rect.width - 8) / CANVAS_DEFAULT_WIDTH, 0.01),
-        Math.max((rect.height - 8) / CANVAS_DEFAULT_HEIGHT, 0.01)
+        Math.max((rect.width - PREVIEW_PADDING) / CANVAS_DEFAULT_WIDTH, MIN_PREVIEW_SCALE),
+        Math.max((rect.height - PREVIEW_PADDING) / CANVAS_DEFAULT_HEIGHT, MIN_PREVIEW_SCALE)
       );
       // Ignore tiny float-only changes so ResizeObserver doesn't trigger unnecessary re-renders.
-      setPreviewScale((prev) => (Math.abs(prev - nextScale) < 0.001 ? prev : nextScale));
+      setPreviewScale((prev) =>
+        Math.abs(prev - nextScale) < SCALE_CHANGE_THRESHOLD ? prev : nextScale
+      );
     };
 
     updateScale();
