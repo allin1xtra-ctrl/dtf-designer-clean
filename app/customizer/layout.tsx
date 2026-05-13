@@ -14,9 +14,8 @@ export default function CustomizerLayout({
       {/* Hide the global site footer and lock the body to the viewport so the
           canvas workspace fills exactly 100dvh with no black gaps. */}
       <style>{`
-        body { overflow: hidden !important; }
-        body > footer { display: none !important; }
-        body > div { height: 100dvh; overflow: hidden; }
+        html, body { height: 100%; overflow: hidden; }
+        body > footer { display: none; }
       `}</style>
       {children}
     </>
