@@ -119,6 +119,7 @@ const SOFT_WHITE_THRESHOLD = 225;
 const TRANSFER_SIZE_PRESETS = ["3x3", "4x5", "8x8", "10x10", "12x12", "12x16", "14x16", "16x20"];
 const BLANK_MOCKUP_SVG_WIDTH = 1000;
 const BLANK_MOCKUP_SVG_HEIGHT = 1200;
+// Expanded so fallback blank garment mockups fill more of the preview stage before the print box is applied.
 const BLANK_MOCKUP_FRAME = { x: 120, y: 70, width: 760, height: 1060, radius: 24 };
 const MOCKUP_FIT_RATIO = 0.9;
 const VIEW_LOCATION_KEYS: Record<ViewName, string[]> = {
@@ -1280,6 +1281,7 @@ export default function CustomizerPage() {
         Math.max((rect.width - 8) / CANVAS_DEFAULT_WIDTH, 0.01),
         Math.max((rect.height - 8) / CANVAS_DEFAULT_HEIGHT, 0.01)
       );
+      // Ignore tiny float-only changes so ResizeObserver doesn't trigger unnecessary re-renders.
       setPreviewScale((prev) => (Math.abs(prev - nextScale) < 0.001 ? prev : nextScale));
     };
 
