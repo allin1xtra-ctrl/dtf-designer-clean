@@ -16,8 +16,7 @@ const SHOPIFY_API_VERSION = cleanEnv(process.env.SHOPIFY_ADMIN_API_VERSION) || "
 
 function cleanDomain(domain) {
   return cleanEnv(domain)
-    .replace("https://", "")
-    .replace("http://", "")
+    .replace(/^https?:\/\//, "")
     .replace(/\/$/, "");
 }
 
