@@ -9,12 +9,12 @@ import {
 
 export const runtime = "nodejs";
 
-type EnhanceImageBody = {
+type VectorizeArtworkBody = {
   imageDataUrl?: string;
 };
 
 export async function POST(request: Request) {
-  const body = await readJsonBody<EnhanceImageBody>(request);
+  const body = await readJsonBody<VectorizeArtworkBody>(request);
   const parsed = parseImageDataUrl(body.imageDataUrl);
 
   if ("error" in parsed) {
@@ -26,17 +26,17 @@ export async function POST(request: Request) {
       .rotate()
       .ensureAlpha()
       .normalize()
-      .linear(1.08, -6)
-      .sharpen({ sigma: 1.1, m1: 0.9, m2: 1.4 })
+      .median(1)
+      .sharpen({ sigma: 1.2, m1: 0.8, m2: 1.5 })
       .png()
       .toBuffer();
 
     return successJson({
       imageDataUrl: toPngDataUrl(outputBuffer),
-      note: "Image enhancement complete.",
+      note: "basic SVG/vector preparation complete",
     });
   } catch (error) {
-    console.error("Enhance image route failed:", error);
-    return errorJson("Unable to enhance image right now. Please try again.");
+    console.error("Vectorize artwork route failed:", error);
+    return errorJson("Unable to prepare artwork for vectorization right now. Please try again.");
   }
 }

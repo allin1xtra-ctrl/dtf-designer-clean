@@ -9,12 +9,12 @@ import {
 
 export const runtime = "nodejs";
 
-type EnhanceImageBody = {
+type CleanColorsBody = {
   imageDataUrl?: string;
 };
 
 export async function POST(request: Request) {
-  const body = await readJsonBody<EnhanceImageBody>(request);
+  const body = await readJsonBody<CleanColorsBody>(request);
   const parsed = parseImageDataUrl(body.imageDataUrl);
 
   if ("error" in parsed) {
@@ -26,17 +26,18 @@ export async function POST(request: Request) {
       .rotate()
       .ensureAlpha()
       .normalize()
-      .linear(1.08, -6)
-      .sharpen({ sigma: 1.1, m1: 0.9, m2: 1.4 })
+      .modulate({ saturation: 1.12, brightness: 1.02 })
+      .linear(1.04, -3)
+      .sharpen({ sigma: 0.9, m1: 0.8, m2: 1.2 })
       .png()
       .toBuffer();
 
     return successJson({
       imageDataUrl: toPngDataUrl(outputBuffer),
-      note: "Image enhancement complete.",
+      note: "Color cleanup complete for print clarity.",
     });
   } catch (error) {
-    console.error("Enhance image route failed:", error);
-    return errorJson("Unable to enhance image right now. Please try again.");
+    console.error("Clean colors route failed:", error);
+    return errorJson("Unable to clean up colors right now. Please try again.");
   }
 }

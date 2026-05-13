@@ -338,6 +338,7 @@ export default function CustomizerPage() {
   const [productHandle, setProductHandle] = useState("");
   const [hasVariantInQuery, setHasVariantInQuery] = useState(false);
   const [printLocations, setPrintLocations] = useState<PrintLocationsMap>({});
+  const [rawPrintLocations, setRawPrintLocations] = useState("");
   const [printLocationsError, setPrintLocationsError] = useState("");
   const [shouldDebugAiLog, setShouldDebugAiLog] = useState(false);
   const [selectedObjectType, setSelectedObjectType] = useState("none");
@@ -584,6 +585,36 @@ export default function CustomizerPage() {
     return true;
   };
 
+  const addImageToPrintableArea = async (nextDataUrl: string) => {
+    const canvas = getCanvas();
+    if (!canvas) return false;
+
+    const nextImage = await FabricImage.fromURL(nextDataUrl);
+    const canvasWidth = canvas.getWidth();
+    const canvasHeight = canvas.getHeight();
+    const areaLeft = pxFromPercentage(canvasWidth, designAreaRef.current.x);
+    const areaTop = pxFromPercentage(canvasHeight, designAreaRef.current.y);
+    const areaWidth = pxFromPercentage(canvasWidth, designAreaRef.current.width);
+    const areaHeight = pxFromPercentage(canvasHeight, designAreaRef.current.height);
+
+    nextImage.scaleToWidth(areaWidth);
+    if (nextImage.getScaledHeight() > areaHeight) {
+      nextImage.scaleToHeight(areaHeight);
+    }
+
+    nextImage.set({
+      left: areaLeft + (areaWidth - nextImage.getScaledWidth()) / 2,
+      top: areaTop + (areaHeight - nextImage.getScaledHeight()) / 2,
+    });
+
+    canvas.add(nextImage);
+    canvas.setActiveObject(nextImage);
+    nextImage.setCoords();
+    canvas.requestRenderAll();
+    syncSelectedObject();
+    return true;
+  };
+
   const runAiRouteAction = async (route: string, actionName: string) => {
     const activeObject = getCanvas()?.getActiveObject();
 
@@ -770,7 +801,20 @@ export default function CustomizerPage() {
         return;
       }
 
-      setAiStatus(result.note || "Design idea generated.");
+      const generatedImageUrl = typeof result.imageDataUrl === "string"
+        ? result.imageDataUrl
+        : typeof result.dataUrl === "string"
+          ? result.dataUrl
+          : "";
+
+      if (generatedImageUrl) {
+        const added = await addImageToPrintableArea(generatedImageUrl);
+        logAiDebug("Generate Idea", { generatedImageUrl, addedToCanvas: added });
+        setAiStatus(added ? "Design idea added to canvas." : result.note || "Design idea generated.");
+      } else {
+        setAiStatus(result.note || "Design idea generated.");
+      }
+
       if (result.suggestions?.length) {
         setAiSuggestions(result.suggestions);
       }
@@ -819,15 +863,27 @@ export default function CustomizerPage() {
   }, [hasVariantInQuery]);
 
   useEffect(() => {
-    if (!productHandle) return;
+    if (!productHandle) {
+      setPrintLocations({});
+      setRawPrintLocations("");
+      setPrintLocationsError("");
+      return;
+    }
 
     let isMounted = true;
     const controller = new AbortController();
+    const normalizedRequestedHandle = productHandle.trim();
+    setPrintLocations({});
+    setRawPrintLocations("");
+    setPrintLocationsError("");
 
     const fetchProductByHandle = async () => {
       try {
-        const apiPath = `/api/products/${encodeURIComponent(productHandle)}`;
-        const response = await fetch(apiPath, { signal: controller.signal });
+        const apiPath = `/api/products/${encodeURIComponent(normalizedRequestedHandle)}`;
+        const response = await fetch(apiPath, {
+          signal: controller.signal,
+          cache: "no-store",
+        });
         const raw = await response.text();
         let result = {} as ProductByHandleApiResponse;
 
@@ -852,7 +908,16 @@ export default function CustomizerPage() {
         const metafieldValue = result.metafield?.value;
         const parsedLocations = parsePrintLocations(metafieldValue);
 
+        logAiDebug("Product Fetch", {
+          requestedHandle: normalizedRequestedHandle,
+          returnedProductHandle: result.handle || "",
+          returnedProductTitle: result.title || "",
+          rawPrintLocations: metafieldValue || "",
+          parsedPrintLocations: parsedLocations,
+        });
+
         setPrintLocations(parsedLocations);
+        setRawPrintLocations(typeof metafieldValue === "string" ? metafieldValue : "");
         if (!metafieldValue || !hasMetafieldLocationData(parsedLocations)) {
           setPrintLocationsError(
             "DTF print preview setup is missing. Configure product metafield dtf.print_locations to continue."
@@ -869,6 +934,8 @@ export default function CustomizerPage() {
         if (controller.signal.aborted) return;
         console.error("Failed to fetch product by handle:", error);
         if (isMounted) {
+          setPrintLocations({});
+          setRawPrintLocations("");
           setPrintLocationsError(
             "Unable to load DTF print preview settings for this product. Please try again."
           );
@@ -907,6 +974,28 @@ export default function CustomizerPage() {
     if (!availableViews.length || availableViews.includes(currentView)) return;
     setCurrentView(availableViews[0]);
   }, [availableViews, currentView]);
+
+  useEffect(() => {
+    if (!shouldDebugAiLogRef.current) return;
+    console.log("[AI DEBUG]", {
+      aiActionRequested: "Mockup Resolution",
+      requestedHandle: productHandle,
+      activeView: currentView,
+      activeLocation,
+      rawPrintLocations,
+      parsedPrintLocations: printLocations,
+      metafieldMockupUrl: mockupUrl || "",
+      resolvedMockupUrl,
+    });
+  }, [
+    activeLocation,
+    currentView,
+    mockupUrl,
+    printLocations,
+    productHandle,
+    rawPrintLocations,
+    resolvedMockupUrl,
+  ]);
 
   useEffect(() => {
     designAreaRef.current = designArea;
@@ -1336,9 +1425,9 @@ export default function CustomizerPage() {
           <div className="grid grid-cols-2 gap-2 text-xs">
             <button type="button" onClick={() => runAiRouteAction("/api/ai/remove-background", "Remove Background")} className="rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333]" title="AI Background Remover">Remove Background</button>
             <button type="button" onClick={() => runAiRouteAction("/api/ai/enhance-image", "Enhance Image")} className="rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333]" title="AI Image Enhancer">Enhance Image</button>
-            <button type="button" onClick={() => runAiRouteAction("/api/ai/upscale", "Upscale / Sharpen")} className="rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333]" title="AI Upscale / Sharpen">Upscale / Sharpen</button>
-            <button type="button" onClick={() => runAiRouteAction("/api/ai/vectorize", "Vectorize Artwork")} className="rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333]" title="AI Vectorize">Vectorize Artwork</button>
-            <button type="button" onClick={() => runAiRouteAction("/api/ai/color-cleanup", "Clean Up Colors")} className="rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333]" title="AI Color Cleanup">Clean Up Colors</button>
+            <button type="button" onClick={() => runAiRouteAction("/api/ai/upscale-sharpen", "Upscale / Sharpen")} className="rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333]" title="AI Upscale / Sharpen">Upscale / Sharpen</button>
+            <button type="button" onClick={() => runAiRouteAction("/api/ai/vectorize-artwork", "Vectorize Artwork")} className="rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333]" title="AI Vectorize">Vectorize Artwork</button>
+            <button type="button" onClick={() => runAiRouteAction("/api/ai/clean-colors", "Clean Up Colors")} className="rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333]" title="AI Color Cleanup">Clean Up Colors</button>
             <button type="button" onClick={removeWhiteBackgroundLocally} className="rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333]" title="AI Remove White Background">Remove White Background</button>
             <button type="button" onClick={generateLocalSuggestions} className="col-span-2 rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333]" title="AI Design Suggestions">Suggest Design Improvements</button>
           </div>

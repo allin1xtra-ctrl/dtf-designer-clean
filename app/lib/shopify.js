@@ -53,6 +53,8 @@ export async function shopifyStorefrontFetch(query, variables = {}) {
 
   const response = await fetch(endpoint, {
     method: "POST",
+    cache: "no-store",
+    next: { revalidate: 0 },
     headers: {
       "X-Shopify-Storefront-Access-Token": SHOPIFY_STOREFRONT_ACCESS_TOKEN,
       "Content-Type": "application/json",
