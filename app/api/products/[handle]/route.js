@@ -1,4 +1,4 @@
-import { cleanEnv, getProductByHandle, getShopifyDomain } from "../../../lib/shopify.js";
+import { cleanEnv, getProductByHandle } from "../../../lib/shopify.js";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +13,11 @@ const NO_STORE_HEADERS = {
 export async function GET(req, context) {
   const params = await context.params;
   const rawHandle = params?.handle;
-  const storefrontDomain = getShopifyDomain();
+  const storefrontDomain = cleanEnv(
+    process.env.SHOPIFY_STORE_DOMAIN || process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN
+  )
+    .replace(/^https?:\/\//, "")
+    .replace(/\/$/, "");
   const privateStorefrontToken = cleanEnv(process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN);
   const publicStorefrontToken = cleanEnv(process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN);
   const storefrontToken = privateStorefrontToken || publicStorefrontToken;
