@@ -193,6 +193,19 @@ function mapPxToDesignArea(rect: DesignRectPx): DesignArea {
   };
 }
 
+function getSafeImageUrl(value: string) {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) return "";
+  if (trimmed.startsWith("/")) return trimmed;
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol === "https:" || url.protocol === "http:") {
+      return trimmed;
+    }
+  } catch {}
+  return "";
+}
+
 function AdminMockupManagerContent() {
   const searchParams = useSearchParams();
   const token = (searchParams?.get("token") || "").trim();
@@ -214,7 +227,9 @@ function AdminMockupManagerContent() {
     [products, selectedProductId]
   );
   const activeConfig = printLocations[selectedLocation];
-  const previewImageUrl = activeConfig?.mockupUrl || selectedProduct?.featuredImage?.url || "";
+  const previewImageUrl = getSafeImageUrl(
+    activeConfig?.mockupUrl || selectedProduct?.featuredImage?.url || ""
+  );
 
   useEffect(() => {
     if (!token) return;
@@ -462,7 +477,7 @@ function AdminMockupManagerContent() {
             <div className="relative overflow-hidden rounded border border-[#333] bg-white" style={{ width: STAGE_WIDTH, height: STAGE_HEIGHT }}>
               {previewImageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={previewImageUrl} alt="Mockup preview" className="absolute inset-0 h-full w-full object-contain" />
+                <img src={encodeURI(previewImageUrl)} alt="Mockup preview" className="absolute inset-0 h-full w-full object-contain" />
               ) : (
                 <div className="absolute inset-0 grid place-items-center bg-[#ececec] text-sm text-[#4b5563]">Set a mockup image URL to preview.</div>
               )}
