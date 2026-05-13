@@ -14,6 +14,10 @@ type GenerateDesignBody = {
   prompt?: string;
 };
 
+const PRIMARY_GPT_IMAGE_MODEL = "gpt-image-1";
+const DALL_E_2_MODEL = "dall-e-2";
+const DALL_E_3_MODEL = "dall-e-3";
+
 type OpenAIErrorInfo = {
   status?: number;
   code?: string;
@@ -87,7 +91,7 @@ function shouldRetryWithFallback(
   fallbackModel: string | undefined,
   error: OpenAIErrorInfo
 ) {
-  if (model !== "gpt-image-1") {
+  if (model !== PRIMARY_GPT_IMAGE_MODEL) {
     return false;
   }
 
@@ -108,10 +112,17 @@ function buildImageGenerateParams(model: string, prompt: string): ImageGenerateP
   };
 
   if (normalizedModel.startsWith("dall-e")) {
+    const quality =
+      normalizedModel === DALL_E_3_MODEL
+        ? "hd"
+        : normalizedModel === DALL_E_2_MODEL
+          ? "standard"
+          : undefined;
+
     return {
       ...baseParams,
       response_format: "b64_json",
-      quality: normalizedModel === "dall-e-3" ? "hd" : "standard",
+      ...(quality ? { quality } : {}),
     };
   }
 
