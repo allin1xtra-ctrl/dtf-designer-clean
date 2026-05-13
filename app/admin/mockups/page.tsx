@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Rnd } from "react-rnd";
 
@@ -193,9 +193,9 @@ function mapPxToDesignArea(rect: DesignRectPx): DesignArea {
   };
 }
 
-export default function AdminMockupManagerPage() {
+function AdminMockupManagerContent() {
   const searchParams = useSearchParams();
-  const token = (searchParams.get("token") || "").trim();
+  const token = (searchParams?.get("token") || "").trim();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
@@ -513,5 +513,19 @@ export default function AdminMockupManagerPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+export default function AdminMockupManagerPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-[#0f0f10] p-8 text-white">
+          <h1 className="text-2xl font-semibold">Loading...</h1>
+        </main>
+      }
+    >
+      <AdminMockupManagerContent />
+    </Suspense>
   );
 }
