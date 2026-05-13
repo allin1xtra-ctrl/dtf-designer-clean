@@ -65,7 +65,22 @@ export async function GET(req, context) {
       });
     }
 
-    return NextResponse.json(product, { headers: NO_STORE_HEADERS });
+    const normalizedProduct = {
+      ...product,
+      variants: Array.isArray(product.variants)
+        ? product.variants.map((variant) => ({
+            ...variant,
+            selectedOptions: Array.isArray(variant.selectedOptions)
+              ? variant.selectedOptions.map((option) => ({
+                  name: String(option?.name || ""),
+                  value: String(option?.value || ""),
+                }))
+              : [],
+          }))
+        : [],
+    };
+
+    return NextResponse.json(normalizedProduct, { headers: NO_STORE_HEADERS });
   } catch (error) {
     console.error("Product API failed for handle:", handle, error);
 

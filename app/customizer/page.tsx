@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, FabricImage, Path, Shadow, Textbox } from "fabric";
 import { normalizeVariantId } from "../lib/shopify";
 
@@ -66,6 +66,7 @@ type PrintArea = {
 
 type PrintLocationData = {
   mockupUrl?: string;
+  colorMockups?: Record<string, string>;
   x?: number;
   y?: number;
   width?: number;
@@ -87,6 +88,11 @@ type ProductByHandleResponse = {
   };
   variants?: Array<{
     id?: string;
+    title?: string;
+    selectedOptions?: Array<{
+      name?: string;
+      value?: string;
+    }>;
   }>;
 };
 
@@ -120,6 +126,8 @@ const VIEW_LOCATION_KEYS: Record<ViewName, string[]> = {
   rightSleeve: ["rightSleeve", "right_sleeve"],
   neck: ["neck", "neckLabel", "neck_label", "neck_tag"],
 };
+const COLOR_OPTION_NAMES = ["color", "colour"];
+const SIZE_OPTION_NAMES = ["size"];
 // Optional per-product overrides for known product handles.
 // Generic view-specific blank mockups are used when no product override exists.
 const PRODUCT_BLANK_MOCKUPS: Record<string, Partial<Record<ViewName, string>>> = {
@@ -144,6 +152,85 @@ function createBlankMockupDataUrl(label: string) {
     <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="#71717a" font-family="Arial, sans-serif" font-size="34">${safeLabel} blank mockup</text>
   </svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+function normalizeOptionLabel(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function getVariantSelectedOptionValue(
+  variant: ProductByHandleResponse["variants"] extends Array<infer Variant> ? Variant : never,
+  optionNames: string[]
+) {
+  const normalizedOptionNames = optionNames.map(normalizeOptionLabel);
+  const matchedOption = variant?.selectedOptions?.find((option) =>
+    normalizedOptionNames.includes(normalizeOptionLabel(String(option?.name || "")))
+  );
+  const optionValue = String(matchedOption?.value || "").trim();
+  return optionValue || "";
+}
+
+function getVariantColor(
+  variant: ProductByHandleResponse["variants"] extends Array<infer Variant> ? Variant : never
+) {
+  return getVariantSelectedOptionValue(variant, COLOR_OPTION_NAMES);
+}
+
+function getVariantSize(
+  variant: ProductByHandleResponse["variants"] extends Array<infer Variant> ? Variant : never
+) {
+  return getVariantSelectedOptionValue(variant, SIZE_OPTION_NAMES);
+}
+
+function getUniqueVariantOptionValues(
+  variants: NonNullable<ProductByHandleResponse["variants"]>,
+  getValue: (
+    variant: ProductByHandleResponse["variants"] extends Array<infer Variant> ? Variant : never
+  ) => string
+) {
+  const seen = new Set<string>();
+  const values: string[] = [];
+
+  for (const variant of variants) {
+    const value = getValue(variant);
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    values.push(value);
+  }
+
+  return values;
+}
+
+function resolveColorMockupUrl(colorMockups: Record<string, string> | undefined, selectedColor: string) {
+  const normalizedSelectedColor = String(selectedColor || "").trim();
+  if (!colorMockups || !normalizedSelectedColor) return "";
+
+  const exactMatch = Object.entries(colorMockups).find(([color]) => color.trim() === normalizedSelectedColor);
+  if (exactMatch?.[1]) return exactMatch[1].trim();
+
+  const fallbackMatch = Object.entries(colorMockups).find(
+    ([color]) => color.trim().toLowerCase() === normalizedSelectedColor.toLowerCase()
+  );
+  return String(fallbackMatch?.[1] || "").trim();
+}
+
+function findMatchingVariant(
+  variants: NonNullable<ProductByHandleResponse["variants"]>,
+  selection: { color?: string; size?: string }
+) {
+  const normalizedColor = String(selection.color || "").trim();
+  const normalizedSize = String(selection.size || "").trim();
+
+  return (
+    variants.find((variant) => {
+      const variantColor = getVariantColor(variant);
+      const variantSize = getVariantSize(variant);
+
+      if (normalizedColor && variantColor !== normalizedColor) return false;
+      if (normalizedSize && variantSize && variantSize !== normalizedSize) return false;
+      return true;
+    }) || null
+  );
 }
 
 const GENERIC_BLANK_MOCKUPS: Record<ViewName, string> = {
@@ -361,11 +448,13 @@ export default function CustomizerPage() {
   const [isReady, setIsReady] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [variantId, setVariantId] = useState(FALLBACK_VARIANT_ID);
+  const [selectedColor, setSelectedColor] = useState("");
   const [selectedSize, setSelectedSize] = useState("Custom");
   const [transferSize, setTransferSize] = useState("12x12");
   const [cartStatus, setCartStatus] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [productHandle, setProductHandle] = useState("");
+  const [productData, setProductData] = useState<ProductByHandleResponse | null>(null);
   const [hasVariantInQuery, setHasVariantInQuery] = useState(false);
   const [printLocations, setPrintLocations] = useState<PrintLocationsMap>({});
   const [rawPrintLocations, setRawPrintLocations] = useState("");
@@ -899,6 +988,7 @@ export default function CustomizerPage() {
 
   useEffect(() => {
     if (!productHandle) {
+      setProductData(null);
       setPrintLocations({});
       setRawPrintLocations("");
       setPrintLocationsError("");
@@ -940,6 +1030,8 @@ export default function CustomizerPage() {
 
         if (!isMounted) return;
 
+        setProductData(result);
+
         const metafieldValue = result.metafield?.value;
         const parsedLocations = parsePrintLocations(metafieldValue);
 
@@ -961,14 +1053,22 @@ export default function CustomizerPage() {
           setPrintLocationsError("");
         }
 
-        if (!hasVariantInQuery && result.variants?.[0]?.id) {
-          const fallbackVariant = normalizeVariantId(result.variants[0].id);
-          if (fallbackVariant) setVariantId(fallbackVariant);
+        const matchingVariant = result.variants?.find(
+          (variant) => normalizeVariantId(variant.id) === variantId
+        );
+        const fallbackVariant = matchingVariant || result.variants?.[0];
+        const normalizedFallbackVariantId = normalizeVariantId(fallbackVariant?.id);
+
+        if (normalizedFallbackVariantId && normalizedFallbackVariantId !== variantId) {
+          if (!hasVariantInQuery || !matchingVariant) {
+            setVariantId(normalizedFallbackVariantId);
+          }
         }
       } catch (error) {
         if (controller.signal.aborted) return;
         console.error("Failed to fetch product by handle:", error);
         if (isMounted) {
+          setProductData(null);
           setPrintLocations({});
           setRawPrintLocations("");
           setPrintLocationsError(
@@ -986,9 +1086,93 @@ export default function CustomizerPage() {
     };
   }, [hasVariantInQuery, productHandle]);
 
+  const productVariants = useMemo(
+    () => (Array.isArray(productData?.variants) ? productData.variants : []),
+    [productData]
+  );
+  const selectedVariant = useMemo(
+    () =>
+      productVariants.find((variant) => normalizeVariantId(variant.id) === variantId) || null,
+    [productVariants, variantId]
+  );
+  const availableColors = useMemo(
+    () => getUniqueVariantOptionValues(productVariants, getVariantColor),
+    [productVariants]
+  );
+  const availableSizes = useMemo(
+    () => getUniqueVariantOptionValues(productVariants, getVariantSize),
+    [productVariants]
+  );
+  const hasColorOptions = availableColors.length > 0;
+  const hasSizeOptions = availableSizes.length > 0;
+
+  useEffect(() => {
+    if (!selectedVariant) {
+      if (!hasColorOptions && selectedColor) {
+        setSelectedColor("");
+      }
+      return;
+    }
+
+    const variantColor = getVariantColor(selectedVariant);
+    const variantSize = getVariantSize(selectedVariant);
+
+    if (variantColor !== selectedColor) {
+      setSelectedColor(variantColor);
+    }
+
+    if (hasSizeOptions && variantSize && variantSize !== selectedSize) {
+      setSelectedSize(variantSize);
+    }
+  }, [hasColorOptions, hasSizeOptions, selectedColor, selectedSize, selectedVariant]);
+
+  const handleColorChange = (nextColor: string) => {
+    setSelectedColor(nextColor);
+
+    const matchedVariant =
+      findMatchingVariant(productVariants, {
+        color: nextColor,
+        size: hasSizeOptions ? selectedSize : undefined,
+      }) || findMatchingVariant(productVariants, { color: nextColor });
+
+    const nextVariantId = normalizeVariantId(matchedVariant?.id);
+    if (nextVariantId) {
+      setVariantId(nextVariantId);
+    }
+
+    const matchedSize = getVariantSize(matchedVariant || undefined);
+    if (matchedSize) {
+      setSelectedSize(matchedSize);
+    }
+  };
+
+  const handleSizeChange = (nextSize: string) => {
+    setSelectedSize(nextSize);
+
+    if (!hasSizeOptions) return;
+
+    const matchedVariant =
+      findMatchingVariant(productVariants, {
+        color: hasColorOptions ? selectedColor : undefined,
+        size: nextSize,
+      }) || findMatchingVariant(productVariants, { size: nextSize });
+
+    const nextVariantId = normalizeVariantId(matchedVariant?.id);
+    if (nextVariantId) {
+      setVariantId(nextVariantId);
+    }
+
+    const matchedColor = getVariantColor(matchedVariant || undefined);
+    if (matchedColor) {
+      setSelectedColor(matchedColor);
+    }
+  };
+
   const locationInfo = getPrintLocationDataForView(printLocations, currentView);
   const { activeLocation, activeLocationData } = locationInfo;
-  const mockupUrl = activeLocationData?.mockupUrl;
+  const mockupUrl =
+    resolveColorMockupUrl(activeLocationData?.colorMockups, selectedColor) ||
+    activeLocationData?.mockupUrl;
   const resolvedMockupUrl = resolveMockupUrl(mockupUrl, currentView, productHandle);
   const designArea = normalizeDesignArea(activeLocationData);
   const maxPrintWidth = normalizePrintLimit(activeLocationData?.maxPrintWidth);
@@ -1023,6 +1207,15 @@ export default function CustomizerPage() {
     if (!availableViews.length || availableViews.includes(currentView)) return;
     setCurrentView(availableViews[0]);
   }, [availableViews, currentView]);
+
+  useEffect(() => {
+    console.log("[Customizer] Mockup resolution", {
+      selectedVariantId: variantId,
+      selectedColor,
+      activePrintLocation: activeLocation,
+      resolvedMockupUrl,
+    });
+  }, [activeLocation, resolvedMockupUrl, selectedColor, variantId]);
 
   useEffect(() => {
     if (!shouldDebugAiLogRef.current) return;
@@ -1557,8 +1750,42 @@ export default function CustomizerPage() {
 
         <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
           <h2 className="mb-2 text-lg font-semibold">Checkout</h2>
+          {hasColorOptions ? (
+            <>
+              <label htmlFor="checkout-color-select" className="mb-2 block text-sm text-gray-300">Color</label>
+              <select
+                id="checkout-color-select"
+                name="color"
+                value={selectedColor}
+                onChange={(e) => handleColorChange(e.target.value)}
+                className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white"
+              >
+                {availableColors.map((color) => (
+                  <option key={color} value={color}>
+                    {color}
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : null}
           <label htmlFor="checkout-size-input" className="mb-2 block text-sm text-gray-300">Size</label>
-          <input id="checkout-size-input" name="size" type="text" value={selectedSize} onChange={(e) => setSelectedSize(e.target.value)} className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white" />
+          {hasSizeOptions ? (
+            <select
+              id="checkout-size-input"
+              name="size"
+              value={selectedSize}
+              onChange={(e) => handleSizeChange(e.target.value)}
+              className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white"
+            >
+              {availableSizes.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input id="checkout-size-input" name="size" type="text" value={selectedSize} onChange={(e) => setSelectedSize(e.target.value)} className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white" />
+          )}
 
           <label htmlFor="checkout-quantity-input" className="mb-2 block text-sm text-gray-300">Quantity</label>
           <input id="checkout-quantity-input" name="quantity" type="number" min="1" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white" />

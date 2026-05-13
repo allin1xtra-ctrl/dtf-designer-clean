@@ -19,6 +19,7 @@ type DesignArea = {
 
 type PrintLocationConfig = {
   mockupUrl: string;
+  colorMockups?: Record<string, string>;
   designArea: DesignArea;
   maxPrintWidth: number;
   maxPrintHeight: number;
@@ -161,9 +162,22 @@ function resolveLocation(
     height = readNumber(rawHeight, defaults.designArea.height, true);
   }
 
+  const rawColorMockups =
+    raw.colorMockups && typeof raw.colorMockups === "object" && !Array.isArray(raw.colorMockups)
+      ? Object.fromEntries(
+          Object.entries(raw.colorMockups as Record<string, unknown>).flatMap(([color, url]) => {
+            const normalizedColor = String(color || "").trim();
+            const normalizedUrl = String(url || "").trim();
+            return normalizedColor && normalizedUrl ? [[normalizedColor, normalizedUrl]] : [];
+          })
+        )
+      : undefined;
+
   return {
     mockupUrl:
       String(raw.mockupUrl || "").trim() || defaults.mockupUrl || String(featuredImageUrl || "").trim(),
+    colorMockups:
+      rawColorMockups && Object.keys(rawColorMockups).length ? rawColorMockups : undefined,
     designArea: {
       x: clamp(x, 0, 1),
       y: clamp(y, 0, 1),
