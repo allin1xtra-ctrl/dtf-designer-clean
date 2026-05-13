@@ -9,5 +9,16 @@ export const metadata: Metadata = {
 export default function CustomizerLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  return children;
+  return (
+    <>
+      {/* Hide the global site footer and lock the body to the viewport so the
+          canvas workspace fills exactly 100dvh with no black gaps. */}
+      <style>{`
+        body { overflow: hidden !important; }
+        body > footer { display: none !important; }
+        body > div { height: 100dvh; overflow: hidden; }
+      `}</style>
+      {children}
+    </>
+  );
 }
