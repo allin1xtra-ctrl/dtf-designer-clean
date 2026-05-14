@@ -524,7 +524,8 @@
 
       iframe.src = url.toString();
       iframe.style.width = '100%';
-      iframe.style.height = '900px';
+      iframe.style.height = '100vh';
+      iframe.style.height = '100dvh';
       iframe.style.border = 'none';
       iframe.style.borderRadius = '12px';
       iframe.loading = 'lazy';
@@ -548,7 +549,7 @@
         var message = event.data || {};
 
         if (message.type === 'dtf:resize' && message.payload && message.payload.height) {
-          iframe.style.height = Math.max(700, Number(message.payload.height)) + 'px';
+          iframe.style.height = Math.max(420, Number(message.payload.height)) + 'px';
           return;
         }
 
