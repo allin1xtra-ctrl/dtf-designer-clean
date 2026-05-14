@@ -41,7 +41,8 @@ async function removeBackgroundWithRemoveBg(
   removeBgApiKey: string
 ) {
   const formData = new FormData();
-  formData.append("image_file", new Blob([pngInput], { type: "image/png" }), "source.png");
+  const pngBytes = new Uint8Array(pngInput);
+  formData.append("image_file", new Blob([pngBytes], { type: "image/png" }), "source.png");
   formData.append("size", "auto");
 
   const response = await fetch("https://api.remove.bg/v1.0/removebg", {
@@ -53,8 +54,7 @@ async function removeBackgroundWithRemoveBg(
   });
 
   if (!response.ok) {
-    const details = await response.text().catch(() => "");
-    throw new Error(`remove.bg request failed (${response.status}): ${details.slice(0, 600)}`);
+    throw new Error(`remove.bg request failed (${response.status}).`);
   }
 
   const outputBuffer = Buffer.from(await response.arrayBuffer());

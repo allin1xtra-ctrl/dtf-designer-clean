@@ -73,7 +73,7 @@ const FONT_OPTIONS: FontOption[] = [
   { label: "Black Ops One", value: "\"Black Ops One\"" },
   { label: "Racing Sans One", value: "\"Racing Sans One\"" },
   { label: "Graduate", value: "Graduate" },
-  { label: "Varsity Style", value: "Graduate" },
+  { label: "Varsity Style", value: "Graduate, \"Times New Roman\", serif" },
   { label: "Russo One", value: "\"Russo One\"" },
   { label: "Archivo Black", value: "\"Archivo Black\"" },
   { label: "Inter", value: "Inter" },

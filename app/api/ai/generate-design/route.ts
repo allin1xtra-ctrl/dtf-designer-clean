@@ -193,7 +193,6 @@ export async function POST(request: Request) {
       response = generated.response;
     } catch (error) {
       const primaryError = toOpenAIErrorInfo(error);
-      console.error("AI design generation failed:", error);
       console.error("Generate design OpenAI request failed", {
         aiImageModel: AI_IMAGE_MODEL,
         attemptedModel: usedModel,
@@ -212,7 +211,6 @@ export async function POST(request: Request) {
           response = fallbackGenerated.response;
         } catch (fallbackError) {
           const mappedFallbackError = toOpenAIErrorInfo(fallbackError);
-          console.error("AI design generation failed:", fallbackError);
           console.error("Generate design OpenAI fallback request failed", {
             aiImageModel: AI_IMAGE_MODEL,
             attemptedModel: usedModel,
@@ -248,7 +246,6 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("AI design generation failed:", error);
-    console.error("Generate design route failed:", error);
     return errorJson("AI design generation failed. Please try a different prompt.");
   }
 }
