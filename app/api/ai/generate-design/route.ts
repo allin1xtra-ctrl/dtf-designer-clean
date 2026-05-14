@@ -82,7 +82,7 @@ function toFrontendSafeErrorMessage(error: OpenAIErrorInfo) {
     return "OpenAI rate limit or billing limit reached.";
   }
 
-  return "Unable to generate design right now. Please try again.";
+  return "AI design generation encountered an error. Please try again or contact support if it continues.";
 }
 
 function shouldRetryWithFallback(
@@ -221,6 +221,8 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Generate design route failed:", error);
-    return errorJson("Unable to generate design right now. Please try again.");
+    return errorJson(
+      "AI design generation encountered an error. Please try again or contact support if it continues."
+    );
   }
 }
