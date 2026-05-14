@@ -1295,7 +1295,6 @@ export default function CustomizerPage() {
   const hasSelectedDesign = selectedObjectType !== "none";
 
   const exceedsPrintWidth = Boolean(
-    shouldShowTransferSizePreview &&
     !isSmallLocation &&
     hasSelectedDesign &&
     maxPrintWidth &&
@@ -1304,7 +1303,6 @@ export default function CustomizerPage() {
   );
 
   const exceedsPrintHeight = Boolean(
-    shouldShowTransferSizePreview &&
     !isSmallLocation &&
     hasSelectedDesign &&
     maxPrintHeight &&
@@ -1708,10 +1706,6 @@ export default function CustomizerPage() {
         return;
       }
 
-      const normalizedTransferSize = TRANSFER_SIZE_PRESETS.includes(transferSize)
-        ? transferSize
-        : "Custom";
-
       const lineItemProperties: Record<string, string> = {
         "Design ID": createDesignId(),
         Size: selectedSize || "Custom",
@@ -1726,6 +1720,9 @@ export default function CustomizerPage() {
       };
 
       if (shouldShowTransferSizePreview) {
+        const normalizedTransferSize = TRANSFER_SIZE_PRESETS.includes(transferSize)
+          ? transferSize
+          : "Custom";
         lineItemProperties["Transfer Size"] = normalizedTransferSize;
       }
 

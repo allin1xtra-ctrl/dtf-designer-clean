@@ -16,6 +16,8 @@ type RemoveBackgroundBody = {
 
 const REMOVE_BACKGROUND_FAILED_MESSAGE =
   "Background removal failed. Please try another image or upload a transparent PNG.";
+const REMOVE_BACKGROUND_CONFIG_ERROR =
+  "Background removal service is not configured. Add REMOVE_BG_API_KEY or OPENAI_API_KEY.";
 
 type AiImageResponse = {
   data?: Array<{
@@ -23,6 +25,13 @@ type AiImageResponse = {
     url?: string;
   }>;
 };
+
+function bufferToArrayBuffer(buffer: Buffer): ArrayBuffer {
+  return buffer.buffer.slice(
+    buffer.byteOffset,
+    buffer.byteOffset + buffer.byteLength
+  ) as ArrayBuffer;
+}
 
 async function fetchImageUrlToDataUrl(url: string) {
   const response = await fetch(url, { cache: "no-store" });
@@ -41,8 +50,12 @@ async function removeBackgroundWithRemoveBg(
   removeBgApiKey: string
 ) {
   const formData = new FormData();
-  const pngBytes = new Uint8Array(pngInput);
-  formData.append("image_file", new Blob([pngBytes], { type: "image/png" }), "source.png");
+  const pngArrayBuffer = bufferToArrayBuffer(pngInput);
+  formData.append(
+    "image_file",
+    new Blob([pngArrayBuffer], { type: "image/png" }),
+    "source.png"
+  );
   formData.append("size", "auto");
 
   const response = await fetch("https://api.remove.bg/v1.0/removebg", {
@@ -114,7 +127,7 @@ export async function POST(request: Request) {
 
     if (!removeBgApiKey && !process.env.OPENAI_API_KEY) {
       console.error("Background removal service is not configured.");
-      return errorJson(REMOVE_BACKGROUND_FAILED_MESSAGE, 503);
+      return errorJson(REMOVE_BACKGROUND_CONFIG_ERROR, 503);
     }
 
     const imageDataUrl = removeBgApiKey
