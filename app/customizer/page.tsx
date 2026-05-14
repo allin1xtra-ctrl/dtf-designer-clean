@@ -1808,7 +1808,7 @@ export default function CustomizerPage() {
         <main className="order-1 flex min-h-0 flex-1 flex-col md:order-2">
           <div
             ref={previewPaneRef}
-            className="order-1 flex aspect-[5/6] min-h-[320px] w-full max-h-[70vh] items-center justify-center bg-[#181818] px-3 py-4 md:order-2 md:min-h-0 md:max-h-none md:flex-1 md:items-center md:justify-center md:px-4 md:py-4"
+            className="order-1 flex aspect-[5/6] min-h-[320px] w-full max-h-[70vh] items-center justify-center bg-[#181818] px-3 py-4 md:order-2 md:min-h-0 md:max-h-none md:flex-1 md:px-4 md:py-4"
           >
             <div
               style={{
@@ -1882,7 +1882,7 @@ export default function CustomizerPage() {
             </p>
           </div>
 
-        <div className="mt-0 md:mt-5">
+        <div className="md:mt-5">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">Upload Artwork</h2>
           <input id="artwork-upload-input" name="artworkUpload" ref={fileInputRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
           <button type="button" onClick={() => fileInputRef.current?.click()} className="block w-full cursor-pointer rounded bg-[#1f1f1f] p-2 text-sm text-white hover:bg-[#333]">Upload Artwork</button>
