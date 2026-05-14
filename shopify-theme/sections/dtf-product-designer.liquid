@@ -552,6 +552,9 @@
       var productHandle = mount.dataset.productHandle || '';
       var launchMode = (mount.dataset.defaultMode || 'apparel').toLowerCase() === 'transfer' ? 'transfer' : 'apparel';
       var startUpload = mount.dataset.startUpload === '1' || mount.dataset.startUpload === 'true';
+      var viewportHeightUnit = (window.CSS && window.CSS.supports && window.CSS.supports('height', '100dvh'))
+        ? '100dvh'
+        : '100vh';
 
       if (!variantId) {
         console.error('NO VARIANT FOUND', {
@@ -561,13 +564,12 @@
       }
 
 
-      // CLS/LCP fix: wrap iframe in a container with min-height and aspect-ratio
+      // Reserve visible viewport height for the embedded customizer.
       var wrapper = document.createElement('div');
       wrapper.className = 'dtf-iframe-wrapper';
       wrapper.style.position = 'relative';
       wrapper.style.width = '100%';
-      wrapper.style.minHeight = '900px';
-      wrapper.style.aspectRatio = '4/3'; // fallback for browsers that support it
+      wrapper.style.minHeight = viewportHeightUnit;
 
       var iframe = document.createElement('iframe');
       iframe.className = 'dtf-iframe';
@@ -588,7 +590,7 @@
 
       iframe.src = url.toString();
       iframe.style.width = '100%';
-      iframe.style.height = '900px';
+      iframe.style.height = viewportHeightUnit;
       iframe.style.border = 'none';
       iframe.style.borderRadius = '12px';
       iframe.loading = 'lazy';
@@ -621,7 +623,7 @@
         var message = event.data || {};
 
         if (message.type === 'dtf:resize' && message.payload && message.payload.height) {
-          iframe.style.height = Math.max(700, Number(message.payload.height)) + 'px';
+          iframe.style.height = Math.max(420, Number(message.payload.height)) + 'px';
           return;
         }
 

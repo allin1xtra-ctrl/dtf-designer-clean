@@ -1280,11 +1280,15 @@ export default function CustomizerPage() {
       const rect = previewPaneRef.current?.getBoundingClientRect();
       if (!rect) return;
 
-      const nextScale = Math.min(
-        1,
-        Math.max((rect.width - PREVIEW_PADDING) / CANVAS_DEFAULT_WIDTH, MIN_PREVIEW_SCALE),
-        Math.max((rect.height - PREVIEW_PADDING) / CANVAS_DEFAULT_HEIGHT, MIN_PREVIEW_SCALE)
+      const widthScale = Math.max(
+        (rect.width - PREVIEW_PADDING) / CANVAS_DEFAULT_WIDTH,
+        MIN_PREVIEW_SCALE
       );
+      const heightScale = Math.max(
+        (rect.height - PREVIEW_PADDING) / CANVAS_DEFAULT_HEIGHT,
+        MIN_PREVIEW_SCALE
+      );
+      const nextScale = Math.min(widthScale, heightScale);
       // Ignore tiny float-only changes so ResizeObserver doesn't trigger unnecessary re-renders.
       setPreviewScale((prev) =>
         Math.abs(prev - nextScale) < SCALE_CHANGE_THRESHOLD ? prev : nextScale
@@ -1916,7 +1920,7 @@ export default function CustomizerPage() {
           </div>
         ) : null}
 
-        <div ref={previewPaneRef} className="flex min-h-0 flex-1 items-center justify-center bg-[#181818] p-1 md:p-3">
+        <div ref={previewPaneRef} className="flex min-h-0 flex-1 items-center justify-center bg-[#181818] p-0 md:p-1">
           <div style={{ width: `${CANVAS_DEFAULT_WIDTH * previewScale}px`, height: `${CANVAS_DEFAULT_HEIGHT * previewScale}px` }}>
             <div
               className={getPreviewStageClassName(currentView)}
