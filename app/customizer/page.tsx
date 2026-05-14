@@ -1288,7 +1288,7 @@ export default function CustomizerPage() {
         (rect.height - PREVIEW_PADDING) / CANVAS_DEFAULT_HEIGHT,
         MIN_PREVIEW_SCALE
       );
-      const nextScale = Math.max(MIN_PREVIEW_SCALE, Math.min(widthScale, heightScale));
+      const nextScale = Math.min(widthScale, heightScale);
       // Ignore tiny float-only changes so ResizeObserver doesn't trigger unnecessary re-renders.
       setPreviewScale((prev) =>
         Math.abs(prev - nextScale) < SCALE_CHANGE_THRESHOLD ? prev : nextScale
