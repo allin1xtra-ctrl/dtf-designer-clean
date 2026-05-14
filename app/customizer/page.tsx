@@ -178,14 +178,27 @@ function normalizeOptionLabel(value: string) {
   return value.trim().toLowerCase();
 }
 
+function normalizeColorName(value: string) {
+  const normalized = String(value || "").trim();
+  const normalizedLower = normalized.toLowerCase();
+  if (normalizedLower === "black") return "Black";
+  if (normalizedLower === "white") return "White";
+  return normalized;
+}
+
 function getVariantSelectedOptionValue(
   variant: ProductVariant | null | undefined,
   optionNames: string[]
 ) {
   const normalizedOptionNames = optionNames.map(normalizeOptionLabel);
-  const matchedOption = variant?.selectedOptions?.find((option) =>
-    normalizedOptionNames.includes(normalizeOptionLabel(String(option?.name || "")))
-  );
+  const matchedOption =
+    variant?.selectedOptions?.find((option) =>
+      normalizedOptionNames.includes(normalizeOptionLabel(String(option?.name || "")))
+    ) ||
+    variant?.selectedOptions?.find((option) => {
+      const normalizedName = normalizeOptionLabel(String(option?.name || ""));
+      return normalizedOptionNames.some((expectedName) => normalizedName.includes(expectedName));
+    });
   const optionValue = String(matchedOption?.value || "").trim();
   return optionValue || "";
 }
@@ -193,7 +206,7 @@ function getVariantSelectedOptionValue(
 function getVariantColor(
   variant: ProductVariant | null | undefined
 ) {
-  return getVariantSelectedOptionValue(variant, COLOR_OPTION_NAMES);
+  return normalizeColorName(getVariantSelectedOptionValue(variant, COLOR_OPTION_NAMES));
 }
 
 function getVariantSize(
@@ -236,7 +249,7 @@ function findMatchingVariant(
   variants: NonNullable<ProductByHandleResponse["variants"]>,
   selection: { color?: string; size?: string }
 ) {
-  const normalizedColor = String(selection.color || "").trim();
+  const normalizedColor = normalizeColorName(String(selection.color || ""));
   const normalizedSize = String(selection.size || "").trim();
 
   return (
@@ -1258,13 +1271,14 @@ export default function CustomizerPage() {
   }, [hasColorOptions, hasSizeOptions, selectedColor, selectedSize, selectedVariant]);
 
   const handleColorChange = (nextColor: string) => {
-    setSelectedColor(nextColor);
+    const normalizedColor = normalizeColorName(nextColor);
+    setSelectedColor(normalizedColor);
 
     const matchedVariant =
       findMatchingVariant(productVariants, {
-        color: nextColor,
+        color: normalizedColor,
         size: hasSizeOptions ? selectedSize : undefined,
-      }) || findMatchingVariant(productVariants, { color: nextColor });
+      }) || findMatchingVariant(productVariants, { color: normalizedColor });
 
     const nextVariantId = normalizeVariantId(matchedVariant?.id);
     if (nextVariantId) {
@@ -1319,9 +1333,13 @@ export default function CustomizerPage() {
 
     return "";
   }, [activeLocationData?.sizeMockups, selectedSize]);
-  const mockupUrl =
-    resolveColorMockupUrl(activeLocationData?.colorMockups, selectedColor) ||
+  const normalizedSelectedColor = normalizeColorName(selectedColor);
+  const colorMockupUrl =
+    activeLocationData?.colorMockups?.[normalizedSelectedColor] ||
+    activeLocationData?.colorMockups?.[normalizedSelectedColor?.toLowerCase()] ||
+    resolveColorMockupUrl(activeLocationData?.colorMockups, normalizedSelectedColor) ||
     activeLocationData?.mockupUrl;
+  const mockupUrl = colorMockupUrl || activeLocationData?.mockupUrl;
   const resolvedMockupUrl = resolveMockupUrl(mockupUrl, currentView, productHandle);
   const designArea = normalizeDesignArea(activeLocationData);
   const mockupFitRatio = previewScale < 1 ? MOCKUP_FIT_RATIO_SMALL_SCREEN : MOCKUP_FIT_RATIO;
@@ -1372,14 +1390,21 @@ export default function CustomizerPage() {
   }, [availableViews, currentView]);
 
   useEffect(() => {
+    console.log("DTF selected variant:", selectedVariant);
+    console.log("DTF selected color:", normalizedSelectedColor);
+    console.log("DTF active location data:", activeLocationData);
+    console.log("DTF resolved color mockup URL:", resolvedMockupUrl);
+  }, [activeLocationData, normalizedSelectedColor, resolvedMockupUrl, selectedVariant]);
+
+  useEffect(() => {
     if (!shouldDebugAiLogRef.current) return;
     console.log("[Customizer] Mockup resolution", {
       selectedVariantId: variantId,
-      selectedColor,
+      selectedColor: normalizedSelectedColor,
       activePrintLocation: activeLocation,
       resolvedMockupUrl,
     });
-  }, [activeLocation, resolvedMockupUrl, selectedColor, variantId]);
+  }, [activeLocation, normalizedSelectedColor, resolvedMockupUrl, variantId]);
 
   useEffect(() => {
     if (!previewPaneRef.current || typeof ResizeObserver === "undefined") return;
@@ -1760,6 +1785,7 @@ export default function CustomizerPage() {
         quantity: Number(quantity || 1),
         properties: {
           "Design ID": createDesignId(),
+          Color: normalizedSelectedColor || "",
           Size: selectedSize || "Custom",
           "Transfer Size": normalizedTransferSize,
           Placement: VIEW_LABELS[currentView],
