@@ -67,6 +67,7 @@ type PrintArea = {
 type PrintLocationData = {
   mockupUrl?: string;
   colorMockups?: Record<string, string>;
+  sizeMockups?: Record<string, string>;
   x?: number;
   y?: number;
   width?: number;
@@ -1218,6 +1219,20 @@ export default function CustomizerPage() {
 
   const locationInfo = getPrintLocationDataForView(printLocations, currentView, productHandle);
   const { activeLocation, activeLocationData } = locationInfo;
+  const matchedSizeMockupKey = useMemo(() => {
+    const normalizedSelectedSize = String(selectedSize || "").trim();
+    if (!normalizedSelectedSize) return "";
+    const sizeMockups = activeLocationData?.sizeMockups;
+    if (!sizeMockups || typeof sizeMockups !== "object") return "";
+
+    return (
+      Object.keys(sizeMockups).find((size) => size.trim() === normalizedSelectedSize) ||
+      Object.keys(sizeMockups).find(
+        (size) => size.trim().toLowerCase() === normalizedSelectedSize.toLowerCase()
+      ) ||
+      ""
+    );
+  }, [activeLocationData?.sizeMockups, selectedSize]);
   const mockupUrl =
     resolveColorMockupUrl(activeLocationData?.colorMockups, selectedColor) ||
     activeLocationData?.mockupUrl;
@@ -1255,6 +1270,11 @@ export default function CustomizerPage() {
   );
 
   const exceedsPrintLimits = exceedsPrintWidth || exceedsPrintHeight;
+
+  useEffect(() => {
+    if (!matchedSizeMockupKey || transferSize === matchedSizeMockupKey) return;
+    setTransferSize(matchedSizeMockupKey);
+  }, [matchedSizeMockupKey, transferSize]);
   const isAddToCartDisabled = isSubmitting || Boolean(printLocationsError);
   const addToCartDescriptionId = printLocationsError ? "print-locations-error" : undefined;
 
