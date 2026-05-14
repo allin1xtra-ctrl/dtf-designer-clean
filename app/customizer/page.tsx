@@ -138,6 +138,7 @@ const VIEW_LOCATION_KEYS: Record<ViewName, string[]> = {
 };
 const COLOR_OPTION_NAMES = ["color", "colour"];
 const SIZE_OPTION_NAMES = ["size"];
+const DEFAULT_COLOR = "Black";
 // Optional per-product overrides for known product handles.
 // Generic view-specific blank mockups are used when no product override exists.
 const PRODUCT_BLANK_MOCKUPS: Record<string, Partial<Record<ViewName, string>>> = {
@@ -232,7 +233,7 @@ function getUniqueVariantOptionValues(
   return values;
 }
 
-function resolveColorMockup(location: PrintLocationData | undefined, selectedColor: string) {
+function resolveColorMockupUrl(location: PrintLocationData | undefined, selectedColor: string) {
   const colorMockups = location?.colorMockups || {};
   const normalizedSelectedColor = String(selectedColor || "").trim();
   if (!normalizedSelectedColor) return location?.mockupUrl;
@@ -417,9 +418,7 @@ function getSmallPrintAreaLabel(view: ViewName) {
   return "4 in × 5 in";
 }
 
-function getMockupImageClassName(view: ViewName) {
-  if (view === "neck") return "absolute z-0 max-h-full max-w-full object-contain transition-all duration-200";
-  if (view === "leftSleeve" || view === "rightSleeve") return "absolute z-0 max-h-full max-w-full object-contain transition-all duration-200";
+function getMockupImageClassName() {
   return "absolute z-0 max-h-full max-w-full object-contain transition-all duration-200";
 }
 
@@ -1333,17 +1332,15 @@ export default function CustomizerPage() {
 
     return "";
   }, [activeLocationData?.sizeMockups, selectedSize]);
-  const selectedColorFromVariant = useMemo(() => {
-    const colorOption = selectedVariant?.selectedOptions?.find((option) => {
-      const optionName = normalizeOptionLabel(String(option?.name || ""));
-      return optionName === "color" || optionName === "colour";
-    });
-    return normalizeColorName(String(colorOption?.value || ""));
-  }, [selectedVariant]);
+  const selectedColorOption = selectedVariant?.selectedOptions?.find((option) => {
+    const optionName = normalizeOptionLabel(String(option?.name || ""));
+    return COLOR_OPTION_NAMES.includes(optionName);
+  });
+  const selectedColorFromVariant = normalizeColorName(String(selectedColorOption?.value || ""));
   const normalizedSelectedColor = normalizeColorName(
-    selectedColorFromVariant || selectedColor || "Black"
+    selectedColorFromVariant || selectedColor || DEFAULT_COLOR
   );
-  const colorMockupUrl = resolveColorMockup(activeLocationData, normalizedSelectedColor);
+  const colorMockupUrl = resolveColorMockupUrl(activeLocationData, normalizedSelectedColor);
   const mockupUrl = colorMockupUrl || activeLocationData?.mockupUrl;
   const resolvedMockupUrl = resolveMockupUrl(mockupUrl, currentView, productHandle);
   const designArea = normalizeDesignArea(activeLocationData);
@@ -1842,26 +1839,19 @@ export default function CustomizerPage() {
             className="order-1 flex aspect-[5/6] min-h-[320px] w-full max-h-[70vh] max-w-full items-center justify-center overflow-x-hidden bg-[#181818] px-3 py-4 md:order-2 md:min-h-0 md:max-h-none md:flex-1 md:px-4 md:py-4"
           >
             <div
-              className="flex items-center justify-center"
+              className={getPreviewStageClassName(currentView)}
               style={{
-                width: `${CANVAS_DEFAULT_WIDTH * previewScale}px`,
-                height: `${CANVAS_DEFAULT_HEIGHT * previewScale}px`,
+                width: `${CANVAS_DEFAULT_WIDTH}px`,
+                height: `${CANVAS_DEFAULT_HEIGHT}px`,
+                transform: `scale(${previewScale})`,
+                transformOrigin: "center center",
               }}
             >
-              <div
-                className={getPreviewStageClassName(currentView)}
-                  style={{
-                    width: `${CANVAS_DEFAULT_WIDTH}px`,
-                    height: `${CANVAS_DEFAULT_HEIGHT}px`,
-                    transform: `scale(${previewScale})`,
-                    transformOrigin: "center center",
-                  }}
-                >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={resolvedMockupUrl}
                   alt={`${VIEW_LABELS[currentView]} mockup`}
-                  className={getMockupImageClassName(currentView)}
+                  className={getMockupImageClassName()}
                   style={{
                     width: `${mockupRender.renderedWidth}px`,
                     height: `${mockupRender.renderedHeight}px`,
@@ -1892,7 +1882,6 @@ export default function CustomizerPage() {
                 <canvas ref={canvasElRef} className="relative z-10" />
               </div>
             </div>
-          </div>
 
           <div className="order-2 md:order-1">
             <PrintLocationControls
