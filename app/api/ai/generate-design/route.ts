@@ -1,7 +1,6 @@
 import OpenAI from "openai";
 import type { ImageGenerateParamsNonStreaming, ImagesResponse } from "openai/resources/images";
 import {
-  AI_CONFIG_ERROR,
   AI_IMAGE_MODEL,
   errorJson,
   readJsonBody,
@@ -82,7 +81,11 @@ function toFrontendSafeErrorMessage(error: OpenAIErrorInfo) {
     return "OpenAI rate limit or billing limit reached.";
   }
 
-  return "Unable to generate design right now. Please try again.";
+  if (typeof error.status === "number" && error.status >= 500) {
+    return "Image generation service is temporarily unavailable.";
+  }
+
+  return "AI design generation failed. Please try a different prompt.";
 }
 
 function shouldRetryWithFallback(
@@ -129,9 +132,31 @@ function buildImageGenerateParams(model: string, prompt: string): ImageGenerateP
   };
 }
 
-function extractImageBase64(response: ImagesResponse) {
+async function fetchImageUrlToDataUrl(url: string) {
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Generated image download failed (${response.status}).`);
+  }
+
+  const contentType = response.headers.get("content-type") || "image/png";
+  const buffer = Buffer.from(await response.arrayBuffer());
+  const safeContentType = contentType.startsWith("image/") ? contentType : "image/png";
+  return `data:${safeContentType};base64,${buffer.toString("base64")}`;
+}
+
+async function extractImageDataUrl(response: ImagesResponse) {
   const imageResponse = response as ImageGenerationResponse;
-  return imageResponse.data?.[0]?.b64_json;
+  const imageBase64 = imageResponse.data?.[0]?.b64_json;
+  if (imageBase64) {
+    return `data:image/png;base64,${imageBase64}`;
+  }
+
+  const imageUrl = imageResponse.data?.[0]?.url;
+  if (imageUrl) {
+    return fetchImageUrlToDataUrl(imageUrl);
+  }
+
+  return "";
 }
 
 async function generateImage(openai: OpenAI, model: string, prompt: string) {
@@ -139,7 +164,7 @@ async function generateImage(openai: OpenAI, model: string, prompt: string) {
   const response = await openai.images.generate(params);
   return {
     response,
-    imageBase64: extractImageBase64(response),
+    imageDataUrl: await extractImageDataUrl(response),
   };
 }
 
@@ -152,22 +177,23 @@ export async function POST(request: Request) {
   }
 
   if (!process.env.OPENAI_API_KEY) {
-    return errorJson(AI_CONFIG_ERROR, 503);
+    return errorJson("AI design generation is not configured.", 503);
   }
 
   try {
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const fallbackModel = process.env.AI_IMAGE_FALLBACK_MODEL?.trim();
-    let imageBase64: string | undefined;
+    let imageDataUrl = "";
     let response: ImagesResponse | undefined;
     let usedModel = AI_IMAGE_MODEL;
 
     try {
       const generated = await generateImage(openai, usedModel, prompt);
-      imageBase64 = generated.imageBase64;
+      imageDataUrl = generated.imageDataUrl;
       response = generated.response;
     } catch (error) {
       const primaryError = toOpenAIErrorInfo(error);
+      console.error("AI design generation failed:", error);
       console.error("Generate design OpenAI request failed", {
         aiImageModel: AI_IMAGE_MODEL,
         attemptedModel: usedModel,
@@ -182,10 +208,11 @@ export async function POST(request: Request) {
 
         try {
           const fallbackGenerated = await generateImage(openai, usedModel, prompt);
-          imageBase64 = fallbackGenerated.imageBase64;
+          imageDataUrl = fallbackGenerated.imageDataUrl;
           response = fallbackGenerated.response;
         } catch (fallbackError) {
           const mappedFallbackError = toOpenAIErrorInfo(fallbackError);
+          console.error("AI design generation failed:", fallbackError);
           console.error("Generate design OpenAI fallback request failed", {
             aiImageModel: AI_IMAGE_MODEL,
             attemptedModel: usedModel,
@@ -204,23 +231,24 @@ export async function POST(request: Request) {
       }
     }
 
-    if (!imageBase64) {
+    if (!imageDataUrl) {
       console.error("Generate design did not return image data", {
         prompt,
         aiImageModel: AI_IMAGE_MODEL,
         attemptedModel: usedModel,
         response,
       });
-      return errorJson("AI design generation could not return an image. Please try again.");
+      return errorJson("Image generation service is temporarily unavailable.");
     }
 
     return successJson({
-      imageDataUrl: `data:image/png;base64,${imageBase64}`,
+      imageDataUrl,
       suggestions: createSuggestions(prompt),
       note: "Design idea generated.",
     });
   } catch (error) {
+    console.error("AI design generation failed:", error);
     console.error("Generate design route failed:", error);
-    return errorJson("Unable to generate design right now. Please try again.");
+    return errorJson("AI design generation failed. Please try a different prompt.");
   }
 }

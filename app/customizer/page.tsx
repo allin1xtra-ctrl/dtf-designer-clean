@@ -27,6 +27,11 @@ type TextControlsState = {
   bendCurve: number;
 };
 
+type FontOption = {
+  label: string;
+  value: string;
+};
+
 const DEFAULT_TEXT_CONTROLS: TextControlsState = {
   fontFamily: "Arial",
   fontSize: 32,
@@ -42,6 +47,43 @@ const DEFAULT_TEXT_CONTROLS: TextControlsState = {
   curveMode: "none",
   bendCurve: 25,
 };
+
+const FONT_OPTIONS: FontOption[] = [
+  { label: "Arial", value: "Arial" },
+  { label: "Helvetica", value: "Helvetica" },
+  { label: "Times New Roman", value: "\"Times New Roman\"" },
+  { label: "Georgia", value: "Georgia" },
+  { label: "Verdana", value: "Verdana" },
+  { label: "Tahoma", value: "Tahoma" },
+  { label: "Trebuchet MS", value: "\"Trebuchet MS\"" },
+  { label: "Courier New", value: "\"Courier New\"" },
+  { label: "Impact", value: "Impact" },
+  { label: "Anton", value: "Anton" },
+  { label: "Bebas Neue", value: "\"Bebas Neue\"" },
+  { label: "Oswald", value: "Oswald" },
+  { label: "Montserrat", value: "Montserrat" },
+  { label: "Poppins", value: "Poppins" },
+  { label: "League Spartan", value: "\"League Spartan\"" },
+  { label: "Pacifico", value: "Pacifico" },
+  { label: "Lobster", value: "Lobster" },
+  { label: "Great Vibes", value: "\"Great Vibes\"" },
+  { label: "Dancing Script", value: "\"Dancing Script\"" },
+  { label: "Bangers", value: "Bangers" },
+  { label: "Permanent Marker", value: "\"Permanent Marker\"" },
+  { label: "Black Ops One", value: "\"Black Ops One\"" },
+  { label: "Racing Sans One", value: "\"Racing Sans One\"" },
+  { label: "Graduate", value: "Graduate" },
+  { label: "Varsity Style", value: "Graduate" },
+  { label: "Russo One", value: "\"Russo One\"" },
+  { label: "Archivo Black", value: "\"Archivo Black\"" },
+  { label: "Inter", value: "Inter" },
+  { label: "Roboto", value: "Roboto" },
+  { label: "Open Sans", value: "\"Open Sans\"" },
+  { label: "Lato", value: "Lato" },
+  { label: "Raleway", value: "Raleway" },
+  { label: "Nunito", value: "Nunito" },
+  { label: "Work Sans", value: "\"Work Sans\"" },
+];
 
 const VIEW_LABELS: Record<ViewName, string> = {
   front: "Front",
@@ -108,6 +150,7 @@ type AiActionResponse = {
   note?: string;
   imageDataUrl?: string;
   dataUrl?: string;
+  imageUrl?: string;
   suggestions?: string[];
 };
 
@@ -115,8 +158,6 @@ const SHOPIFY_PARENT_ORIGIN = "https://yourdtfplug.com";
 const DEFAULT_DESIGN_AREA: PrintArea = { x: 10, y: 10, width: 80, height: 80 };
 const MIN_CURVE_AMPLITUDE = 8;
 const MAX_CURVE_AMPLITUDE = 220;
-const NEAR_WHITE_THRESHOLD = 245;
-const SOFT_WHITE_THRESHOLD = 225;
 const TRANSFER_SIZE_PRESETS = ["3x3", "4x5", "8x8", "10x10", "12x12", "12x16", "14x16", "16x20"];
 const BLANK_MOCKUP_SVG_WIDTH = 1000;
 const BLANK_MOCKUP_SVG_HEIGHT = 1200;
@@ -427,6 +468,32 @@ function getPrintLocationDataForView(
     activeLocation: fallbackKey,
     activeLocationData: handleOverrides?.[fallbackKey] ? { ...handleOverrides[fallbackKey] } : {},
   };
+}
+
+function normalizeProductIdentifier(value: string | undefined | null) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isTransferProduct(productHandle: string, productTitle: string) {
+  const joined = `${normalizeProductIdentifier(productHandle)} ${normalizeProductIdentifier(productTitle)}`;
+  return (
+    joined.includes("dtf-transfer") ||
+    joined.includes("dtf transfer") ||
+    joined.includes("gang-sheet") ||
+    joined.includes("gang sheet") ||
+    joined.includes("gangsheet")
+  );
+}
+
+function isApparelProduct(productHandle: string, productTitle: string) {
+  const joined = `${normalizeProductIdentifier(productHandle)} ${normalizeProductIdentifier(productTitle)}`;
+  return (
+    joined.includes("custom-t-shirt") ||
+    joined.includes("custom t-shirt") ||
+    joined.includes("t-shirt") ||
+    joined.includes("hoodie") ||
+    joined.includes("apparel")
+  );
 }
 
 function resolveMockupUrl(
@@ -812,7 +879,16 @@ export default function CustomizerPage() {
       });
 
       const raw = await response.text();
-      const result = raw ? (JSON.parse(raw) as AiActionResponse) : {};
+      let result: AiActionResponse = {};
+      if (raw) {
+        try {
+          result = JSON.parse(raw) as AiActionResponse;
+        } catch (parseError) {
+          console.error(`${actionName} response parse failed:`, parseError);
+          setAiStatus(`${actionName} failed. The service returned an invalid response.`);
+          return;
+        }
+      }
 
       logAiDebug(actionName, {
         apiRoute: route,
@@ -821,7 +897,10 @@ export default function CustomizerPage() {
       });
 
       if (!response.ok || result.ok === false) {
-        setAiStatus(result.error || `${actionName} failed.`);
+        const fallbackError = actionName === "Remove Background"
+          ? "Background removal failed. Please try another image or upload a transparent PNG."
+          : `${actionName} failed.`;
+        setAiStatus(result.error || fallbackError);
         return;
       }
 
@@ -829,6 +908,8 @@ export default function CustomizerPage() {
         ? result.imageDataUrl
         : typeof result.dataUrl === "string"
           ? result.dataUrl
+          : typeof result.imageUrl === "string"
+            ? result.imageUrl
           : "";
 
       if (updatedImageUrl) {
@@ -841,78 +922,11 @@ export default function CustomizerPage() {
       setAiStatus(result.note || `${actionName} finished.`);
     } catch (error) {
       console.error(`${actionName} failed:`, error);
-      setAiStatus(`${actionName} failed.`);
-    }
-  };
-
-  const removeWhiteBackgroundLocally = async () => {
-    const activeObject = getCanvas()?.getActiveObject();
-    if (!isImageObject(activeObject)) {
-      setAiStatus("Select an image first.");
-      return;
-    }
-
-    try {
-      setAiStatus("Removing white background...");
-      const sourceDataUrl = activeObject.toDataURL({ format: "png", multiplier: 1 });
-
-      const imageElement = await new Promise<HTMLImageElement>((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = () => reject(new Error("Unable to load selected image."));
-        img.src = sourceDataUrl;
-      });
-
-      const workCanvas = document.createElement("canvas");
-      workCanvas.width = imageElement.width;
-      workCanvas.height = imageElement.height;
-
-      const context = workCanvas.getContext("2d", { willReadFrequently: true });
-      if (!context) {
-        setAiStatus("Remove White Background is not available in this browser.");
-        return;
-      }
-
-      context.drawImage(imageElement, 0, 0);
-      const imageData = context.getImageData(0, 0, workCanvas.width, workCanvas.height);
-      const pixels = imageData.data;
-
-      for (let i = 0; i < pixels.length; i += 4) {
-        const red = pixels[i];
-        const green = pixels[i + 1];
-        const blue = pixels[i + 2];
-
-        const nearWhite =
-          red > NEAR_WHITE_THRESHOLD &&
-          green > NEAR_WHITE_THRESHOLD &&
-          blue > NEAR_WHITE_THRESHOLD;
-        const softWhite =
-          red > SOFT_WHITE_THRESHOLD &&
-          green > SOFT_WHITE_THRESHOLD &&
-          blue > SOFT_WHITE_THRESHOLD;
-
-        if (nearWhite) {
-          pixels[i + 3] = 0;
-        } else if (softWhite) {
-          const average = (red + green + blue) / 3;
-          pixels[i + 3] = Math.max(
-            0,
-            Math.min(255, 255 - (average - SOFT_WHITE_THRESHOLD) * 6)
-          );
-        }
-      }
-
-      context.putImageData(imageData, 0, 0);
-      const cleanedDataUrl = workCanvas.toDataURL("image/png");
-      const replaced = await replaceActiveImage(cleanedDataUrl);
-
-      setAiStatus(replaced ? "White background removed locally." : "White background cleanup complete.");
-      logAiDebug("Remove White Background", {
-        updatedImageUrl: cleanedDataUrl,
-      });
-    } catch (error) {
-      console.error("Remove White Background failed:", error);
-      setAiStatus("Remove White Background failed.");
+      setAiStatus(
+        actionName === "Remove Background"
+          ? "Background removal failed. Please try another image or upload a transparent PNG."
+          : `${actionName} failed.`
+      );
     }
   };
 
@@ -957,11 +971,29 @@ export default function CustomizerPage() {
       const response = await fetch("/api/ai/generate-design", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({
+          prompt,
+          context: {
+            productMode: shouldShowTransferSizePreview ? "transfer" : "apparel",
+            currentView,
+            garmentTemplate: productData?.title || "",
+            shirtColor: selectedColor || "",
+            transferSize,
+          },
+        }),
       });
 
       const raw = await response.text();
-      const result = raw ? (JSON.parse(raw) as AiActionResponse) : {};
+      let result: AiActionResponse = {};
+      if (raw) {
+        try {
+          result = JSON.parse(raw) as AiActionResponse;
+        } catch (parseError) {
+          console.error("AI design response parse failed:", parseError);
+          setAiStatus("Image generation service is temporarily unavailable.");
+          return;
+        }
+      }
 
       logAiDebug("Generate Idea", {
         apiRoute: "/api/ai/generate-design",
@@ -978,6 +1010,8 @@ export default function CustomizerPage() {
         ? result.imageDataUrl
         : typeof result.dataUrl === "string"
           ? result.dataUrl
+          : typeof result.imageUrl === "string"
+            ? result.imageUrl
           : "";
 
       if (generatedImageUrl) {
@@ -992,8 +1026,8 @@ export default function CustomizerPage() {
         setAiSuggestions(result.suggestions);
       }
     } catch (error) {
-      console.error("Generate idea failed:", error);
-      setAiStatus("AI design generation is not configured yet.");
+      console.error("AI design generation failed:", error);
+      setAiStatus("AI design generation failed. Please try a different prompt.");
     }
   };
 
@@ -1154,6 +1188,9 @@ export default function CustomizerPage() {
   );
   const hasColorOptions = availableColors.length > 0;
   const hasSizeOptions = availableSizes.length > 0;
+  const transferProduct = isTransferProduct(productHandle, productData?.title || "");
+  const apparelProduct = isApparelProduct(productHandle, productData?.title || "");
+  const shouldShowTransferSizePreview = transferProduct && !apparelProduct;
 
   useEffect(() => {
     if (!selectedVariant) {
@@ -1258,6 +1295,7 @@ export default function CustomizerPage() {
   const hasSelectedDesign = selectedObjectType !== "none";
 
   const exceedsPrintWidth = Boolean(
+    shouldShowTransferSizePreview &&
     !isSmallLocation &&
     hasSelectedDesign &&
     maxPrintWidth &&
@@ -1266,6 +1304,7 @@ export default function CustomizerPage() {
   );
 
   const exceedsPrintHeight = Boolean(
+    shouldShowTransferSizePreview &&
     !isSmallLocation &&
     hasSelectedDesign &&
     maxPrintHeight &&
@@ -1673,22 +1712,27 @@ export default function CustomizerPage() {
         ? transferSize
         : "Custom";
 
+      const lineItemProperties: Record<string, string> = {
+        "Design ID": createDesignId(),
+        Size: selectedSize || "Custom",
+        Placement: VIEW_LABELS[currentView],
+        "Print Location": activeLocation,
+        "Artwork URL": uploadedArtworkUrl,
+        "Preview URL": uploadedArtworkUrl,
+        "Mockup URL": resolvedMockupUrl || "",
+        "Max Print Width (in)": maxPrintWidth ? String(maxPrintWidth) : "",
+        "Max Print Height (in)": maxPrintHeight ? String(maxPrintHeight) : "",
+        "Boundary Warning": boundaryWarning || "None",
+      };
+
+      if (shouldShowTransferSizePreview) {
+        lineItemProperties["Transfer Size"] = normalizedTransferSize;
+      }
+
       const payload = {
         id: numericId,
         quantity: Number(quantity || 1),
-        properties: {
-          "Design ID": createDesignId(),
-          Size: selectedSize || "Custom",
-          "Transfer Size": normalizedTransferSize,
-          Placement: VIEW_LABELS[currentView],
-          "Print Location": activeLocation,
-          "Artwork URL": uploadedArtworkUrl,
-          "Preview URL": uploadedArtworkUrl,
-          "Mockup URL": resolvedMockupUrl || "",
-          "Max Print Width (in)": maxPrintWidth ?? "",
-          "Max Print Height (in)": maxPrintHeight ?? "",
-          "Boundary Warning": boundaryWarning || "None",
-        },
+        properties: lineItemProperties,
       };
 
       window.parent.postMessage({ type: "DTF_ADD_TO_CART", data: payload }, SHOPIFY_PARENT_ORIGIN);
@@ -1747,12 +1791,11 @@ export default function CustomizerPage() {
 
           <label htmlFor="font-family-select" className="mb-1 block text-xs text-gray-300">Font</label>
           <select id="font-family-select" name="fontFamily" value={textControls.fontFamily} onChange={(e) => updateTextControls({ fontFamily: e.target.value })} className="mb-2 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm">
-            <option value="Arial">Arial</option>
-            <option value="Helvetica">Helvetica</option>
-            <option value="Impact">Impact</option>
-            <option value="Times New Roman">Times New Roman</option>
-            <option value="Courier New">Courier New</option>
-            <option value="Verdana">Verdana</option>
+            {FONT_OPTIONS.map((font) => (
+              <option key={font.label} value={font.value}>
+                {font.label}
+              </option>
+            ))}
           </select>
 
           <label htmlFor="font-size-range" className="mb-1 block text-xs text-gray-300">Font Size</label>
@@ -1810,8 +1853,7 @@ export default function CustomizerPage() {
             <button type="button" onClick={() => runAiRouteAction("/api/ai/upscale-sharpen", "Upscale / Sharpen")} className="rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333]" title="AI Upscale / Sharpen">Upscale / Sharpen</button>
             <button type="button" onClick={() => runAiRouteAction("/api/ai/vectorize-artwork", "Vectorize Artwork")} className="rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333]" title="AI Vectorize">Vectorize Artwork</button>
             <button type="button" onClick={() => runAiRouteAction("/api/ai/clean-colors", "Clean Up Colors")} className="rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333]" title="AI Color Cleanup">Clean Up Colors</button>
-            <button type="button" onClick={removeWhiteBackgroundLocally} className="rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333]" title="AI Remove White Background">Remove White Background</button>
-            <button type="button" onClick={generateLocalSuggestions} className="col-span-2 rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333]" title="AI Design Suggestions">Suggest Design Improvements</button>
+            <button type="button" onClick={generateLocalSuggestions} className="rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333]" title="AI Design Suggestions">Suggest Design Improvements</button>
           </div>
 
           <div className="mt-3 rounded border border-[#2b2b2b] bg-[#111] p-3">
@@ -1829,50 +1871,52 @@ export default function CustomizerPage() {
           ) : null}
         </div>
 
-        <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">Transfer Size Preview</h2>
+        {shouldShowTransferSizePreview ? (
+          <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
+            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">Transfer Size Preview</h2>
 
-          {isSmallLocation ? (
-            <div className="rounded bg-[#1f1f1f] px-3 py-3">
-              <p className="text-xs text-gray-400">
-                Live print area: <span className="font-semibold text-white">{safePrintAreaLabel}</span>
+            {isSmallLocation ? (
+              <div className="rounded bg-[#1f1f1f] px-3 py-3">
+                <p className="text-xs text-gray-400">
+                  Live print area: <span className="font-semibold text-white">{safePrintAreaLabel}</span>
+                </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  This location is optimized for small logos, sleeve prints, and neck tag designs.
+                </p>
+              </div>
+            ) : (
+              <>
+                <label htmlFor="transfer-size-select" className="sr-only">Transfer size</label>
+                <select
+                  id="transfer-size-select"
+                  name="transferSize"
+                  value={transferSize}
+                  onChange={(e) => setTransferSize(e.target.value)}
+                  className="mb-3 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm"
+                >
+                  {TRANSFER_SIZE_PRESETS.map((size) => <option key={size} value={size}>{size}</option>)}
+                </select>
+                <p className="text-xs text-gray-400">
+                  Live transfer size: <span className="font-semibold text-white">{transferSize}</span>
+                </p>
+              </>
+            )}
+
+            {(maxPrintWidth || maxPrintHeight) ? (
+              <p className="mt-2 text-xs text-gray-400">
+                Max print size: <span className="font-semibold text-white">{maxPrintWidth ?? "—"} in × {maxPrintHeight ?? "—"} in</span>
               </p>
-              <p className="mt-1 text-xs text-gray-500">
-                This location is optimized for small logos, sleeve prints, and neck tag designs.
+            ) : null}
+
+            {exceedsPrintLimits ? (
+              <p id="print-limit-warning" role="alert" aria-live="polite" className="mt-2 text-xs text-yellow-300">
+                ⚠ Selected design exceeds this location&apos;s print size limit.
               </p>
-            </div>
-          ) : (
-            <>
-              <label htmlFor="transfer-size-select" className="sr-only">Transfer size</label>
-              <select
-                id="transfer-size-select"
-                name="transferSize"
-                value={transferSize}
-                onChange={(e) => setTransferSize(e.target.value)}
-                className="mb-3 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm"
-              >
-                {TRANSFER_SIZE_PRESETS.map((size) => <option key={size} value={size}>{size}</option>)}
-              </select>
-              <p className="text-xs text-gray-400">
-                Live transfer size: <span className="font-semibold text-white">{transferSize}</span>
-              </p>
-            </>
-          )}
+            ) : null}
 
-          {(maxPrintWidth || maxPrintHeight) ? (
-            <p className="mt-2 text-xs text-gray-400">
-              Max print size: <span className="font-semibold text-white">{maxPrintWidth ?? "—"} in × {maxPrintHeight ?? "—"} in</span>
-            </p>
-          ) : null}
-
-          {exceedsPrintLimits ? (
-            <p id="print-limit-warning" role="alert" aria-live="polite" className="mt-2 text-xs text-yellow-300">
-              ⚠ Selected design exceeds this location&apos;s print size limit.
-            </p>
-          ) : null}
-
-          {boundaryWarning ? <p className="mt-2 text-xs text-yellow-300">⚠ {boundaryWarning}</p> : null}
-        </div>
+            {boundaryWarning ? <p className="mt-2 text-xs text-yellow-300">⚠ {boundaryWarning}</p> : null}
+          </div>
+        ) : null}
 
         <div className="mt-5">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">Print Areas</h2>
