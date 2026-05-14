@@ -1220,18 +1220,22 @@ export default function CustomizerPage() {
   const locationInfo = getPrintLocationDataForView(printLocations, currentView, productHandle);
   const { activeLocation, activeLocationData } = locationInfo;
   const matchedSizeMockupKey = useMemo(() => {
-    const normalizedSelectedSize = String(selectedSize || "").trim();
+    const normalizedSelectedSize = (selectedSize ?? "").trim();
     if (!normalizedSelectedSize) return "";
     const sizeMockups = activeLocationData?.sizeMockups;
     if (!sizeMockups || typeof sizeMockups !== "object") return "";
+    const normalizedSelectedSizeLower = normalizedSelectedSize.toLowerCase();
 
-    return (
-      Object.keys(sizeMockups).find((size) => size.trim() === normalizedSelectedSize) ||
-      Object.keys(sizeMockups).find(
-        (size) => size.trim().toLowerCase() === normalizedSelectedSize.toLowerCase()
-      ) ||
-      ""
-    );
+    for (const size of Object.keys(sizeMockups)) {
+      const normalizedKey = size.trim();
+      if (!normalizedKey) continue;
+      const normalizedKeyLower = normalizedKey.toLowerCase();
+      if (normalizedKeyLower === normalizedSelectedSizeLower) {
+        return size;
+      }
+    }
+
+    return "";
   }, [activeLocationData?.sizeMockups, selectedSize]);
   const mockupUrl =
     resolveColorMockupUrl(activeLocationData?.colorMockups, selectedColor) ||
@@ -1272,9 +1276,11 @@ export default function CustomizerPage() {
   const exceedsPrintLimits = exceedsPrintWidth || exceedsPrintHeight;
 
   useEffect(() => {
-    if (!matchedSizeMockupKey || transferSize === matchedSizeMockupKey) return;
-    setTransferSize(matchedSizeMockupKey);
-  }, [matchedSizeMockupKey, transferSize]);
+    if (!matchedSizeMockupKey) return;
+    setTransferSize((currentTransferSize) =>
+      currentTransferSize === matchedSizeMockupKey ? currentTransferSize : matchedSizeMockupKey
+    );
+  }, [matchedSizeMockupKey, setTransferSize]);
   const isAddToCartDisabled = isSubmitting || Boolean(printLocationsError);
   const addToCartDescriptionId = printLocationsError ? "print-locations-error" : undefined;
 
