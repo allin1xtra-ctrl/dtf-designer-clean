@@ -82,7 +82,7 @@ function toFrontendSafeErrorMessage(error: OpenAIErrorInfo) {
     return "OpenAI rate limit or billing limit reached.";
   }
 
-  return "AI design generation failed. Verify the image model configuration and server logs.";
+  return "AI design generation failed before an image could be returned.";
 }
 
 function shouldRetryWithFallback(
@@ -221,6 +221,6 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Generate design route failed:", error);
-    return errorJson("AI design generation failed on the server. Verify OPENAI_API_KEY and model settings.");
+    return errorJson("AI design generation failed before an image could be returned.");
   }
 }
