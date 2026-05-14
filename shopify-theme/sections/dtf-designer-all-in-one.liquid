@@ -508,6 +508,9 @@
       var productId = mount.dataset.productId || '';
       var launchMode = (mount.dataset.defaultMode || 'apparel').toLowerCase() === 'transfer' ? 'transfer' : 'apparel';
       var startUpload = mount.dataset.startUpload === '1' || mount.dataset.startUpload === 'true';
+      var viewportHeightUnit = (window.CSS && window.CSS.supports && window.CSS.supports('height', '100dvh'))
+        ? '100dvh'
+        : '100vh';
 
       var iframe = document.createElement('iframe');
       var url = new URL(designerUrl, window.location.origin);
@@ -524,8 +527,7 @@
 
       iframe.src = url.toString();
       iframe.style.width = '100%';
-      iframe.style.height = '100vh';
-      iframe.style.height = '100dvh';
+      iframe.style.height = viewportHeightUnit;
       iframe.style.border = 'none';
       iframe.style.borderRadius = '12px';
       iframe.loading = 'lazy';

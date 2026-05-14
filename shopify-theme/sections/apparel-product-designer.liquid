@@ -58,6 +58,9 @@
     mount.dataset.dtfInitialized = 'true';
     var designerUrl = (mount.dataset.designerUrl || '').replace(/\/$/, '');
     if (!designerUrl) return;
+    var viewportHeightUnit = (window.CSS && window.CSS.supports && window.CSS.supports('height', '100dvh'))
+      ? '100dvh'
+      : '100vh';
     var iframe = document.createElement('iframe');
     var url = new URL(designerUrl, window.location.origin);
     url.searchParams.set('mode', 'apparel');
@@ -65,8 +68,7 @@
     url.searchParams.set('v', mount.dataset.appVersion || '2026-04-15-3');
     iframe.src = url.toString();
     iframe.style.width = '100%';
-    iframe.style.height = '100vh';
-    iframe.style.height = '100dvh';
+    iframe.style.height = viewportHeightUnit;
     iframe.style.border = 'none';
     iframe.style.borderRadius = '12px';
     iframe.loading = 'lazy';
