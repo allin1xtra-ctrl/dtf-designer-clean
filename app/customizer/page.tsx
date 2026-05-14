@@ -75,6 +75,8 @@ type PrintLocationData = {
   maxPrintWidth?: number;
   maxPrintHeight?: number;
   designArea?: Partial<PrintArea>;
+  printArea?: Partial<PrintArea>;
+  print_area?: Partial<PrintArea>;
 };
 
 type PrintLocationsMap = Record<string, PrintLocationData>;
@@ -316,12 +318,26 @@ function normalizeBoundPercent(value: unknown, fallback: number) {
 }
 
 function normalizeDesignArea(value?: Partial<PrintLocationData>): PrintArea {
-  const nestedArea = value?.designArea;
+  const designArea = value?.designArea;
+  const printArea = value?.printArea;
+  const legacyPrintArea = value?.print_area;
   return {
-    x: normalizeBoundPercent(value?.x ?? nestedArea?.x, DEFAULT_DESIGN_AREA.x),
-    y: normalizeBoundPercent(value?.y ?? nestedArea?.y, DEFAULT_DESIGN_AREA.y),
-    width: normalizeBoundPercent(value?.width ?? nestedArea?.width, DEFAULT_DESIGN_AREA.width),
-    height: normalizeBoundPercent(value?.height ?? nestedArea?.height, DEFAULT_DESIGN_AREA.height),
+    x: normalizeBoundPercent(
+      designArea?.x ?? printArea?.x ?? legacyPrintArea?.x ?? value?.x,
+      DEFAULT_DESIGN_AREA.x
+    ),
+    y: normalizeBoundPercent(
+      designArea?.y ?? printArea?.y ?? legacyPrintArea?.y ?? value?.y,
+      DEFAULT_DESIGN_AREA.y
+    ),
+    width: normalizeBoundPercent(
+      designArea?.width ?? printArea?.width ?? legacyPrintArea?.width ?? value?.width,
+      DEFAULT_DESIGN_AREA.width
+    ),
+    height: normalizeBoundPercent(
+      designArea?.height ?? printArea?.height ?? legacyPrintArea?.height ?? value?.height,
+      DEFAULT_DESIGN_AREA.height
+    ),
   };
 }
 
@@ -417,7 +433,7 @@ function getPrintLocationDataForView(
       const override = handleOverrides?.[key];
       return {
         activeLocation: key,
-        activeLocationData: override ? { ...location, ...override } : location,
+        activeLocationData: override ? { ...override, ...location } : location,
       };
     }
   }
@@ -460,6 +476,70 @@ function createDesignId() {
   cryptoApi.getRandomValues(values);
 
   return `DTF-${timestamp}-${Array.from(values, (value) => value.toString(36)).join("")}`;
+}
+
+function PrintLocationControls({
+  availableViews,
+  currentView,
+  isReady,
+  loadView,
+  printLocationsError,
+}: {
+  availableViews: ViewName[];
+  currentView: ViewName;
+  isReady: boolean;
+  loadView: (view: ViewName) => void;
+  printLocationsError: string;
+}) {
+  return (
+    <section className="border-b border-[#222] bg-[#111] px-4 py-4 md:px-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-400">
+            Current View
+          </p>
+          <p className="mt-1 text-sm text-gray-200">
+            <strong className="text-white">{VIEW_LABELS[currentView]}</strong>
+            {!isReady ? <span className="ml-2 text-yellow-400">Loading canvas...</span> : null}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+        {availableViews.map((view) => (
+          <button
+            key={view}
+            type="button"
+            onClick={() => loadView(view)}
+            className={`shrink-0 rounded-full border px-4 py-2 text-sm transition ${
+              currentView === view
+                ? "border-white bg-white text-black"
+                : "border-[#303030] bg-[#1a1a1a] text-white hover:bg-[#262626]"
+            }`}
+          >
+            {VIEW_LABELS[view]}
+          </button>
+        ))}
+      </div>
+
+      {!availableViews.length ? (
+        <p className="mt-3 text-xs text-gray-400">
+          No print locations are configured for this product.
+        </p>
+      ) : null}
+
+      {printLocationsError ? (
+        <div
+          id="print-locations-error"
+          role="alert"
+          aria-live="polite"
+          className="mt-3 rounded border border-red-700 bg-red-950 px-3 py-2 text-sm text-red-200"
+        >
+          {printLocationsError}
+        </div>
+      ) : null}
+    </section>
+  );
 }
 
 function isCloudinaryUrl(value: unknown): value is string {
@@ -954,7 +1034,7 @@ export default function CustomizerPage() {
 
     try {
       setAiStatus("Generating design idea...");
-      const response = await fetch("/api/ai/generate-design", {
+      const response = await fetch("/api/ai/generate-idea", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt }),
@@ -964,13 +1044,15 @@ export default function CustomizerPage() {
       const result = raw ? (JSON.parse(raw) as AiActionResponse) : {};
 
       logAiDebug("Generate Idea", {
-        apiRoute: "/api/ai/generate-design",
+        apiRoute: "/api/ai/generate-idea",
         apiRouteResponse: result,
         status: response.status,
       });
 
       if (!response.ok || result.ok === false) {
-        setAiStatus(result.error || "AI design generation is not configured yet.");
+        setAiStatus(
+          result.error || "AI design generation is not configured. Add OPENAI_API_KEY in Vercel."
+        );
         return;
       }
 
@@ -993,7 +1075,7 @@ export default function CustomizerPage() {
       }
     } catch (error) {
       console.error("Generate idea failed:", error);
-      setAiStatus("AI design generation is not configured yet.");
+      setAiStatus("Unable to reach AI design generation. Please verify server configuration.");
     }
   };
 
@@ -1713,16 +1795,94 @@ export default function CustomizerPage() {
   };
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-[#0e0e0e] text-white md:flex-row">
-      <aside className="w-full shrink-0 overflow-y-auto border-b border-[#222] bg-[#111] p-5 max-h-[45dvh] md:w-[360px] md:max-h-none md:border-b-0 md:border-r">
+    <div className="min-h-dvh overflow-x-hidden bg-[#0e0e0e] text-white">
+      <div className="border-b border-[#222] bg-[#111] px-4 py-4 md:hidden">
         <h1 className="text-xl font-bold">DTF Designer Pro</h1>
         <p className="mt-1 text-sm text-gray-400">
-          Upload artwork, customize DTF transfers and gang sheets, place designs
-          on custom t-shirts and hoodies, then send your order details to
-          Shopify checkout.
+          Upload artwork, customize DTF transfers and gang sheets, place designs on custom
+          t-shirts and hoodies, then send your order details to Shopify checkout.
         </p>
+      </div>
 
-        <div className="mt-5">
+      <div className="flex min-h-[calc(100dvh-0px)] flex-col md:min-h-dvh md:flex-row">
+        <main className="order-1 flex min-h-0 flex-1 flex-col md:order-2">
+          <div
+            ref={previewPaneRef}
+            className="order-1 flex aspect-[5/6] min-h-[320px] w-full max-h-[70vh] items-center justify-center bg-[#181818] px-3 py-4 md:order-2 md:min-h-0 md:max-h-none md:flex-1 md:items-center md:justify-center md:px-4 md:py-4"
+          >
+            <div
+              style={{
+                width: `${CANVAS_DEFAULT_WIDTH * previewScale}px`,
+                height: `${CANVAS_DEFAULT_HEIGHT * previewScale}px`,
+              }}
+            >
+              <div
+                className={getPreviewStageClassName(currentView)}
+                style={{
+                  width: `${CANVAS_DEFAULT_WIDTH}px`,
+                  height: `${CANVAS_DEFAULT_HEIGHT}px`,
+                  transform: `scale(${previewScale})`,
+                  transformOrigin: "top left",
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={resolvedMockupUrl}
+                  alt={`${VIEW_LABELS[currentView]} mockup`}
+                  className={getMockupImageClassName(currentView)}
+                  style={{
+                    width: `${mockupRender.renderedWidth}px`,
+                    height: `${mockupRender.renderedHeight}px`,
+                    left: "50%",
+                    top: "50%",
+                    transform: "translate(-50%, -50%)",
+                  }}
+                  onLoad={(event) => {
+                    const image = event.currentTarget;
+                    const naturalWidth = image.naturalWidth || 0;
+                    const naturalHeight = image.naturalHeight || 0;
+                    setMockupNaturalSize((prev) =>
+                      prev.width === naturalWidth && prev.height === naturalHeight
+                        ? prev
+                        : { width: naturalWidth, height: naturalHeight }
+                    );
+                  }}
+                />
+                <div
+                  className="pointer-events-none absolute z-20 border border-dashed border-cyan-400"
+                  style={{
+                    left: `${resolvedPrintAreaBounds.left}px`,
+                    top: `${resolvedPrintAreaBounds.top}px`,
+                    width: `${resolvedPrintAreaBounds.width}px`,
+                    height: `${resolvedPrintAreaBounds.height}px`,
+                  }}
+                />
+                <canvas ref={canvasElRef} className="relative z-10" />
+              </div>
+            </div>
+          </div>
+
+          <div className="order-2 md:order-1">
+            <PrintLocationControls
+              availableViews={availableViews}
+              currentView={currentView}
+              isReady={isReady}
+              loadView={loadView}
+              printLocationsError={printLocationsError}
+            />
+          </div>
+        </main>
+
+        <aside className="order-2 w-full shrink-0 border-t border-[#222] bg-[#111] p-4 md:order-1 md:w-[360px] md:overflow-y-auto md:border-t-0 md:border-r md:p-5">
+          <div className="hidden md:block">
+            <h1 className="text-xl font-bold">DTF Designer Pro</h1>
+            <p className="mt-1 text-sm text-gray-400">
+              Upload artwork, customize DTF transfers and gang sheets, place designs on custom
+              t-shirts and hoodies, then send your order details to Shopify checkout.
+            </p>
+          </div>
+
+        <div className="mt-0 md:mt-5">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">Upload Artwork</h2>
           <input id="artwork-upload-input" name="artworkUpload" ref={fileInputRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
           <button type="button" onClick={() => fileInputRef.current?.click()} className="block w-full cursor-pointer rounded bg-[#1f1f1f] p-2 text-sm text-white hover:bg-[#333]">Upload Artwork</button>
@@ -1875,16 +2035,6 @@ export default function CustomizerPage() {
         </div>
 
         <div className="mt-5">
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">Print Areas</h2>
-          <div className="grid gap-2">
-            {availableViews.map((view) => (
-              <button key={view} type="button" onClick={() => loadView(view)} className={`rounded px-4 py-3 text-left ${currentView === view ? "bg-white text-black" : "bg-[#1f1f1f] hover:bg-[#333]"}`}>{VIEW_LABELS[view]}</button>
-            ))}
-          </div>
-          {!availableViews.length ? <p className="mt-2 text-xs text-gray-400">No print locations are configured for this product.</p> : null}
-        </div>
-
-        <div className="mt-5">
           <button type="button" onClick={downloadDesign} className="w-full rounded bg-[#1f1f1f] px-4 py-3 text-left hover:bg-[#333]">Download Print File</button>
         </div>
 
@@ -1934,66 +2084,7 @@ export default function CustomizerPage() {
           {cartStatus ? <p className="mt-3 text-sm text-gray-300">{cartStatus}</p> : null}
         </div>
       </aside>
-
-      <main className="flex min-h-0 flex-1 flex-col">
-        <div className="flex h-[60px] items-center border-b border-[#222] bg-[#111] px-5">
-          <span className="text-sm text-gray-300">Current view: <strong className="text-white">{VIEW_LABELS[currentView]}</strong></span>
-          {!isReady && <span className="ml-4 text-sm text-yellow-400">Loading canvas...</span>}
-        </div>
-        {printLocationsError ? (
-          <div id="print-locations-error" role="alert" aria-live="polite" className="border-b border-red-700 bg-red-950 px-6 py-3 text-sm text-red-200">
-            {printLocationsError}
-          </div>
-        ) : null}
-
-        <div ref={previewPaneRef} className="flex min-h-0 flex-1 items-center justify-center bg-[#181818] p-0 md:p-1">
-          <div style={{ width: `${CANVAS_DEFAULT_WIDTH * previewScale}px`, height: `${CANVAS_DEFAULT_HEIGHT * previewScale}px` }}>
-            <div
-              className={getPreviewStageClassName(currentView)}
-              style={{
-                width: `${CANVAS_DEFAULT_WIDTH}px`,
-                height: `${CANVAS_DEFAULT_HEIGHT}px`,
-                transform: `scale(${previewScale})`,
-                transformOrigin: "top left",
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={resolvedMockupUrl}
-                alt={`${VIEW_LABELS[currentView]} mockup`}
-                className={getMockupImageClassName(currentView)}
-                style={{
-                  width: `${mockupRender.renderedWidth}px`,
-                  height: `${mockupRender.renderedHeight}px`,
-                  left: "50%",
-                  top: "50%",
-                  transform: "translate(-50%, -50%)",
-                }}
-                onLoad={(event) => {
-                  const image = event.currentTarget;
-                  const naturalWidth = image.naturalWidth || 0;
-                  const naturalHeight = image.naturalHeight || 0;
-                  setMockupNaturalSize((prev) =>
-                    prev.width === naturalWidth && prev.height === naturalHeight
-                      ? prev
-                      : { width: naturalWidth, height: naturalHeight }
-                  );
-                }}
-              />
-              <div
-                className="pointer-events-none absolute z-20 border border-dashed border-cyan-400"
-                style={{
-                  left: `${resolvedPrintAreaBounds.left}px`,
-                  top: `${resolvedPrintAreaBounds.top}px`,
-                  width: `${resolvedPrintAreaBounds.width}px`,
-                  height: `${resolvedPrintAreaBounds.height}px`,
-                }}
-              />
-              <canvas ref={canvasElRef} className="relative z-10" />
-            </div>
-          </div>
-        </div>
-      </main>
+      </div>
     </div>
   );
 }
