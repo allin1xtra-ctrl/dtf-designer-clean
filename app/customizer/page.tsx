@@ -1804,7 +1804,7 @@ export default function CustomizerPage() {
         </p>
       </div>
 
-      <div className="flex min-h-[calc(100dvh-0px)] flex-col md:min-h-dvh md:flex-row">
+      <div className="flex flex-col md:min-h-dvh md:flex-row">
         <main className="order-1 flex min-h-0 flex-1 flex-col md:order-2">
           <div
             ref={previewPaneRef}
