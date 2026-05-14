@@ -138,6 +138,7 @@ const VIEW_LOCATION_KEYS: Record<ViewName, string[]> = {
 };
 const COLOR_OPTION_NAMES = ["color", "colour"];
 const SIZE_OPTION_NAMES = ["size"];
+const DEFAULT_COLOR = "Black";
 // Optional per-product overrides for known product handles.
 // Generic view-specific blank mockups are used when no product override exists.
 const PRODUCT_BLANK_MOCKUPS: Record<string, Partial<Record<ViewName, string>>> = {
@@ -232,17 +233,17 @@ function getUniqueVariantOptionValues(
   return values;
 }
 
-function resolveColorMockupUrl(colorMockups: Record<string, string> | undefined, selectedColor: string) {
+function resolveColorMockupUrl(location: PrintLocationData | undefined, selectedColor: string) {
+  const colorMockups = location?.colorMockups || {};
   const normalizedSelectedColor = String(selectedColor || "").trim();
-  if (!colorMockups || !normalizedSelectedColor) return "";
+  if (!normalizedSelectedColor) return location?.mockupUrl;
 
-  const exactMatch = Object.entries(colorMockups).find(([color]) => color.trim() === normalizedSelectedColor);
-  if (exactMatch?.[1]) return exactMatch[1].trim();
-
-  const fallbackMatch = Object.entries(colorMockups).find(
-    ([color]) => color.trim().toLowerCase() === normalizedSelectedColor.toLowerCase()
+  const exact = colorMockups[normalizedSelectedColor];
+  const normalizedEntry = Object.entries(colorMockups).find(
+    ([key]) => key.trim().toLowerCase() === normalizedSelectedColor.toLowerCase()
   );
-  return String(fallbackMatch?.[1] || "").trim();
+
+  return exact || normalizedEntry?.[1] || location?.mockupUrl;
 }
 
 function findMatchingVariant(
@@ -417,10 +418,8 @@ function getSmallPrintAreaLabel(view: ViewName) {
   return "4 in × 5 in";
 }
 
-function getMockupImageClassName(view: ViewName) {
-  if (view === "neck") return "absolute z-0 object-contain transition-all duration-200";
-  if (view === "leftSleeve" || view === "rightSleeve") return "absolute z-0 object-contain transition-all duration-200";
-  return "absolute z-0 object-contain transition-all duration-200";
+function getMockupImageClassName() {
+  return "absolute z-0 max-h-full max-w-full object-contain transition-all duration-200";
 }
 
 function getPreviewStageClassName(view: ViewName) {
@@ -1333,12 +1332,15 @@ export default function CustomizerPage() {
 
     return "";
   }, [activeLocationData?.sizeMockups, selectedSize]);
-  const normalizedSelectedColor = normalizeColorName(selectedColor);
-  const colorMockupUrl =
-    activeLocationData?.colorMockups?.[normalizedSelectedColor] ||
-    activeLocationData?.colorMockups?.[normalizedSelectedColor?.toLowerCase()] ||
-    resolveColorMockupUrl(activeLocationData?.colorMockups, normalizedSelectedColor) ||
-    activeLocationData?.mockupUrl;
+  const selectedColorOption = selectedVariant?.selectedOptions?.find((option) => {
+    const optionName = normalizeOptionLabel(String(option?.name || ""));
+    return COLOR_OPTION_NAMES.includes(optionName);
+  });
+  const selectedColorFromVariant = normalizeColorName(String(selectedColorOption?.value || ""));
+  const normalizedSelectedColor = normalizeColorName(
+    selectedColorFromVariant || selectedColor || DEFAULT_COLOR
+  );
+  const colorMockupUrl = resolveColorMockupUrl(activeLocationData, normalizedSelectedColor);
   const mockupUrl = colorMockupUrl || activeLocationData?.mockupUrl;
   const resolvedMockupUrl = resolveMockupUrl(mockupUrl, currentView, productHandle);
   const designArea = normalizeDesignArea(activeLocationData);
@@ -1421,7 +1423,7 @@ export default function CustomizerPage() {
         (rect.height - PREVIEW_PADDING) / CANVAS_DEFAULT_HEIGHT,
         MIN_PREVIEW_SCALE
       );
-      const nextScale = Math.min(widthScale, heightScale);
+      const nextScale = Math.min(widthScale, heightScale, 1);
       // Ignore tiny float-only changes so ResizeObserver doesn't trigger unnecessary re-renders.
       setPreviewScale((prev) =>
         Math.abs(prev - nextScale) < SCALE_CHANGE_THRESHOLD ? prev : nextScale
@@ -1830,32 +1832,26 @@ export default function CustomizerPage() {
         </p>
       </div>
 
-      <div className="flex flex-col md:min-h-dvh md:flex-row">
-        <main className="order-1 flex min-h-0 flex-1 flex-col md:order-2">
+      <div className="flex min-w-0 flex-col md:min-h-dvh md:flex-row">
+        <main className="order-1 flex min-h-0 min-w-0 flex-1 flex-col md:order-2">
           <div
             ref={previewPaneRef}
-            className="order-1 flex aspect-[5/6] min-h-[320px] w-full max-h-[70vh] items-center justify-center bg-[#181818] px-3 py-4 md:order-2 md:min-h-0 md:max-h-none md:flex-1 md:px-4 md:py-4"
+            className="order-1 flex aspect-[5/6] min-h-[320px] w-full max-h-[70vh] max-w-full items-center justify-center overflow-x-hidden bg-[#181818] px-3 py-4 md:order-2 md:min-h-0 md:max-h-none md:flex-1 md:px-4 md:py-4"
           >
             <div
+              className={getPreviewStageClassName(currentView)}
               style={{
-                width: `${CANVAS_DEFAULT_WIDTH * previewScale}px`,
-                height: `${CANVAS_DEFAULT_HEIGHT * previewScale}px`,
+                width: `${CANVAS_DEFAULT_WIDTH}px`,
+                height: `${CANVAS_DEFAULT_HEIGHT}px`,
+                transform: `scale(${previewScale})`,
+                transformOrigin: "center center",
               }}
             >
-              <div
-                className={getPreviewStageClassName(currentView)}
-                style={{
-                  width: `${CANVAS_DEFAULT_WIDTH}px`,
-                  height: `${CANVAS_DEFAULT_HEIGHT}px`,
-                  transform: `scale(${previewScale})`,
-                  transformOrigin: "top left",
-                }}
-              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={resolvedMockupUrl}
                   alt={`${VIEW_LABELS[currentView]} mockup`}
-                  className={getMockupImageClassName(currentView)}
+                  className={getMockupImageClassName()}
                   style={{
                     width: `${mockupRender.renderedWidth}px`,
                     height: `${mockupRender.renderedHeight}px`,
@@ -1886,7 +1882,6 @@ export default function CustomizerPage() {
                 <canvas ref={canvasElRef} className="relative z-10" />
               </div>
             </div>
-          </div>
 
           <div className="order-2 md:order-1">
             <PrintLocationControls
