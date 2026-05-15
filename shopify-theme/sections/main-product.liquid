@@ -8,17 +8,52 @@
 {% endcomment %}
 
 {% assign customizer_handles = 'custom-dtf-transfer-by-size,dtf-gang-sheet-builder-build-your-own-sheet,custom-t-shirt-upload-customize,custom-hoodie-upload-customize' | split: ',' %}
+{% assign customizer_failsafe_fragments = 'custom-dtf-transfer,gang-sheet-builder,custom-t-shirt,custom-hoodie' | split: ',' %}
 {% assign current_handle = product.handle | downcase | strip %}
+{% assign customizer_blocked = false %}
+{% assign allowlist_match = false %}
+{% assign failsafe_match = false %}
+{% assign matched_customizer_fragment = '' %}
+{% assign debug_match_source = 'none' %}
 {% assign show_customizer = false %}
-{% for h in customizer_handles %}
-  {% assign allowed_handle = h | downcase | strip %}
-  {% if current_handle == allowed_handle %}
-    {% assign show_customizer = true %}
-    {% break %}
+{% if current_handle contains 'upload-print-ready-file' %}
+  {% assign customizer_blocked = true %}
+  {% assign debug_match_source = 'blocked' %}
+{% endif %}
+{% unless customizer_blocked %}
+  {% for h in customizer_handles %}
+    {% assign allowed_handle = h | downcase | strip %}
+    {% if current_handle == allowed_handle %}
+      {% assign allowlist_match = true %}
+      {% assign debug_match_source = 'allowlist' %}
+      {% assign show_customizer = true %}
+      {% break %}
+    {% endif %}
+  {% endfor %}
+
+  {% if show_customizer == false %}
+    {% for fragment in customizer_failsafe_fragments %}
+      {% assign normalized_fragment = fragment | downcase | strip %}
+      {% if current_handle contains normalized_fragment %}
+        {% assign failsafe_match = true %}
+        {% assign matched_customizer_fragment = normalized_fragment %}
+        {% assign debug_match_source = normalized_fragment %}
+        {% assign show_customizer = true %}
+        {% break %}
+      {% endif %}
+    {% endfor %}
   {% endif %}
-{% endfor %}
+{% endunless %}
 
 {% assign current_variant = product.selected_or_first_available_variant %}
+{% capture customizer_cta_base_url %}{{ routes.root_url }}pages/customizer?source=shopify&product={{ product.handle | url_encode }}{% endcapture %}
+{% assign is_theme_preview = false %}
+{% if request.design_mode or content_for_header contains 'previewBarInjector' %}
+  {% assign is_theme_preview = true %}
+{% endif %}
+{% if is_theme_preview %}
+  <!-- DTF customizer CTA debug: handle={{ current_handle }}, blocked={{ customizer_blocked }}, show_customizer={{ show_customizer }}, match={{ debug_match_source }} -->
+{% endif %}
 
 <div class="dtf-product-section">
   <div class="dtf-product-grid">
@@ -64,6 +99,7 @@
               <option
                 value="{{ variant.id }}"
                 data-price="{{ variant.price | money }}"
+                data-customizer-price="{{ variant.price | money_without_currency }}"
                 {% if variant == current_variant %}selected{% endif %}
                 {% unless variant.available %}disabled{% endunless %}
               >
@@ -86,18 +122,18 @@
         >
 
         <button type="submit" class="dtf-size-btn dtf-cart-btn">🛒 Add to Cart</button>
-      </form>
 
-      <!-- Customize Now CTA (supported products only) -->
-      {% if show_customizer %}
-        <a
-          id="dtf-customize-btn"
-          class="dtf-size-btn dtf-customize-btn"
-          href="/pages/customizer?source=shopify&product={{ product.handle | url_encode }}&variant={{ current_variant.id }}&product_id={{ product.id }}"
-        >
-          🎨 Customize &amp; Upload Design
-        </a>
-      {% endif %}
+        <!-- Customize Now CTA (supported products only) -->
+        {% if show_customizer %}
+          <a
+            id="dtf-customize-btn"
+            class="dtf-size-btn dtf-customize-btn"
+            href="{{ customizer_cta_base_url }}&variant={{ current_variant.id }}&product_id={{ product.id }}&price={{ current_variant.price | money_without_currency | url_encode }}"
+          >
+            🎨 Customize &amp; Upload Design
+          </a>
+        {% endif %}
+      </form>
 
       <!-- Reorder Last Design (logged-in customers only) -->
       {% if customer and customer.orders_count > 0 %}
@@ -326,7 +362,7 @@
   var select       = document.getElementById('dtf-variant-select');
   var customizeBtn = document.getElementById('dtf-customize-btn');
   var priceDisplay = document.getElementById('dtf-price-display');
-  var productHandle = {{ product.handle | json }};
+  var customizerBaseUrl = {{ customizer_cta_base_url | json }};
   var productId    = {{ product.id | json }};
 
   if (!select || select.tagName !== 'SELECT') return;
@@ -336,10 +372,10 @@
     var selectedOption = select.options[select.selectedIndex];
 
     if (customizeBtn) {
-      customizeBtn.href = '/pages/customizer?source=shopify'
-        + '&product=' + encodeURIComponent(productHandle)
+      customizeBtn.href = customizerBaseUrl
         + '&variant=' + encodeURIComponent(variantId)
-        + '&product_id=' + encodeURIComponent(productId);
+        + '&product_id=' + encodeURIComponent(productId)
+        + '&price=' + encodeURIComponent(selectedOption.dataset.customizerPrice || '');
     }
 
     if (priceDisplay && selectedOption.dataset.price) {
