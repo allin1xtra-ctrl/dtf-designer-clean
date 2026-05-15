@@ -1765,6 +1765,12 @@ export default function CustomizerPage() {
       setQuantity(restoredQuantity);
       const canvas = getCanvas();
       if (!canvas) return;
+      const applyRestoredCanvasState = () => {
+        canvas.renderAll();
+        syncSelectedObject();
+        setDraftStatus(DRAFT_STATUS_RESTORED);
+        setTimeout(() => setDraftStatus((prev) => (prev === DRAFT_STATUS_RESTORED ? "" : prev)), 4000);
+      };
       const saved = viewsRef.current[restoredView];
       canvas.clear();
       canvas.backgroundColor = "transparent";
@@ -1772,23 +1778,14 @@ export default function CustomizerPage() {
         canvas
           .loadFromJSON(saved)
           .then(() => {
-            canvas.renderAll();
-            syncSelectedObject();
-            setDraftStatus(DRAFT_STATUS_RESTORED);
-            setTimeout(
-              () => setDraftStatus((prev) => (prev === DRAFT_STATUS_RESTORED ? "" : prev)),
-              4000
-            );
+            applyRestoredCanvasState();
           })
           .catch((err: unknown) => {
             console.warn("DTF draft canvas restore failed:", err);
           });
         return;
       }
-      canvas.renderAll();
-      syncSelectedObject();
-      setDraftStatus(DRAFT_STATUS_RESTORED);
-      setTimeout(() => setDraftStatus((prev) => (prev === DRAFT_STATUS_RESTORED ? "" : prev)), 4000);
+      applyRestoredCanvasState();
     } catch (err) {
       console.warn("DTF draft restore failed:", err);
     }
