@@ -2533,7 +2533,7 @@ export default function CustomizerPage() {
         <main className="order-1 flex min-h-0 min-w-0 flex-col md:order-2 md:px-6 md:py-6">
           <div
             ref={previewPaneRef}
-            className="flex w-full max-w-full flex-none items-center justify-center overflow-hidden bg-[#181818] px-2 py-3 h-[clamp(420px,58vh,620px)] md:h-[clamp(560px,72vh,760px)] md:flex-none md:px-4 md:py-4"
+            className="flex w-full max-w-full flex-none items-center justify-center overflow-hidden bg-[#181818] px-2 py-3 h-[clamp(420px,58vh,620px)] md:h-[clamp(560px,72vh,760px)] md:px-4 md:py-4"
           >
             <div
               className={getPreviewStageClassName(currentView)}
