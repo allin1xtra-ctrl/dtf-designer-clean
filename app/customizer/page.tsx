@@ -777,6 +777,7 @@ export default function CustomizerPage() {
     quantityRef.current = quantity;
   }, [quantity]);
 
+  // Intentionally stable: this callback reads the latest values from refs at execution time.
   const scheduleSaveDraft = useCallback(() => {
     if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
     autosaveTimerRef.current = setTimeout(() => {
@@ -829,6 +830,8 @@ export default function CustomizerPage() {
     setTimeout(() => setDraftStatus((prev) => (prev === DRAFT_STATUS_CLEARED ? "" : prev)), 3000);
   };
 
+  // Intentionally keyed to readiness + product + variant. Other referenced functions are stable enough here,
+  // and re-running on every render would cause unnecessary draft restore attempts.
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -1827,6 +1830,7 @@ export default function CustomizerPage() {
     canvas.on("object:modified", handleObjectChange);
     canvas.on("object:added", scheduleSaveDraft);
     canvas.on("object:removed", scheduleSaveDraft);
+    canvas.on("text:changed", scheduleSaveDraft);
 
     setIsReady(true);
 
@@ -1839,6 +1843,7 @@ export default function CustomizerPage() {
       canvas.off("object:modified", handleObjectChange);
       canvas.off("object:added", scheduleSaveDraft);
       canvas.off("object:removed", scheduleSaveDraft);
+      canvas.off("text:changed", scheduleSaveDraft);
       canvas.dispose();
       fabricCanvasRef.current = null;
     };
