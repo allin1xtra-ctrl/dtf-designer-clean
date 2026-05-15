@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, FabricImage, Path, Shadow, Textbox } from "fabric";
 import { normalizeVariantId } from "../lib/shopify";
 
@@ -94,6 +94,10 @@ const VIEW_LABELS: Record<ViewName, string> = {
 };
 
 type CanvasSnapshot = ReturnType<Canvas["toJSON"]>;
+type DraftData = {
+  views: Record<ViewName, CanvasSnapshot | null>;
+  savedAt: number;
+};
 type UploadResponse = {
   error?: string;
   url?: string;
@@ -161,6 +165,8 @@ const DEFAULT_DESIGN_AREA: PrintArea = { x: 10, y: 10, width: 80, height: 80 };
 const MIN_CURVE_AMPLITUDE = 8;
 const MAX_CURVE_AMPLITUDE = 220;
 const TRANSFER_SIZE_PRESETS = ["3x3", "4x5", "8x8", "10x10", "12x12", "12x16", "14x16", "16x20"];
+const DRAFT_STORAGE_PREFIX = "dtf-draft-v1";
+const AUTOSAVE_DEBOUNCE_MS = 1000;
 const BLANK_MOCKUP_SVG_WIDTH = 1000;
 const BLANK_MOCKUP_SVG_HEIGHT = 1200;
 // Expanded to leave a roughly 12% side margin and 6% top margin so fallback blank garments read larger in the preview.
@@ -557,6 +563,11 @@ function createDesignId() {
   return `DTF-${timestamp}-${Array.from(values, (value) => value.toString(36)).join("")}`;
 }
 
+function getDraftStorageKey(productHandle: string) {
+  const normalizedHandle = normalizeProductIdentifier(productHandle) || "default";
+  return `${DRAFT_STORAGE_PREFIX}:${normalizedHandle}`;
+}
+
 function PrintLocationControls({
   availableViews,
   currentView,
@@ -697,6 +708,11 @@ export default function CustomizerPage() {
   const printableAreaRef = useRef({ left: 0, top: 0, width: 0, height: 0 });
   const shouldDebugAiLogRef = useRef(false);
   const lastSentIframeHeightRef = useRef(0);
+  const productHandleRef = useRef(productHandle);
+  const currentViewRef = useRef<ViewName>(currentView);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const draftRestoredRef = useRef(false);
+  const [draftStatus, setDraftStatus] = useState("");
 
   const viewsRef = useRef<Record<ViewName, CanvasSnapshot | null>>({
     front: null,
@@ -707,6 +723,54 @@ export default function CustomizerPage() {
   });
 
   const getCanvas = () => fabricCanvasRef.current;
+
+  useEffect(() => {
+    productHandleRef.current = productHandle;
+  }, [productHandle]);
+
+  useEffect(() => {
+    currentViewRef.current = currentView;
+  }, [currentView]);
+
+  const scheduleSaveDraft = useCallback(() => {
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(() => {
+      const handle = productHandleRef.current;
+      if (!handle) return;
+      const canvas = fabricCanvasRef.current;
+      if (!canvas) return;
+      viewsRef.current[currentViewRef.current] = canvas.toJSON();
+      try {
+        const key = getDraftStorageKey(handle);
+        const draft: DraftData = { views: viewsRef.current, savedAt: Date.now() };
+        localStorage.setItem(key, JSON.stringify(draft));
+      } catch (err) {
+        console.warn("DTF autosave failed:", err);
+      }
+    }, AUTOSAVE_DEBOUNCE_MS);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const clearDraft = () => {
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    const handle = productHandleRef.current;
+    if (handle) {
+      try {
+        localStorage.removeItem(getDraftStorageKey(handle));
+      } catch (err) {
+        console.warn("DTF clear draft failed:", err);
+      }
+    }
+    viewsRef.current = { front: null, back: null, leftSleeve: null, rightSleeve: null, neck: null };
+    const canvas = getCanvas();
+    if (canvas) {
+      canvas.clear();
+      canvas.backgroundColor = "transparent";
+      canvas.renderAll();
+    }
+    syncSelectedObject();
+    setDraftStatus("Saved design cleared.");
+    setTimeout(() => setDraftStatus((prev) => (prev === "Saved design cleared." ? "" : prev)), 3000);
+  };
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -854,6 +918,7 @@ export default function CustomizerPage() {
     if (!canvas) return;
 
     saveCurrentView();
+    scheduleSaveDraft();
     canvas.clear();
     canvas.backgroundColor = "transparent";
 
@@ -1601,6 +1666,38 @@ export default function CustomizerPage() {
   }, [shouldDebugAiLog]);
 
   useEffect(() => {
+    if (!isReady || !productHandle || draftRestoredRef.current) return;
+    draftRestoredRef.current = true;
+    try {
+      const raw = localStorage.getItem(getDraftStorageKey(productHandle));
+      if (!raw) return;
+      const draft = JSON.parse(raw) as DraftData;
+      if (!draft?.views) return;
+      viewsRef.current = {
+        front: draft.views.front ?? null,
+        back: draft.views.back ?? null,
+        leftSleeve: draft.views.leftSleeve ?? null,
+        rightSleeve: draft.views.rightSleeve ?? null,
+        neck: draft.views.neck ?? null,
+      };
+      const canvas = getCanvas();
+      if (!canvas) return;
+      const saved = viewsRef.current[currentViewRef.current];
+      if (!saved?.objects?.length) return;
+      canvas.loadFromJSON(saved).then(() => {
+        canvas.renderAll();
+        syncSelectedObject();
+        setDraftStatus("Saved design restored.");
+        setTimeout(() => setDraftStatus((prev) => (prev === "Saved design restored." ? "" : prev)), 4000);
+      }).catch((err: unknown) => {
+        console.warn("DTF draft canvas restore failed:", err);
+      });
+    } catch (err) {
+      console.warn("DTF draft restore failed:", err);
+    }
+  }, [isReady, productHandle]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
     if (!canvasElRef.current) return;
 
     const canvas = new Canvas(canvasElRef.current, {
@@ -1633,6 +1730,9 @@ export default function CustomizerPage() {
     canvas.on("object:moving", handleObjectChange);
     canvas.on("object:scaling", handleObjectChange);
     canvas.on("object:modified", handleObjectChange);
+    canvas.on("object:added", scheduleSaveDraft);
+    canvas.on("object:removed", scheduleSaveDraft);
+    canvas.on("object:modified", scheduleSaveDraft);
 
     setIsReady(true);
 
@@ -1643,6 +1743,9 @@ export default function CustomizerPage() {
       canvas.off("object:moving", handleObjectChange);
       canvas.off("object:scaling", handleObjectChange);
       canvas.off("object:modified", handleObjectChange);
+      canvas.off("object:added", scheduleSaveDraft);
+      canvas.off("object:removed", scheduleSaveDraft);
+      canvas.off("object:modified", scheduleSaveDraft);
       canvas.dispose();
       fabricCanvasRef.current = null;
     };
@@ -1984,6 +2087,16 @@ export default function CustomizerPage() {
             />
           </div>
 
+          {draftStatus ? (
+            <div
+              role="status"
+              aria-live="polite"
+              className="mt-3 rounded border border-[#2b2b2b] bg-[#1a1a1a] px-3 py-2 text-xs text-gray-300"
+            >
+              {draftStatus}
+            </div>
+          ) : null}
+
         <div className="md:mt-5">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">Upload Artwork</h2>
           <input id="artwork-upload-input" name="artworkUpload" ref={fileInputRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
@@ -2133,6 +2246,10 @@ export default function CustomizerPage() {
 
         <div className="mt-5">
           <button type="button" onClick={downloadDesign} className="w-full rounded bg-[#1f1f1f] px-4 py-3 text-left hover:bg-[#333]">Download Print File</button>
+        </div>
+
+        <div className="mt-2">
+          <button type="button" onClick={clearDraft} className="w-full rounded bg-[#1f1f1f] px-4 py-3 text-left text-sm text-gray-400 hover:bg-[#333] hover:text-white">Clear Saved Design</button>
         </div>
 
         <div className="mt-5 block rounded border border-[#2b2b2b] bg-[#171717] p-4 pb-8 opacity-100">
