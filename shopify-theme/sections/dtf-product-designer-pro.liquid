@@ -164,6 +164,26 @@
 
   #shopify-section-{{ section.id }} .dtf-designer-mount {
     margin-top: 16px;
+    overflow: visible !important;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-customizer-page,
+  #shopify-section-{{ section.id }} .dtf-customizer-page__inner,
+  #shopify-section-{{ section.id }} .dtf-customizer-page__frame-wrap {
+    overflow: visible !important;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-customizer-page__frame-wrap {
+    min-height: 1100px;
+    height: auto;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-customizer-page iframe {
+    width: 100%;
+    min-height: 1100px;
+    height: 1100px;
+    border: 0;
+    display: block;
   }
 
   #shopify-section-{{ section.id }} .dtf-designer-sidebar {
@@ -233,10 +253,23 @@
       backdrop-filter: blur(12px);
     }
   }
+
+  @media screen and (max-width: 749px) {
+    #shopify-section-{{ section.id }} .dtf-customizer-page__frame-wrap {
+      min-height: 1450px;
+      padding-bottom: 120px;
+      overflow: visible !important;
+    }
+
+    #shopify-section-{{ section.id }} .dtf-customizer-page iframe {
+      min-height: 1450px;
+      height: 1450px;
+    }
+  }
 </style>
 
-<section class="dtf-designer-section page-width">
-  <div class="dtf-designer-grid">
+<section class="dtf-designer-section dtf-customizer-page page-width">
+  <div class="dtf-designer-grid dtf-customizer-page__inner">
     <div class="dtf-designer-main">
       <div class="dtf-designer-head">
         <div>
@@ -317,7 +350,7 @@
 
       <div
         id="dtf-designer-{{ section.id }}"
-        class="dtf-designer-mount"
+        class="dtf-designer-mount dtf-customizer-page__frame-wrap"
         data-product-id="{{ product.id | default: '' }}"
         data-product-handle="{{ product.handle | default: '' | escape }}"
         data-variant-id="{{ product.selected_or_first_available_variant.id | default: '' }}"
@@ -515,15 +548,15 @@
       var productHandle = mount.dataset.productHandle || '';
       var launchMode = (mount.dataset.defaultMode || 'apparel').toLowerCase() === 'transfer' ? 'transfer' : 'apparel';
       var startUpload = mount.dataset.startUpload === '1' || mount.dataset.startUpload === 'true';
-      var viewportHeightUnit = (window.CSS && window.CSS.supports && window.CSS.supports('height', '100dvh'))
-        ? '100dvh'
-        : '100vh';
-
       if (!variantId) {
         console.error('NO VARIANT FOUND', {
           mountVariantId: mount.dataset.variantId || '',
           productId: productId || ''
         });
+      }
+
+      function getMinIframeHeight() {
+        return window.matchMedia('(max-width: 749px)').matches ? 1450 : 1100;
       }
 
       var iframe = document.createElement('iframe');
@@ -544,8 +577,10 @@
 
       iframe.src = url.toString();
       iframe.title = 'DTF Designer Pro customizer iframe';
+      iframe.className = 'dtf-customizer-page__iframe';
       iframe.style.width = '100%';
-      iframe.style.height = viewportHeightUnit;
+      iframe.style.minHeight = getMinIframeHeight() + 'px';
+      iframe.style.height = getMinIframeHeight() + 'px';
       iframe.style.border = 'none';
       iframe.style.borderRadius = '12px';
       iframe.loading = 'lazy';
@@ -574,7 +609,7 @@
         var message = event.data || {};
 
         if (message.type === 'dtf:resize' && message.payload && message.payload.height) {
-          iframe.style.height = Math.max(420, Number(message.payload.height)) + 'px';
+          iframe.style.height = Math.max(getMinIframeHeight(), Number(message.payload.height)) + 'px';
           return;
         }
 
