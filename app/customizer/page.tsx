@@ -753,7 +753,7 @@ export default function CustomizerPage() {
   const printableAreaRef = useRef({ left: 0, top: 0, width: 0, height: 0 });
   const shouldDebugAiLogRef = useRef(false);
   const lastSentIframeHeightRef = useRef(0);
-  const draftAutosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const draftAutosaveTimerRef = useRef<number | null>(null);
   const lastSavedDraftRef = useRef("");
   const restoredDraftKeyRef = useRef("");
   const isRestoringDraftRef = useRef(false);
