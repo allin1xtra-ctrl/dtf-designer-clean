@@ -552,8 +552,8 @@
       function readCssPixels(variableName, fallback) {
         if (!sectionRoot || !window.getComputedStyle) return fallback;
         var rawValue = window.getComputedStyle(sectionRoot).getPropertyValue(variableName).trim();
-        var parsedValue = Number.parseInt(rawValue, 10);
-        return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : fallback;
+        var parsedValue = parseInt(rawValue, 10);
+        return isFinite(parsedValue) && parsedValue > 0 ? parsedValue : fallback;
       }
 
       var minDesktopIframeHeight = readCssPixels('--dtf-iframe-min-height-desktop', 1100);
