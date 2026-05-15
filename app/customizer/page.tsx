@@ -1593,6 +1593,7 @@ export default function CustomizerPage() {
       width: CANVAS_DEFAULT_WIDTH,
       height: CANVAS_DEFAULT_HEIGHT,
       backgroundColor: "transparent",
+      allowTouchScrolling: true,
     });
 
     fabricCanvasRef.current = canvas;
