@@ -1964,58 +1964,17 @@ export default function CustomizerPage() {
         </p>
       </div>
 
-      <div className="flex min-w-0 flex-col overflow-visible md:min-h-dvh md:flex-row">
-        <main className="order-1 flex min-h-0 min-w-0 flex-1 flex-col md:order-2">
-          <div
-            ref={previewPaneRef}
-            className="order-1 flex h-[clamp(420px,62vh,620px)] min-h-[420px] w-full max-w-full items-center justify-center overflow-hidden bg-[#181818] px-2 py-3 md:order-2 md:h-[clamp(520px,72vh,760px)] md:min-h-[520px] md:max-h-[760px] md:flex-none md:px-4 md:py-4"
-          >
-            <div
-              className={getPreviewStageClassName(currentView)}
-              style={{
-                width: `${CANVAS_DEFAULT_WIDTH}px`,
-                height: `${CANVAS_DEFAULT_HEIGHT}px`,
-                transform: `scale(${previewScale})`,
-                transformOrigin: "center center",
-              }}
-            >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={resolvedMockupUrl}
-                  alt={`${VIEW_LABELS[currentView]} mockup`}
-                  className={getMockupImageClassName()}
-                  style={{
-                    width: `${mockupRender.renderedWidth}px`,
-                    height: `${mockupRender.renderedHeight}px`,
-                    left: "50%",
-                    top: "50%",
-                    transform: "translate(-50%, -50%)",
-                  }}
-                  onLoad={(event) => {
-                    const image = event.currentTarget;
-                    const naturalWidth = image.naturalWidth || 0;
-                    const naturalHeight = image.naturalHeight || 0;
-                    setMockupNaturalSize((prev) =>
-                      prev.width === naturalWidth && prev.height === naturalHeight
-                        ? prev
-                        : { width: naturalWidth, height: naturalHeight }
-                    );
-                  }}
-                />
-                <div
-                  className="pointer-events-none absolute z-20 border border-dashed border-cyan-400"
-                  style={{
-                    left: `${resolvedPrintAreaBounds.left}px`,
-                    top: `${resolvedPrintAreaBounds.top}px`,
-                    width: `${resolvedPrintAreaBounds.width}px`,
-                    height: `${resolvedPrintAreaBounds.height}px`,
-                  }}
-                />
-                <canvas ref={canvasElRef} className="relative z-10" />
-              </div>
-            </div>
+      <div className="flex min-w-0 flex-col overflow-visible md:grid md:min-h-dvh md:grid-cols-[360px_minmax(0,1fr)]">
+        <aside className="order-2 w-full shrink-0 overflow-visible border-t border-[#222] bg-[#111] p-4 pb-24 md:order-1 md:h-dvh md:w-auto md:overflow-y-auto md:border-t-0 md:border-r md:p-5">
+          <div className="hidden md:block">
+            <h1 className="text-xl font-bold">DTF Designer Pro</h1>
+            <p className="mt-1 text-sm text-gray-400">
+              Upload artwork, customize DTF transfers and gang sheets, place designs on custom
+              t-shirts and hoodies, then send your order details to Shopify checkout.
+            </p>
+          </div>
 
-          <div className="order-2 md:order-1">
+          <div className="mt-2 md:mt-5">
             <PrintLocationControls
               availableViews={availableViews}
               currentView={currentView}
@@ -2023,16 +1982,6 @@ export default function CustomizerPage() {
               loadView={loadView}
               printLocationsError={printLocationsError}
             />
-          </div>
-        </main>
-
-        <aside className="order-2 w-full shrink-0 overflow-visible border-t border-[#222] bg-[#111] p-4 pb-40 md:order-1 md:w-[360px] md:overflow-y-auto md:border-t-0 md:border-r md:p-5">
-          <div className="hidden md:block">
-            <h1 className="text-xl font-bold">DTF Designer Pro</h1>
-            <p className="mt-1 text-sm text-gray-400">
-              Upload artwork, customize DTF transfers and gang sheets, place designs on custom
-              t-shirts and hoodies, then send your order details to Shopify checkout.
-            </p>
           </div>
 
         <div className="md:mt-5">
@@ -2235,6 +2184,57 @@ export default function CustomizerPage() {
           {cartStatus ? <p className="mt-3 text-sm text-gray-300">{cartStatus}</p> : null}
         </div>
       </aside>
+
+        <main className="order-1 flex min-h-0 min-w-0 flex-1 flex-col md:order-2 md:items-center md:justify-center md:px-6 md:py-6">
+          <div
+            ref={previewPaneRef}
+            className="order-1 flex h-[clamp(420px,58vh,620px)] min-h-[420px] w-full max-w-full items-center justify-center overflow-hidden bg-[#181818] px-2 py-3 md:h-[clamp(620px,78vh,820px)] md:max-h-[820px] md:px-4 md:py-4"
+          >
+            <div
+              className={getPreviewStageClassName(currentView)}
+              style={{
+                width: `${CANVAS_DEFAULT_WIDTH}px`,
+                height: `${CANVAS_DEFAULT_HEIGHT}px`,
+                transform: `scale(${previewScale})`,
+                transformOrigin: "center center",
+              }}
+            >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={resolvedMockupUrl}
+                  alt={`${VIEW_LABELS[currentView]} mockup`}
+                  className={getMockupImageClassName()}
+                  style={{
+                    width: `${mockupRender.renderedWidth}px`,
+                    height: `${mockupRender.renderedHeight}px`,
+                    left: "50%",
+                    top: "50%",
+                    transform: "translate(-50%, -50%)",
+                  }}
+                  onLoad={(event) => {
+                    const image = event.currentTarget;
+                    const naturalWidth = image.naturalWidth || 0;
+                    const naturalHeight = image.naturalHeight || 0;
+                    setMockupNaturalSize((prev) =>
+                      prev.width === naturalWidth && prev.height === naturalHeight
+                        ? prev
+                        : { width: naturalWidth, height: naturalHeight }
+                    );
+                  }}
+                />
+                <div
+                  className="pointer-events-none absolute z-20 border border-dashed border-cyan-400"
+                  style={{
+                    left: `${resolvedPrintAreaBounds.left}px`,
+                    top: `${resolvedPrintAreaBounds.top}px`,
+                    width: `${resolvedPrintAreaBounds.width}px`,
+                    height: `${resolvedPrintAreaBounds.height}px`,
+                  }}
+                />
+                <canvas ref={canvasElRef} className="relative z-10" />
+              </div>
+            </div>
+        </main>
       </div>
     </div>
   );
