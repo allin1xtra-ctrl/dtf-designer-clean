@@ -2315,9 +2315,12 @@ export default function CustomizerPage() {
               Your design is saved automatically while you work.
             </p>
           )}
-          <button type="button" onClick={clearSavedDesign} aria-label="Clear saved design and remove the autosaved customizer draft" className="mt-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-left text-sm text-white hover:bg-[#333]">
+          <button type="button" onClick={clearSavedDesign} aria-describedby="clear-saved-design-help" className="mt-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-left text-sm text-white hover:bg-[#333]">
             Clear Saved Design
           </button>
+          <p id="clear-saved-design-help" className="sr-only">
+            Removes the autosaved design draft from this device after confirmation.
+          </p>
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-2 text-sm">
