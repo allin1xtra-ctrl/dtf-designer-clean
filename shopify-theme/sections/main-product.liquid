@@ -42,8 +42,9 @@
 {% endunless %}
 
 {% assign current_variant = product.selected_or_first_available_variant %}
+{% capture customizer_cta_base_url %}{{ routes.root_url }}pages/customizer?source=shopify&product={{ product.handle | url_encode }}{% endcapture %}
 {% assign is_theme_preview = false %}
-{% if request.design_mode or content_for_header contains 'previewBarInjector.init();' %}
+{% if request.design_mode or content_for_header contains 'previewBarInjector' %}
   {% assign is_theme_preview = true %}
 {% endif %}
 {% if is_theme_preview %}
@@ -123,7 +124,7 @@
           <a
             id="dtf-customize-btn"
             class="dtf-size-btn dtf-customize-btn"
-            href="{{ routes.root_url }}pages/customizer?source=shopify&product={{ product.handle | url_encode }}&variant={{ current_variant.id }}&product_id={{ product.id }}&price={{ current_variant.price | money_without_currency | url_encode }}"
+            href="{{ customizer_cta_base_url }}&variant={{ current_variant.id }}&product_id={{ product.id }}&price={{ current_variant.price | money_without_currency | url_encode }}"
           >
             🎨 Customize &amp; Upload Design
           </a>
@@ -357,8 +358,7 @@
   var select       = document.getElementById('dtf-variant-select');
   var customizeBtn = document.getElementById('dtf-customize-btn');
   var priceDisplay = document.getElementById('dtf-price-display');
-  var customizerBaseUrl = {{ routes.root_url | append: 'pages/customizer?source=shopify' | json }};
-  var productHandle = {{ product.handle | json }};
+  var customizerBaseUrl = {{ customizer_cta_base_url | json }};
   var productId    = {{ product.id | json }};
 
   if (!select || select.tagName !== 'SELECT') return;
@@ -369,7 +369,6 @@
 
     if (customizeBtn) {
       customizeBtn.href = customizerBaseUrl
-        + '&product=' + encodeURIComponent(productHandle)
         + '&variant=' + encodeURIComponent(variantId)
         + '&product_id=' + encodeURIComponent(productId)
         + '&price=' + encodeURIComponent(selectedOption.dataset.customizerPrice || '');
