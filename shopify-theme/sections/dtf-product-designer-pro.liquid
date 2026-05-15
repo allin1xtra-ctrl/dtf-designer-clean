@@ -597,6 +597,10 @@
       iframe.className = 'dtf-customizer-page__iframe';
       iframe.style.width = '100%';
       var initialMinHeight = getMinIframeHeight();
+      var currentIframeHeight = initialMinHeight;
+      var pendingDesktopShrinkTimer = null;
+      var DESKTOP_RESIZE_JITTER_PX = 24;
+      var DESKTOP_RESIZE_SETTLE_DELAY_MS = 180;
       iframe.style.minHeight = initialMinHeight + 'px';
       iframe.style.height = initialMinHeight + 'px';
       iframe.style.border = 'none';
@@ -628,7 +632,29 @@
 
         if (message.type === 'dtf:resize' && message.payload && message.payload.height) {
           var minHeight = getMinIframeHeight();
-          iframe.style.height = Math.max(minHeight, Number(message.payload.height)) + 'px';
+          var nextHeight = Math.max(minHeight, Number(message.payload.height));
+          var isDesktopViewport = !window.matchMedia('(max-width: 749px)').matches;
+
+          if (pendingDesktopShrinkTimer) {
+            window.clearTimeout(pendingDesktopShrinkTimer);
+            pendingDesktopShrinkTimer = null;
+          }
+
+          if (!isDesktopViewport || nextHeight >= currentIframeHeight) {
+            currentIframeHeight = nextHeight;
+            iframe.style.height = nextHeight + 'px';
+            return;
+          }
+
+          if (Math.abs(currentIframeHeight - nextHeight) <= DESKTOP_RESIZE_JITTER_PX) {
+            return;
+          }
+
+          pendingDesktopShrinkTimer = window.setTimeout(function () {
+            currentIframeHeight = nextHeight;
+            iframe.style.height = nextHeight + 'px';
+            pendingDesktopShrinkTimer = null;
+          }, DESKTOP_RESIZE_SETTLE_DELAY_MS);
           return;
         }
 
