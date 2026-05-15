@@ -199,6 +199,8 @@
     iframe.style.height = "900px";
     let currentIframeHeight = 900;
     let pendingDesktopShrinkTimer = null;
+    const DESKTOP_RESIZE_JITTER_PX = 24;
+    const DESKTOP_RESIZE_SETTLE_DELAY_MS = 180;
     iframe.style.border = "none";
     iframe.style.borderRadius = "12px";
     iframe.loading = "lazy";
@@ -263,16 +265,15 @@
             return;
           }
 
-          if (currentIframeHeight - nextHeight < 24) {
+          if (Math.abs(currentIframeHeight - nextHeight) <= DESKTOP_RESIZE_JITTER_PX) {
             return;
           }
 
           pendingDesktopShrinkTimer = window.setTimeout(() => {
-            const stableHeight = Math.max(700, nextHeight);
-            currentIframeHeight = stableHeight;
-            iframe.style.height = `${stableHeight}px`;
+            currentIframeHeight = nextHeight;
+            iframe.style.height = `${nextHeight}px`;
             pendingDesktopShrinkTimer = null;
-          }, 180);
+          }, DESKTOP_RESIZE_SETTLE_DELAY_MS);
           return;
         }
 
