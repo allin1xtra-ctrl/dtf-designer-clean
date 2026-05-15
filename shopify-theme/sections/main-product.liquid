@@ -8,10 +8,12 @@
 {% endcomment %}
 
 {% assign customizer_handles = 'custom-dtf-transfer-by-size,dtf-gang-sheet-builder-build-your-own-sheet,custom-t-shirt-upload-customize,custom-hoodie-upload-customize' | split: ',' %}
+{% assign customizer_failsafe_fragments = 'custom-dtf-transfer,gang-sheet-builder,custom-t-shirt,custom-hoodie' | split: ',' %}
 {% assign current_handle = product.handle | downcase | strip %}
 {% assign customizer_blocked = false %}
 {% assign allowlist_match = false %}
 {% assign failsafe_match = false %}
+{% assign matched_customizer_fragment = '' %}
 {% assign show_customizer = false %}
 {% if current_handle contains 'upload-print-ready-file' %}
   {% assign customizer_blocked = true %}
@@ -27,10 +29,15 @@
   {% endfor %}
 
   {% if show_customizer == false %}
-    {% if current_handle contains 'custom-dtf-transfer' or current_handle contains 'gang-sheet-builder' or current_handle contains 'custom-t-shirt' or current_handle contains 'custom-hoodie' %}
-      {% assign failsafe_match = true %}
-      {% assign show_customizer = true %}
-    {% endif %}
+    {% for fragment in customizer_failsafe_fragments %}
+      {% assign normalized_fragment = fragment | downcase | strip %}
+      {% if current_handle contains normalized_fragment %}
+        {% assign failsafe_match = true %}
+        {% assign matched_customizer_fragment = normalized_fragment %}
+        {% assign show_customizer = true %}
+        {% break %}
+      {% endif %}
+    {% endfor %}
   {% endif %}
 {% endunless %}
 
@@ -40,7 +47,7 @@
   {% assign is_theme_preview = true %}
 {% endif %}
 {% if is_theme_preview %}
-  <!-- DTF customizer CTA debug: handle={{ current_handle }}, blocked={{ customizer_blocked }}, allowlist_match={{ allowlist_match }}, failsafe_match={{ failsafe_match }}, show_customizer={{ show_customizer }} -->
+  <!-- DTF customizer CTA debug: handle={{ current_handle }}, blocked={{ customizer_blocked }}, show_customizer={{ show_customizer }}, match={% if allowlist_match %}allowlist{% elsif failsafe_match %}failsafe:{{ matched_customizer_fragment }}{% else %}none{% endif %} -->
 {% endif %}
 
 <div class="dtf-product-section">
