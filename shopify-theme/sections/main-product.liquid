@@ -8,10 +8,13 @@
 {% endcomment %}
 
 {% assign customizer_handles = 'custom-dtf-transfer-by-size,dtf-gang-sheet-builder-build-your-own-sheet,custom-t-shirt-upload-customize,custom-hoodie-upload-customize' | split: ',' %}
+{% assign current_handle = product.handle | downcase | strip %}
 {% assign show_customizer = false %}
 {% for h in customizer_handles %}
-  {% if product.handle == h %}
+  {% assign allowed_handle = h | downcase | strip %}
+  {% if current_handle == allowed_handle %}
     {% assign show_customizer = true %}
+    {% break %}
   {% endif %}
 {% endfor %}
 
