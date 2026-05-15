@@ -1836,7 +1836,7 @@ export default function CustomizerPage() {
         <main className="order-1 flex min-h-0 min-w-0 flex-1 flex-col md:order-2">
           <div
             ref={previewPaneRef}
-            className="order-1 flex aspect-[5/6] min-h-[320px] w-full max-h-[70vh] max-w-full items-center justify-center overflow-x-hidden bg-[#181818] px-3 py-4 md:order-2 md:min-h-0 md:max-h-none md:flex-1 md:px-4 md:py-4"
+            className="order-1 flex aspect-[5/6] min-h-[320px] w-full max-h-[70vh] max-w-full items-center justify-center overflow-hidden bg-[#181818] px-2 py-3 md:order-2 md:min-h-0 md:max-h-none md:flex-1 md:px-4 md:py-4"
           >
             <div
               className={getPreviewStageClassName(currentView)}
@@ -1844,7 +1844,7 @@ export default function CustomizerPage() {
                 width: `${CANVAS_DEFAULT_WIDTH}px`,
                 height: `${CANVAS_DEFAULT_HEIGHT}px`,
                 transform: `scale(${previewScale})`,
-                transformOrigin: "center center",
+                transformOrigin: previewScale < 1 ? "top center" : "center center",
               }}
             >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1894,7 +1894,7 @@ export default function CustomizerPage() {
           </div>
         </main>
 
-        <aside className="order-2 w-full shrink-0 border-t border-[#222] bg-[#111] p-4 md:order-1 md:w-[360px] md:overflow-y-auto md:border-t-0 md:border-r md:p-5">
+        <aside className="order-2 w-full shrink-0 border-t border-[#222] bg-[#111] p-4 pb-24 md:order-1 md:w-[360px] md:overflow-y-auto md:border-t-0 md:border-r md:p-5">
           <div className="hidden md:block">
             <h1 className="text-xl font-bold">DTF Designer Pro</h1>
             <p className="mt-1 text-sm text-gray-400">
@@ -1922,7 +1922,7 @@ export default function CustomizerPage() {
           <button type="button" onClick={sendBackward} className="rounded bg-[#1f1f1f] px-3 py-2 text-left hover:bg-[#333]">Send Backward</button>
         </div>
 
-        <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
+        <div className="sticky bottom-0 z-30 mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4 shadow-[0_-6px_16px_rgba(0,0,0,0.45)] md:static md:shadow-none">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">Text & Font Customization</h2>
           <p className="mb-3 text-xs text-gray-400">Selected object: {selectedObjectType}</p>
 
