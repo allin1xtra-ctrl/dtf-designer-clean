@@ -14,6 +14,12 @@
 {{ 'dtf-pro-theme.css' | asset_url | stylesheet_tag }}
 
 <style>
+  #shopify-section-{{ section.id }} {
+    --dtf-iframe-min-height-desktop: 1100px;
+    --dtf-iframe-min-height-mobile: 1450px;
+    --dtf-mobile-safe-bottom-padding: 120px;
+  }
+
   #shopify-section-{{ section.id }} .dtf-designer-section {
     margin: 20px auto 32px;
     padding: clamp(16px, 2.2vw, 22px);
@@ -174,14 +180,14 @@
   }
 
   #shopify-section-{{ section.id }} .dtf-customizer-page__frame-wrap {
-    min-height: 1100px;
+    min-height: var(--dtf-iframe-min-height-desktop);
     height: auto;
   }
 
-  #shopify-section-{{ section.id }} .dtf-customizer-page iframe {
+  #shopify-section-{{ section.id }} .dtf-customizer-page__iframe {
     width: 100%;
-    min-height: 1100px;
-    height: 1100px;
+    min-height: var(--dtf-iframe-min-height-desktop);
+    height: var(--dtf-iframe-min-height-desktop);
     border: 0;
     display: block;
   }
@@ -256,14 +262,14 @@
 
   @media screen and (max-width: 749px) {
     #shopify-section-{{ section.id }} .dtf-customizer-page__frame-wrap {
-      min-height: 1450px;
-      padding-bottom: 120px;
+      min-height: var(--dtf-iframe-min-height-mobile);
+      padding-bottom: var(--dtf-mobile-safe-bottom-padding);
       overflow: visible !important;
     }
 
-    #shopify-section-{{ section.id }} .dtf-customizer-page iframe {
-      min-height: 1450px;
-      height: 1450px;
+    #shopify-section-{{ section.id }} .dtf-customizer-page__iframe {
+      min-height: var(--dtf-iframe-min-height-mobile);
+      height: var(--dtf-iframe-min-height-mobile);
     }
   }
 </style>
@@ -541,6 +547,8 @@
     }
 
     function initEmbeddedDesigner() {
+      var minDesktopIframeHeight = 1100;
+      var minMobileIframeHeight = 1450;
       var redirectToCart = mount.dataset.redirectToCart !== 'false';
       var variantId = getCurrentVariantId() || normalizeVariantId(mount.dataset.variantId);
       var productTitle = getProductTitle();
@@ -556,7 +564,7 @@
       }
 
       function getMinIframeHeight() {
-        return window.matchMedia('(max-width: 749px)').matches ? 1450 : 1100;
+        return window.matchMedia('(max-width: 749px)').matches ? minMobileIframeHeight : minDesktopIframeHeight;
       }
 
       var iframe = document.createElement('iframe');
