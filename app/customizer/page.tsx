@@ -94,13 +94,7 @@ const VIEW_LABELS: Record<ViewName, string> = {
 };
 
 function isViewName(value: unknown): value is ViewName {
-  return (
-    value === "front" ||
-    value === "back" ||
-    value === "leftSleeve" ||
-    value === "rightSleeve" ||
-    value === "neck"
-  );
+  return typeof value === "string" && VIEW_NAMES.includes(value as ViewName);
 }
 
 type CanvasSnapshot = ReturnType<Canvas["toJSON"]>;
