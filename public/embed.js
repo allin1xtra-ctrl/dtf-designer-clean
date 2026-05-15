@@ -197,6 +197,8 @@
     iframe.src = url.toString();
     iframe.style.width = "100%";
     iframe.style.height = "900px";
+    let currentIframeHeight = 900;
+    let pendingDesktopShrinkTimer = null;
     iframe.style.border = "none";
     iframe.style.borderRadius = "12px";
     iframe.loading = "lazy";
@@ -247,7 +249,30 @@
         const message = event.data || {};
 
         if (message.type === "dtf:resize" && message.payload?.height) {
-          iframe.style.height = `${Math.max(700, Number(message.payload.height))}px`;
+          const nextHeight = Math.max(700, Number(message.payload.height));
+          const isDesktopViewport = !window.matchMedia("(max-width: 749px)").matches;
+
+          if (pendingDesktopShrinkTimer) {
+            window.clearTimeout(pendingDesktopShrinkTimer);
+            pendingDesktopShrinkTimer = null;
+          }
+
+          if (!isDesktopViewport || nextHeight >= currentIframeHeight) {
+            currentIframeHeight = nextHeight;
+            iframe.style.height = `${nextHeight}px`;
+            return;
+          }
+
+          if (currentIframeHeight - nextHeight < 24) {
+            return;
+          }
+
+          pendingDesktopShrinkTimer = window.setTimeout(() => {
+            const stableHeight = Math.max(700, nextHeight);
+            currentIframeHeight = stableHeight;
+            iframe.style.height = `${stableHeight}px`;
+            pendingDesktopShrinkTimer = null;
+          }, 180);
           return;
         }
 

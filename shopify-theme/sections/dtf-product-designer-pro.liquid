@@ -597,6 +597,8 @@
       iframe.className = 'dtf-customizer-page__iframe';
       iframe.style.width = '100%';
       var initialMinHeight = getMinIframeHeight();
+      var currentIframeHeight = initialMinHeight;
+      var pendingDesktopShrinkTimer = null;
       iframe.style.minHeight = initialMinHeight + 'px';
       iframe.style.height = initialMinHeight + 'px';
       iframe.style.border = 'none';
@@ -628,7 +630,30 @@
 
         if (message.type === 'dtf:resize' && message.payload && message.payload.height) {
           var minHeight = getMinIframeHeight();
-          iframe.style.height = Math.max(minHeight, Number(message.payload.height)) + 'px';
+          var nextHeight = Math.max(minHeight, Number(message.payload.height));
+          var isDesktopViewport = !window.matchMedia('(max-width: 749px)').matches;
+
+          if (pendingDesktopShrinkTimer) {
+            window.clearTimeout(pendingDesktopShrinkTimer);
+            pendingDesktopShrinkTimer = null;
+          }
+
+          if (!isDesktopViewport || nextHeight >= currentIframeHeight) {
+            currentIframeHeight = nextHeight;
+            iframe.style.height = nextHeight + 'px';
+            return;
+          }
+
+          if (currentIframeHeight - nextHeight < 24) {
+            return;
+          }
+
+          pendingDesktopShrinkTimer = window.setTimeout(function () {
+            var stableHeight = Math.max(getMinIframeHeight(), nextHeight);
+            currentIframeHeight = stableHeight;
+            iframe.style.height = stableHeight + 'px';
+            pendingDesktopShrinkTimer = null;
+          }, 180);
           return;
         }
 

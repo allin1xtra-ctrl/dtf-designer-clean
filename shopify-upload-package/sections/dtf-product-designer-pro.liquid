@@ -527,6 +527,8 @@
       iframe.src = url.toString();
       iframe.style.width = '100%';
       iframe.style.height = '900px';
+      var currentIframeHeight = 900;
+      var pendingDesktopShrinkTimer = null;
       iframe.style.border = 'none';
       iframe.style.borderRadius = '12px';
       iframe.loading = 'lazy';
@@ -559,7 +561,30 @@
         var message = event.data || {};
 
         if (message.type === 'dtf:resize' && message.payload && message.payload.height) {
-          iframe.style.height = Math.max(700, Number(message.payload.height)) + 'px';
+          var nextHeight = Math.max(700, Number(message.payload.height));
+          var isDesktopViewport = !window.matchMedia('(max-width: 749px)').matches;
+
+          if (pendingDesktopShrinkTimer) {
+            window.clearTimeout(pendingDesktopShrinkTimer);
+            pendingDesktopShrinkTimer = null;
+          }
+
+          if (!isDesktopViewport || nextHeight >= currentIframeHeight) {
+            currentIframeHeight = nextHeight;
+            iframe.style.height = nextHeight + 'px';
+            return;
+          }
+
+          if (currentIframeHeight - nextHeight < 24) {
+            return;
+          }
+
+          pendingDesktopShrinkTimer = window.setTimeout(function () {
+            var stableHeight = Math.max(700, nextHeight);
+            currentIframeHeight = stableHeight;
+            iframe.style.height = stableHeight + 'px';
+            pendingDesktopShrinkTimer = null;
+          }, 180);
           return;
         }
 
