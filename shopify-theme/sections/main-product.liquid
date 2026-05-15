@@ -9,16 +9,39 @@
 
 {% assign customizer_handles = 'custom-dtf-transfer-by-size,dtf-gang-sheet-builder-build-your-own-sheet,custom-t-shirt-upload-customize,custom-hoodie-upload-customize' | split: ',' %}
 {% assign current_handle = product.handle | downcase | strip %}
+{% assign customizer_blocked = false %}
+{% assign allowlist_match = false %}
+{% assign failsafe_match = false %}
 {% assign show_customizer = false %}
-{% for h in customizer_handles %}
-  {% assign allowed_handle = h | downcase | strip %}
-  {% if current_handle == allowed_handle %}
-    {% assign show_customizer = true %}
-    {% break %}
+{% if current_handle contains 'upload-print-ready-file' %}
+  {% assign customizer_blocked = true %}
+{% endif %}
+{% unless customizer_blocked %}
+  {% for h in customizer_handles %}
+    {% assign allowed_handle = h | downcase | strip %}
+    {% if current_handle == allowed_handle %}
+      {% assign allowlist_match = true %}
+      {% assign show_customizer = true %}
+      {% break %}
+    {% endif %}
+  {% endfor %}
+
+  {% if show_customizer == false %}
+    {% if current_handle contains 'custom-dtf-transfer' or current_handle contains 'gang-sheet-builder' or current_handle contains 'custom-t-shirt' or current_handle contains 'custom-hoodie' %}
+      {% assign failsafe_match = true %}
+      {% assign show_customizer = true %}
+    {% endif %}
   {% endif %}
-{% endfor %}
+{% endunless %}
 
 {% assign current_variant = product.selected_or_first_available_variant %}
+{% assign is_theme_preview = false %}
+{% if request.design_mode or content_for_header contains 'previewBarInjector.init();' %}
+  {% assign is_theme_preview = true %}
+{% endif %}
+{% if is_theme_preview %}
+  <!-- DTF customizer CTA debug: handle={{ current_handle }}, blocked={{ customizer_blocked }}, allowlist_match={{ allowlist_match }}, failsafe_match={{ failsafe_match }}, show_customizer={{ show_customizer }} -->
+{% endif %}
 
 <div class="dtf-product-section">
   <div class="dtf-product-grid">
@@ -64,6 +87,7 @@
               <option
                 value="{{ variant.id }}"
                 data-price="{{ variant.price | money }}"
+                data-customizer-price="{{ variant.price | money_without_currency }}"
                 {% if variant == current_variant %}selected{% endif %}
                 {% unless variant.available %}disabled{% endunless %}
               >
@@ -86,18 +110,18 @@
         >
 
         <button type="submit" class="dtf-size-btn dtf-cart-btn">🛒 Add to Cart</button>
-      </form>
 
-      <!-- Customize Now CTA (supported products only) -->
-      {% if show_customizer %}
-        <a
-          id="dtf-customize-btn"
-          class="dtf-size-btn dtf-customize-btn"
-          href="/pages/customizer?source=shopify&product={{ product.handle | url_encode }}&variant={{ current_variant.id }}&product_id={{ product.id }}"
-        >
-          🎨 Customize &amp; Upload Design
-        </a>
-      {% endif %}
+        <!-- Customize Now CTA (supported products only) -->
+        {% if show_customizer %}
+          <a
+            id="dtf-customize-btn"
+            class="dtf-size-btn dtf-customize-btn"
+            href="{{ routes.root_url }}pages/customizer?source=shopify&product={{ product.handle | url_encode }}&variant={{ current_variant.id }}&product_id={{ product.id }}&price={{ current_variant.price | money_without_currency | url_encode }}"
+          >
+            🎨 Customize &amp; Upload Design
+          </a>
+        {% endif %}
+      </form>
 
       <!-- Reorder Last Design (logged-in customers only) -->
       {% if customer and customer.orders_count > 0 %}
@@ -326,6 +350,7 @@
   var select       = document.getElementById('dtf-variant-select');
   var customizeBtn = document.getElementById('dtf-customize-btn');
   var priceDisplay = document.getElementById('dtf-price-display');
+  var customizerBaseUrl = {{ routes.root_url | append: 'pages/customizer?source=shopify' | json }};
   var productHandle = {{ product.handle | json }};
   var productId    = {{ product.id | json }};
 
@@ -336,10 +361,11 @@
     var selectedOption = select.options[select.selectedIndex];
 
     if (customizeBtn) {
-      customizeBtn.href = '/pages/customizer?source=shopify'
+      customizeBtn.href = customizerBaseUrl
         + '&product=' + encodeURIComponent(productHandle)
         + '&variant=' + encodeURIComponent(variantId)
-        + '&product_id=' + encodeURIComponent(productId);
+        + '&product_id=' + encodeURIComponent(productId)
+        + '&price=' + encodeURIComponent(selectedOption.dataset.customizerPrice || '');
     }
 
     if (priceDisplay && selectedOption.dataset.price) {
