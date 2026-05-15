@@ -93,6 +93,16 @@ const VIEW_LABELS: Record<ViewName, string> = {
   neck: "Neck Label",
 };
 
+function isViewName(value: unknown): value is ViewName {
+  return (
+    value === "front" ||
+    value === "back" ||
+    value === "leftSleeve" ||
+    value === "rightSleeve" ||
+    value === "neck"
+  );
+}
+
 type CanvasSnapshot = ReturnType<Canvas["toJSON"]>;
 type DraftPayload = {
   version: number;
@@ -222,10 +232,6 @@ function createEmptyViews(): Record<ViewName, CanvasSnapshot | null> {
     rightSleeve: null,
     neck: null,
   };
-}
-
-function isViewName(value: unknown): value is ViewName {
-  return typeof value === "string" && VIEW_NAMES.includes(value as ViewName);
 }
 
 function normalizeDraftQuantity(value: unknown) {
@@ -839,6 +845,8 @@ export default function CustomizerPage() {
     }, DRAFT_AUTOSAVE_DEBOUNCE_MS);
   };
 
+  // Intentionally keyed to readiness + product + variant. Other referenced functions are stable enough here,
+  // and re-running on every render would cause unnecessary draft restore attempts.
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -2298,6 +2306,16 @@ export default function CustomizerPage() {
               printLocationsError={printLocationsError}
             />
           </div>
+
+          {draftStatus ? (
+            <div
+              role="status"
+              aria-live="polite"
+              className="mt-3 rounded border border-[#2b2b2b] bg-[#1a1a1a] px-3 py-2 text-xs text-gray-300"
+            >
+              {draftStatus}
+            </div>
+          ) : null}
 
         <div className="md:mt-5">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">Upload Artwork</h2>
