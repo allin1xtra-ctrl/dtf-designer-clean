@@ -82,7 +82,11 @@ function toFrontendSafeErrorMessage(error: OpenAIErrorInfo) {
     return "OpenAI rate limit or billing limit reached.";
   }
 
-  return "AI design generation encountered an error. Please try again or contact support if it continues.";
+  if (typeof error.status === "number" && error.status >= 500) {
+    return "Image generation service is temporarily unavailable.";
+  }
+
+  return "AI design generation failed. Please try a different prompt.";
 }
 
 function shouldRetryWithFallback(
@@ -220,9 +224,7 @@ export async function POST(request: Request) {
       note: "Design idea generated.",
     });
   } catch (error) {
-    console.error("Generate design route failed:", error);
-    return errorJson(
-      "AI design generation encountered an error. Please try again or contact support if it continues."
-    );
+    console.error("AI design generation failed:", error);
+    return errorJson("AI design generation failed. Please try a different prompt.");
   }
 }
