@@ -2117,12 +2117,7 @@ export default function CustomizerPage() {
         <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">AI Design Tools</h2>
           <div className="grid grid-cols-2 gap-2 text-xs">
-            <button type="button" onClick={() => runAiRouteAction("/api/ai/remove-background", "Remove Background")} className="rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333]" title="AI Background Remover">Remove Background</button>
-            <button type="button" onClick={() => runAiRouteAction("/api/ai/enhance-image", "Enhance Image")} className="rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333]" title="AI Image Enhancer">Enhance Image</button>
-            <button type="button" onClick={() => runAiRouteAction("/api/ai/upscale-sharpen", "Upscale / Sharpen")} className="rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333]" title="AI Upscale / Sharpen">Upscale / Sharpen</button>
-            <button type="button" onClick={() => runAiRouteAction("/api/ai/vectorize-artwork", "Vectorize Artwork")} className="rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333]" title="AI Vectorize">Vectorize Artwork</button>
-            <button type="button" onClick={() => runAiRouteAction("/api/ai/clean-colors", "Clean Up Colors")} className="rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333]" title="AI Color Cleanup">Clean Up Colors</button>
-            <button type="button" onClick={generateLocalSuggestions} className="rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333]" title="AI Design Suggestions">Suggest Design Improvements</button>
+            <button type="button" onClick={() => runAiRouteAction("/api/ai/remove-background", "Remove Background")} className="rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333]" title="Remove any background from selected artwork">Remove Background</button>
           </div>
 
           <div className="mt-3 rounded border border-[#2b2b2b] bg-[#111] p-3">
