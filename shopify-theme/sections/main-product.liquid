@@ -1,88 +1,98 @@
 {% comment %}
-  main-product.liquid — Premium DTF Product Page
-  - Variant selector synced to Customize + ATC buttons
-  - Passes product handle + variant_id to Vercel customizer
-  - Reorder Last Design for logged-in customers
+  main-product.liquid — DTF Product Page (Theme 3.0)
+  - Displays product image (square), title, price, description
+  - Variant selector inside Add to Cart form
+  - "🎨 Customize Now with DTF Designer" CTA → /pages/customizer (4 supported handles only)
+  - Upload-only handle (dtf-gang-sheet-upload-print-ready-file) never shows the CTA
+  - Reorder Last Design for logged-in customers with saved artwork URL
 {% endcomment %}
-  <a
-    id="dtf-customize-btn"
-    class="dtf-size-btn"
-    style="background:#00fff7;color:#18181b;margin-top:0.75rem;"
-    href="https://dtf-designer-clean.vercel.app/customizer?product={{ product.handle }}&variant={{ current_variant.id }}"
-    target="_blank" rel="noopener"
-  >
-    ⚡ Start Customizing
-  </a>
-  <!-- Variant Selector -->
-  {%- if product.variants.size > 1 -%}
-    <label for="dtf-variant-select" style="color:#00fff7;font-weight:700;display:block;margin-bottom:0.5rem;">
-      Select Size:
-    </label>
-    <select id="dtf-variant-select" name="id" style="width:100%;padding:0.6rem 1rem;border-radius:0.75rem;background:#18181b;color:#fff;border:1.5px solid #00fff7;font-size:1rem;margin-bottom:1rem;">
-      {% for variant in product.variants %}
-        <option
-          value="{{ variant.id }}"
-          data-price="{{ variant.price | money }}"
-          {% if variant == current_variant %}selected{% endif %}
-          {% unless variant.available %}disabled{% endunless %}
-        >
-          {{ variant.title }}{% unless variant.available %} — Sold Out{% endunless %}
-        </option>
-      {% endfor %}
-    </select>
-  {%- else -%}
-    <input type="hidden" name="id" value="{{ product.variants.first.id }}">
-  {%- endif -%}
 
-  <!-- Price Display -->
-  <div id="dtf-price-display" style="font-size:1.4rem;font-weight:800;color:#fff200;margin-bottom:1rem;">
+{% assign customizer_handles = 'custom-dtf-transfer-by-size,dtf-gang-sheet-builder-build-your-own-sheet,custom-t-shirt-upload-customize,custom-hoodie-upload-customize' | split: ',' %}
+{% assign show_customizer = false %}
+{% for h in customizer_handles %}
+  {% if product.handle == h %}
+    {% assign show_customizer = true %}
+  {% endif %}
+{% endfor %}
+
+{% assign current_variant = product.selected_or_first_available_variant %}
+
+<div class="dtf-product-section">
+
+  <!-- Product Media (square) -->
+  {% if product.featured_image %}
+    <div class="dtf-product-media">
+      <img
+        src="{{ product.featured_image | image_url: width: 800 }}"
+        alt="{{ product.featured_image.alt | escape | default: product.title | escape }}"
+        width="800"
+        height="800"
+        loading="eager"
+        class="dtf-product-img"
+      >
+    </div>
+  {% endif %}
+
+  <!-- Product Title -->
+  <h1 class="dtf-product-title">{{ product.title }}</h1>
+
+  <!-- Price -->
+  <div id="dtf-price-display" class="dtf-price-display">
     {{ current_variant.price | money }}
   </div>
 
-  <!-- Add to Cart -->
+  <!-- Description -->
+  {% if product.description != blank %}
+    <div class="dtf-product-description">{{ product.description }}</div>
+  {% endif %}
+
+  <!-- Variant selector + Add to Cart -->
   <form id="dtf-add-to-cart-form" method="post" action="/cart/add">
-    <input type="hidden" name="id" id="dtf-atc-variant-id" value="{{ current_variant.id }}">
+    {%- if product.variants.size > 1 -%}
+      <label for="dtf-variant-select" class="dtf-label">Select Size:</label>
+      <select id="dtf-variant-select" name="id" class="dtf-select">
+        {% for variant in product.variants %}
+          <option
+            value="{{ variant.id }}"
+            data-price="{{ variant.price | money }}"
+            {% if variant == current_variant %}selected{% endif %}
+            {% unless variant.available %}disabled{% endunless %}
+          >
+            {{ variant.title }}{% unless variant.available %} — Sold Out{% endunless %}
+          </option>
+        {% endfor %}
+      </select>
+    {%- else -%}
+      <input type="hidden" name="id" id="dtf-variant-select" value="{{ product.variants.first.id }}">
+    {%- endif -%}
     <input type="hidden" name="quantity" value="1">
-    <button type="submit" class="dtf-size-btn">⚡ Add to Cart</button>
+    <button type="submit" class="dtf-size-btn">🛒 Add to Cart</button>
   </form>
 
-    <!-- Start Customizing Button -->
+  <!-- Customize Now CTA (supported products only) -->
+  {% if show_customizer %}
     <a
-      id="dtf-start-customizing-btn"
-      href="https://dtf-designer-clean.vercel.app/customizer?product={{ product.handle }}&variant={{ current_variant.id }}"
-      style="display:block;width:100%;margin-top:0.75rem;padding:1rem 0;border-radius:0.75rem;background:#18181b;color:#39ff14;font-weight:900;font-size:1.1rem;text-align:center;text-decoration:none;border:2.5px solid #39ff14;box-shadow:0 2px 12px #39ff1440;letter-spacing:0.03em;transition:background 0.18s,border 0.18s;"
-      target="_blank" rel="noopener"
-      onmouseover="this.style.background='#232323'"
-      onmouseout="this.style.background='#18181b'"
+      id="dtf-customize-btn"
+      class="dtf-size-btn dtf-customize-btn"
+      href="/pages/customizer?source=shopify&product={{ product.handle | url_encode }}&variant={{ current_variant.id }}&product_id={{ product.id }}"
     >
-      ⚡ Start Customizing
+      🎨 Customize Now with DTF Designer
     </a>
+  {% endif %}
 
-  <!-- Customize Button -->
-  <a
-    id="dtf-customize-btn"
-    class="dtf-size-btn"
-    style="background:#00fff7;color:#18181b;margin-top:0.75rem;"
-    href="https://dtf-designer-clean.vercel.app/customizer?product={{ product.handle }}&variant={{ current_variant.id }}"
-    target="_blank" rel="noopener"
-  >
-    ⚡ Start Customizing
-  </a>
-
-  <!-- Reorder (logged-in customers only) -->
+  <!-- Reorder Last Design (logged-in customers only) -->
   {% if customer and customer.orders_count > 0 %}
     {% assign last_order = customer.orders.first %}
     {% assign last_line  = last_order.line_items.first %}
     {% assign artwork_url = last_line.properties | where: "name", "_Artwork URL" | map: "value" | first %}
     <div style="margin-top:0.75rem;">
       {% if artwork_url %}
-        <a class="dtf-size-btn" style="background:#fff200;color:#18181b;"
-           href="https://dtf-designer-clean.vercel.app/customizer?reorder=true&artwork={{ artwork_url | url_encode }}&variant={{ last_line.variant_id }}"
-           target="_blank" rel="noopener">
+        <a class="dtf-size-btn dtf-reorder-btn"
+           href="/pages/customizer?source=shopify&reorder=true&artwork={{ artwork_url | url_encode }}&variant={{ last_line.variant_id }}&product={{ product.handle | url_encode }}&product_id={{ product.id }}">
           🔁 Reorder Last Design
         </a>
       {% else %}
-        <a class="dtf-size-btn" style="background:#fff200;color:#18181b;"
+        <a class="dtf-size-btn dtf-reorder-btn"
            href="/cart/add?id={{ last_line.variant_id }}&quantity=1">
           🔁 Reorder Last Size
         </a>
@@ -97,22 +107,55 @@
   background: #18181b;
   border-radius: 1.5rem;
   border: 2px solid #00fff7;
-  box-shadow: 0 0 16px #00fff7;
+  box-shadow: 0 0 24px #00fff730;
   padding: 2.5rem 2rem 2rem;
   color: #fff;
   margin: 2rem auto;
-  max-width: 540px;
+  max-width: 600px;
+}
+.dtf-product-media {
+  margin-bottom: 1.25rem;
+}
+.dtf-product-img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 1rem;
+  display: block;
 }
 .dtf-product-title {
   font-size: 2rem;
   font-weight: 800;
-  margin-bottom: 0.5rem;
+  margin: 0 0 0.5rem;
   color: #fff200;
 }
+.dtf-price-display {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #fff200;
+  margin-bottom: 0.75rem;
+}
 .dtf-product-description {
-  font-size: 1.1rem;
+  font-size: 1rem;
   color: #b3b3b3;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
+  line-height: 1.6;
+}
+.dtf-label {
+  color: #00fff7;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+.dtf-select {
+  width: 100%;
+  padding: 0.6rem 1rem;
+  border-radius: 0.75rem;
+  background: #27272a;
+  color: #fff;
+  border: 1.5px solid #00fff7;
+  font-size: 1rem;
+  margin-bottom: 1rem;
 }
 .dtf-size-btn {
   display: block;
@@ -122,16 +165,32 @@
   font-weight: 700;
   border: none;
   border-radius: 0.75rem;
-  padding: 0.75rem 0;
+  padding: 0.85rem 0;
   font-size: 1.1rem;
-  margin-top: 1rem;
+  margin-top: 0.75rem;
   cursor: pointer;
-  transition: background 0.2s;
   text-decoration: none;
   text-align: center;
+  transition: background 0.2s, color 0.2s;
 }
 .dtf-size-btn:hover {
   background: linear-gradient(90deg, #fff200 0%, #00fff7 100%);
+  color: #18181b;
+}
+.dtf-customize-btn {
+  background: linear-gradient(90deg, #a855f7 0%, #6366f1 100%);
+  color: #fff;
+}
+.dtf-customize-btn:hover {
+  background: linear-gradient(90deg, #9333ea 0%, #4f46e5 100%);
+  color: #fff;
+}
+.dtf-reorder-btn {
+  background: #fff200;
+  color: #18181b;
+}
+.dtf-reorder-btn:hover {
+  background: #ffe000;
   color: #18181b;
 }
 @media (max-width: 640px) {
@@ -141,34 +200,31 @@
     max-width: 100%;
   }
   .dtf-product-title { font-size: 1.5rem; }
-  .dtf-size-btn { font-size: 1rem; padding: 0.85rem 0; } /* larger tap target */
+  .dtf-size-btn { font-size: 1rem; padding: 0.9rem 0; }
 }
 </style>
 
 <script>
 (function () {
   var select       = document.getElementById('dtf-variant-select');
-  var atcInput     = document.getElementById('dtf-atc-variant-id');
   var customizeBtn = document.getElementById('dtf-customize-btn');
-  var productHandle = '{{ product.handle }}';
   var priceDisplay = document.getElementById('dtf-price-display');
-  var productId    = '{{ product.id }}';
+  var productHandle = {{ product.handle | json }};
+  var productId    = {{ product.id | json }};
 
-  if (!select) return;
+  if (!select || select.tagName !== 'SELECT') return;
 
   select.addEventListener('change', function () {
     var variantId = select.value;
     var selectedOption = select.options[select.selectedIndex];
 
-    // ✅ Sync ATC form
-    if (atcInput) atcInput.value = variantId;
-
-    // ✅ Sync Customize button URL (now external Vercel app)
     if (customizeBtn) {
-      customizeBtn.href = 'https://dtf-designer-clean.vercel.app/customizer?product={{ product.handle }}&variant=' + variantId;
+      customizeBtn.href = '/pages/customizer?source=shopify'
+        + '&product=' + encodeURIComponent(productHandle)
+        + '&variant=' + encodeURIComponent(variantId)
+        + '&product_id=' + encodeURIComponent(productId);
     }
 
-    // ✅ Update price display
     if (priceDisplay && selectedOption.dataset.price) {
       priceDisplay.textContent = selectedOption.dataset.price;
     }

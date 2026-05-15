@@ -1,0 +1,17 @@
+{% comment %}
+  main-page.liquid — Generic page section for Theme 3.0.
+  Renders the Shopify page content (page.title + page.content).
+{% endcomment %}
+
+<div class="page-width" style="max-width:860px;margin:2.5rem auto;padding:0 1rem 3rem;">
+  <h1 style="font-size:2rem;font-weight:800;margin-bottom:1rem;">{{ page.title }}</h1>
+  <div class="rte" style="line-height:1.7;">{{ page.content }}</div>
+</div>
+
+{% schema %}
+{
+  "name": "Page",
+  "settings": [],
+  "presets": [{ "name": "Page" }]
+}
+{% endschema %}
