@@ -711,6 +711,8 @@ export default function CustomizerPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    const MIN_HEIGHT_CHANGE_THRESHOLD = 80;
+    const HEIGHT_UPDATE_DEBOUNCE_MS = 250;
     let timer: ReturnType<typeof setTimeout> | null = null;
 
     const sendHeight = () => {
@@ -729,7 +731,7 @@ export default function CustomizerPage() {
         const previousHeight = lastSentIframeHeightRef.current;
         const heightDifference = Math.abs(nextHeight - previousHeight);
 
-        if (previousHeight && heightDifference < 80) {
+        if (previousHeight && heightDifference < MIN_HEIGHT_CHANGE_THRESHOLD) {
           return;
         }
 
@@ -742,7 +744,7 @@ export default function CustomizerPage() {
           },
           "*"
         );
-      }, 250);
+      }, HEIGHT_UPDATE_DEBOUNCE_MS);
     };
 
     sendHeight();
