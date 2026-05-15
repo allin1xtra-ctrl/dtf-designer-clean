@@ -1880,6 +1880,10 @@ export default function CustomizerPage() {
     };
 
     const handleDraftObjectEvent = () => {
+      requestDraftSave();
+    };
+
+    const handleDraftTextChange = () => {
       requestDraftSave({ resume: true });
     };
 
@@ -1891,7 +1895,7 @@ export default function CustomizerPage() {
     canvas.on("object:scaling", handleObjectChange);
     canvas.on("object:modified", handleObjectChange);
     canvas.on("object:removed", handleDraftObjectEvent);
-    canvas.on("text:changed", handleDraftObjectEvent);
+    canvas.on("text:changed", handleDraftTextChange);
 
     setIsReady(true);
 
@@ -1904,7 +1908,7 @@ export default function CustomizerPage() {
       canvas.off("object:scaling", handleObjectChange);
       canvas.off("object:modified", handleObjectChange);
       canvas.off("object:removed", handleDraftObjectEvent);
-      canvas.off("text:changed", handleDraftObjectEvent);
+      canvas.off("text:changed", handleDraftTextChange);
       canvas.dispose();
       fabricCanvasRef.current = null;
     };
@@ -2291,10 +2295,16 @@ export default function CustomizerPage() {
         </div>
 
         <div className="mt-3 rounded border border-[#2b2b2b] bg-[#171717] p-3">
-          <p aria-live="polite" className="text-xs text-gray-300">
-            {draftStatus || "Your design is saved automatically while you work."}
-          </p>
-          <button type="button" onClick={clearSavedDesign} className="mt-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-left text-sm text-white hover:bg-[#333]">
+          {draftStatus ? (
+            <p aria-live="polite" className="text-xs text-gray-300">
+              {draftStatus}
+            </p>
+          ) : (
+            <p className="text-xs text-gray-300">
+              Your design is saved automatically while you work.
+            </p>
+          )}
+          <button type="button" onClick={clearSavedDesign} aria-label="Clear saved design and remove the autosaved customizer draft" className="mt-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-left text-sm text-white hover:bg-[#333]">
             Clear Saved Design
           </button>
         </div>
