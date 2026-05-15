@@ -1927,7 +1927,7 @@ export default function CustomizerPage() {
   };
 
   return (
-    <div className="min-h-dvh overflow-x-hidden bg-[#0e0e0e] text-white">
+    <div className="overflow-x-hidden bg-[#0e0e0e] text-white">
       <style jsx global>{`
         .canvas-container,
         .upper-canvas,
@@ -1964,7 +1964,7 @@ export default function CustomizerPage() {
         </p>
       </div>
 
-      <div className="flex min-w-0 flex-col overflow-visible md:grid md:min-h-dvh md:grid-cols-[360px_minmax(0,1fr)]">
+      <div className="flex min-w-0 flex-col overflow-visible md:grid md:h-screen md:grid-cols-[360px_minmax(0,1fr)]">
         <aside className="order-2 w-full shrink-0 overflow-visible border-t border-[#222] bg-[#111] p-4 pb-12 md:order-1 md:h-dvh md:w-auto md:overflow-y-auto md:border-t-0 md:border-r md:p-5">
           <div className="hidden md:block">
             <h1 className="text-xl font-bold">DTF Designer Pro</h1>
@@ -2185,10 +2185,10 @@ export default function CustomizerPage() {
         </div>
       </aside>
 
-        <main className="order-1 flex min-h-0 min-w-0 flex-col md:order-2 md:h-full md:overflow-hidden md:px-6 md:py-6">
+        <main className="order-1 flex min-h-0 min-w-0 flex-col md:order-2 md:px-6 md:py-6">
           <div
             ref={previewPaneRef}
-            className="order-1 flex h-[clamp(440px,62vh,640px)] min-h-[440px] w-full max-w-full items-center justify-center overflow-hidden bg-[#181818] px-2 py-3 md:h-auto md:min-h-0 md:flex-1 md:px-4 md:py-4"
+            className="flex w-full max-w-full flex-none items-center justify-center overflow-hidden bg-[#181818] px-2 py-3 h-[clamp(420px,58vh,620px)] md:h-[clamp(560px,72vh,760px)] md:flex-none md:px-4 md:py-4"
           >
             <div
               className={getPreviewStageClassName(currentView)}
