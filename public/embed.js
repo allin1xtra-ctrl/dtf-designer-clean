@@ -194,17 +194,71 @@
     url.searchParams.set("source", "shopify-theme");
     url.searchParams.set("v", appVersion);
 
-    iframe.src = url.toString();
-    iframe.style.width = "100%";
-    iframe.style.height = "900px";
-    let currentIframeHeight = 900;
-    let pendingDesktopShrinkTimer = null;
-    const DESKTOP_RESIZE_JITTER_PX = 24;
-    const DESKTOP_RESIZE_SETTLE_DELAY_MS = 180;
-    iframe.style.border = "none";
-    iframe.style.borderRadius = "12px";
-    iframe.loading = "lazy";
-    iframe.dataset.dtfDesigner = "true";
+      iframe.src = url.toString();
+      iframe.style.width = "100%";
+      iframe.style.height = "900px";
+      let currentIframeHeight = 900;
+      let pendingDesktopShrinkTimer = null;
+      let pendingDesktopShrinkHeight = null;
+      const DESKTOP_RESIZE_JITTER_PX = 24;
+      const DESKTOP_RESIZE_SETTLE_DELAY_MS = 180;
+      iframe.style.border = "none";
+      iframe.style.borderRadius = "12px";
+      iframe.loading = "lazy";
+      iframe.dataset.dtfDesigner = "true";
+
+      const clearPendingDesktopShrink = () => {
+        if (pendingDesktopShrinkTimer) {
+          window.clearTimeout(pendingDesktopShrinkTimer);
+          pendingDesktopShrinkTimer = null;
+        }
+        pendingDesktopShrinkHeight = null;
+      };
+
+      const applyIframeHeight = (nextHeight) => {
+        const isDesktopViewport = !window.matchMedia("(max-width: 749px)").matches;
+        const heightDifference = nextHeight - currentIframeHeight;
+
+        if (!isDesktopViewport) {
+          clearPendingDesktopShrink();
+          if (nextHeight !== currentIframeHeight) {
+            currentIframeHeight = nextHeight;
+            iframe.style.height = `${nextHeight}px`;
+          }
+          return;
+        }
+
+        if (pendingDesktopShrinkTimer) {
+          if (nextHeight >= currentIframeHeight - DESKTOP_RESIZE_JITTER_PX) {
+            clearPendingDesktopShrink();
+          } else if (
+            pendingDesktopShrinkHeight !== null &&
+            Math.abs(nextHeight - pendingDesktopShrinkHeight) <= DESKTOP_RESIZE_JITTER_PX
+          ) {
+            return;
+          } else {
+            clearPendingDesktopShrink();
+          }
+        }
+
+        if (Math.abs(heightDifference) <= DESKTOP_RESIZE_JITTER_PX) {
+          return;
+        }
+
+        if (heightDifference > 0) {
+          currentIframeHeight = nextHeight;
+          iframe.style.height = `${nextHeight}px`;
+          return;
+        }
+
+        pendingDesktopShrinkHeight = nextHeight;
+        pendingDesktopShrinkTimer = window.setTimeout(() => {
+          currentIframeHeight = nextHeight;
+          iframe.style.height = `${nextHeight}px`;
+          pendingDesktopShrinkTimer = null;
+          pendingDesktopShrinkHeight = null;
+        }, DESKTOP_RESIZE_SETTLE_DELAY_MS);
+      };
 
       const postShopifyContext = () => {
         iframe.contentWindow?.postMessage(
@@ -249,31 +303,16 @@
         if (event.origin !== designerOrigin) return;
 
         const message = event.data || {};
+        const requestedHeight =
+          message.type === "dtf:resize"
+            ? Number(message.payload?.height)
+            : message.type === "DTF_IFRAME_HEIGHT"
+              ? Number(message.height)
+              : NaN;
 
-        if (message.type === "dtf:resize" && message.payload?.height) {
-          const nextHeight = Math.max(700, Number(message.payload.height));
-          const isDesktopViewport = !window.matchMedia("(max-width: 749px)").matches;
-
-          if (pendingDesktopShrinkTimer) {
-            window.clearTimeout(pendingDesktopShrinkTimer);
-            pendingDesktopShrinkTimer = null;
-          }
-
-          if (!isDesktopViewport || nextHeight >= currentIframeHeight) {
-            currentIframeHeight = nextHeight;
-            iframe.style.height = `${nextHeight}px`;
-            return;
-          }
-
-          if (Math.abs(currentIframeHeight - nextHeight) <= DESKTOP_RESIZE_JITTER_PX) {
-            return;
-          }
-
-          pendingDesktopShrinkTimer = window.setTimeout(() => {
-            currentIframeHeight = nextHeight;
-            iframe.style.height = `${nextHeight}px`;
-            pendingDesktopShrinkTimer = null;
-          }, DESKTOP_RESIZE_SETTLE_DELAY_MS);
+        if (Number.isFinite(requestedHeight) && requestedHeight > 0) {
+          const nextHeight = Math.max(700, requestedHeight);
+          applyIframeHeight(nextHeight);
           return;
         }
 
@@ -357,6 +396,7 @@
         document.removeEventListener("variant:change", onVariantChange);
         document.removeEventListener("product:variant-change", onVariantChange);
         iframe.removeEventListener("load", postShopifyContext);
+        clearPendingDesktopShrink();
         if (productForm) {
           productForm.removeEventListener("change", formListener);
           productForm.removeEventListener("input", formListener);

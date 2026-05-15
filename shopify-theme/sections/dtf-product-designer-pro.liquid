@@ -599,6 +599,7 @@
       var initialMinHeight = getMinIframeHeight();
       var currentIframeHeight = initialMinHeight;
       var pendingDesktopShrinkTimer = null;
+      var pendingDesktopShrinkHeight = null;
       var DESKTOP_RESIZE_JITTER_PX = 24;
       var DESKTOP_RESIZE_SETTLE_DELAY_MS = 180;
       iframe.style.minHeight = initialMinHeight + 'px';
@@ -606,6 +607,59 @@
       iframe.style.border = 'none';
       iframe.style.borderRadius = '12px';
       iframe.loading = 'lazy';
+
+      function clearPendingDesktopShrink() {
+        if (pendingDesktopShrinkTimer) {
+          window.clearTimeout(pendingDesktopShrinkTimer);
+          pendingDesktopShrinkTimer = null;
+        }
+        pendingDesktopShrinkHeight = null;
+      }
+
+      function applyIframeHeight(nextHeight) {
+        var isDesktopViewport = !window.matchMedia('(max-width: 749px)').matches;
+        var heightDifference = nextHeight - currentIframeHeight;
+
+        if (!isDesktopViewport) {
+          clearPendingDesktopShrink();
+          if (nextHeight !== currentIframeHeight) {
+            currentIframeHeight = nextHeight;
+            iframe.style.height = nextHeight + 'px';
+          }
+          return;
+        }
+
+        if (pendingDesktopShrinkTimer) {
+          if (nextHeight >= currentIframeHeight - DESKTOP_RESIZE_JITTER_PX) {
+            clearPendingDesktopShrink();
+          } else if (
+            pendingDesktopShrinkHeight !== null &&
+            Math.abs(nextHeight - pendingDesktopShrinkHeight) <= DESKTOP_RESIZE_JITTER_PX
+          ) {
+            return;
+          } else {
+            clearPendingDesktopShrink();
+          }
+        }
+
+        if (Math.abs(heightDifference) <= DESKTOP_RESIZE_JITTER_PX) {
+          return;
+        }
+
+        if (heightDifference > 0) {
+          currentIframeHeight = nextHeight;
+          iframe.style.height = nextHeight + 'px';
+          return;
+        }
+
+        pendingDesktopShrinkHeight = nextHeight;
+        pendingDesktopShrinkTimer = window.setTimeout(function () {
+          currentIframeHeight = nextHeight;
+          iframe.style.height = nextHeight + 'px';
+          pendingDesktopShrinkTimer = null;
+          pendingDesktopShrinkHeight = null;
+        }, DESKTOP_RESIZE_SETTLE_DELAY_MS);
+      }
 
       function postContext() {
         iframe.contentWindow?.postMessage({
@@ -629,32 +683,17 @@
         }
 
         var message = event.data || {};
+        var requestedHeight =
+          message.type === 'dtf:resize' && message.payload
+            ? Number(message.payload.height)
+            : message.type === 'DTF_IFRAME_HEIGHT'
+              ? Number(message.height)
+              : NaN;
 
-        if (message.type === 'dtf:resize' && message.payload && message.payload.height) {
+        if (Number.isFinite(requestedHeight) && requestedHeight > 0) {
           var minHeight = getMinIframeHeight();
-          var nextHeight = Math.max(minHeight, Number(message.payload.height));
-          var isDesktopViewport = !window.matchMedia('(max-width: 749px)').matches;
-
-          if (pendingDesktopShrinkTimer) {
-            window.clearTimeout(pendingDesktopShrinkTimer);
-            pendingDesktopShrinkTimer = null;
-          }
-
-          if (!isDesktopViewport || nextHeight >= currentIframeHeight) {
-            currentIframeHeight = nextHeight;
-            iframe.style.height = nextHeight + 'px';
-            return;
-          }
-
-          if (Math.abs(currentIframeHeight - nextHeight) <= DESKTOP_RESIZE_JITTER_PX) {
-            return;
-          }
-
-          pendingDesktopShrinkTimer = window.setTimeout(function () {
-            currentIframeHeight = nextHeight;
-            iframe.style.height = nextHeight + 'px';
-            pendingDesktopShrinkTimer = null;
-          }, DESKTOP_RESIZE_SETTLE_DELAY_MS);
+          var nextHeight = Math.max(minHeight, requestedHeight);
+          applyIframeHeight(nextHeight);
           return;
         }
 
