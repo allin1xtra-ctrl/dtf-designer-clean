@@ -1965,7 +1965,7 @@ export default function CustomizerPage() {
       </div>
 
       <div className="flex min-w-0 flex-col overflow-visible md:grid md:min-h-dvh md:grid-cols-[360px_minmax(0,1fr)]">
-        <aside className="order-2 w-full shrink-0 overflow-visible border-t border-[#222] bg-[#111] p-4 pb-24 md:order-1 md:h-dvh md:w-auto md:overflow-y-auto md:border-t-0 md:border-r md:p-5">
+        <aside className="order-2 w-full shrink-0 overflow-visible border-t border-[#222] bg-[#111] p-4 pb-12 md:order-1 md:h-dvh md:w-auto md:overflow-y-auto md:border-t-0 md:border-r md:p-5">
           <div className="hidden md:block">
             <h1 className="text-xl font-bold">DTF Designer Pro</h1>
             <p className="mt-1 text-sm text-gray-400">
