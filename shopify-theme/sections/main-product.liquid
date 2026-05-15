@@ -14,15 +14,18 @@
 {% assign allowlist_match = false %}
 {% assign failsafe_match = false %}
 {% assign matched_customizer_fragment = '' %}
+{% assign debug_match_source = 'none' %}
 {% assign show_customizer = false %}
 {% if current_handle contains 'upload-print-ready-file' %}
   {% assign customizer_blocked = true %}
+  {% assign debug_match_source = 'blocked' %}
 {% endif %}
 {% unless customizer_blocked %}
   {% for h in customizer_handles %}
     {% assign allowed_handle = h | downcase | strip %}
     {% if current_handle == allowed_handle %}
       {% assign allowlist_match = true %}
+      {% assign debug_match_source = 'allowlist' %}
       {% assign show_customizer = true %}
       {% break %}
     {% endif %}
@@ -34,6 +37,7 @@
       {% if current_handle contains normalized_fragment %}
         {% assign failsafe_match = true %}
         {% assign matched_customizer_fragment = normalized_fragment %}
+        {% assign debug_match_source = normalized_fragment %}
         {% assign show_customizer = true %}
         {% break %}
       {% endif %}
@@ -48,7 +52,7 @@
   {% assign is_theme_preview = true %}
 {% endif %}
 {% if is_theme_preview %}
-  <!-- DTF customizer CTA debug: handle={{ current_handle }}, blocked={{ customizer_blocked }}, show_customizer={{ show_customizer }}, match={% if allowlist_match %}allowlist{% elsif failsafe_match %}failsafe:{{ matched_customizer_fragment }}{% else %}none{% endif %} -->
+  <!-- DTF customizer CTA debug: handle={{ current_handle }}, blocked={{ customizer_blocked }}, show_customizer={{ show_customizer }}, match={{ debug_match_source }} -->
 {% endif %}
 
 <div class="dtf-product-section">
