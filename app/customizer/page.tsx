@@ -167,6 +167,8 @@ const MAX_CURVE_AMPLITUDE = 220;
 const TRANSFER_SIZE_PRESETS = ["3x3", "4x5", "8x8", "10x10", "12x12", "12x16", "14x16", "16x20"];
 const DRAFT_STORAGE_PREFIX = "dtf-draft-v1";
 const AUTOSAVE_DEBOUNCE_MS = 1000;
+const DRAFT_STATUS_RESTORED = "Saved design restored.";
+const DRAFT_STATUS_CLEARED = "Saved design cleared.";
 const BLANK_MOCKUP_SVG_WIDTH = 1000;
 const BLANK_MOCKUP_SVG_HEIGHT = 1200;
 // Expanded to leave a roughly 12% side margin and 6% top margin so fallback blank garments read larger in the preview.
@@ -768,8 +770,8 @@ export default function CustomizerPage() {
       canvas.renderAll();
     }
     syncSelectedObject();
-    setDraftStatus("Saved design cleared.");
-    setTimeout(() => setDraftStatus((prev) => (prev === "Saved design cleared." ? "" : prev)), 3000);
+    setDraftStatus(DRAFT_STATUS_CLEARED);
+    setTimeout(() => setDraftStatus((prev) => (prev === DRAFT_STATUS_CLEARED ? "" : prev)), 3000);
   };
 
   useEffect(() => {
@@ -1687,8 +1689,8 @@ export default function CustomizerPage() {
       canvas.loadFromJSON(saved).then(() => {
         canvas.renderAll();
         syncSelectedObject();
-        setDraftStatus("Saved design restored.");
-        setTimeout(() => setDraftStatus((prev) => (prev === "Saved design restored." ? "" : prev)), 4000);
+        setDraftStatus(DRAFT_STATUS_RESTORED);
+        setTimeout(() => setDraftStatus((prev) => (prev === DRAFT_STATUS_RESTORED ? "" : prev)), 4000);
       }).catch((err: unknown) => {
         console.warn("DTF draft canvas restore failed:", err);
       });
@@ -1722,6 +1724,7 @@ export default function CustomizerPage() {
 
     const handleObjectChange = () => {
       updateBoundaryWarning();
+      scheduleSaveDraft();
     };
 
     canvas.on("selection:created", handleSelection);
@@ -1732,7 +1735,6 @@ export default function CustomizerPage() {
     canvas.on("object:modified", handleObjectChange);
     canvas.on("object:added", scheduleSaveDraft);
     canvas.on("object:removed", scheduleSaveDraft);
-    canvas.on("object:modified", scheduleSaveDraft);
 
     setIsReady(true);
 
@@ -1745,7 +1747,6 @@ export default function CustomizerPage() {
       canvas.off("object:modified", handleObjectChange);
       canvas.off("object:added", scheduleSaveDraft);
       canvas.off("object:removed", scheduleSaveDraft);
-      canvas.off("object:modified", scheduleSaveDraft);
       canvas.dispose();
       fabricCanvasRef.current = null;
     };
