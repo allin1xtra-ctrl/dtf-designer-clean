@@ -94,6 +94,19 @@ const VIEW_LABELS: Record<ViewName, string> = {
 };
 
 type CanvasSnapshot = ReturnType<Canvas["toJSON"]>;
+type DraftPayload = {
+  version: number;
+  productHandle: string;
+  variantId: string;
+  selectedColor: string;
+  selectedSize: string;
+  transferSize: string;
+  quantity: number;
+  currentView: ViewName;
+  views: Record<ViewName, CanvasSnapshot | null>;
+  activeCanvas: CanvasSnapshot | null;
+  savedAt: number;
+};
 type UploadResponse = {
   error?: string;
   url?: string;
@@ -161,6 +174,9 @@ const DEFAULT_DESIGN_AREA: PrintArea = { x: 10, y: 10, width: 80, height: 80 };
 const MIN_CURVE_AMPLITUDE = 8;
 const MAX_CURVE_AMPLITUDE = 220;
 const TRANSFER_SIZE_PRESETS = ["3x3", "4x5", "8x8", "10x10", "12x12", "12x16", "14x16", "16x20"];
+const DRAFT_STORAGE_VERSION = 1;
+const DRAFT_STORAGE_KEY_PREFIX = "dtf-designer-draft";
+const DRAFT_AUTOSAVE_DEBOUNCE_MS = 800;
 const BLANK_MOCKUP_SVG_WIDTH = 1000;
 const BLANK_MOCKUP_SVG_HEIGHT = 1200;
 // Expanded to leave a roughly 12% side margin and 6% top margin so fallback blank garments read larger in the preview.
@@ -196,6 +212,45 @@ const PRODUCT_PRINT_LOCATION_OVERRIDES: Record<string, Partial<Record<string, Pa
     neck_label: { x: 41, y: 13, width: 18, height: 12 },
   },
 };
+const VIEW_NAMES: ViewName[] = ["front", "back", "leftSleeve", "rightSleeve", "neck"];
+
+function createEmptyViews(): Record<ViewName, CanvasSnapshot | null> {
+  return {
+    front: null,
+    back: null,
+    leftSleeve: null,
+    rightSleeve: null,
+    neck: null,
+  };
+}
+
+function isViewName(value: unknown): value is ViewName {
+  return typeof value === "string" && VIEW_NAMES.includes(value as ViewName);
+}
+
+function normalizeDraftQuantity(value: unknown) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 1) return 1;
+  return Math.max(1, Math.round(parsed));
+}
+
+function normalizeDraftSnapshot(value: unknown): CanvasSnapshot | null {
+  if (!value || typeof value !== "object") return null;
+  return value as CanvasSnapshot;
+}
+
+function normalizeDraftViews(value: unknown): Record<ViewName, CanvasSnapshot | null> {
+  const normalized = createEmptyViews();
+  if (!value || typeof value !== "object") return normalized;
+
+  for (const view of VIEW_NAMES) {
+    normalized[view] = normalizeDraftSnapshot(
+      (value as Partial<Record<ViewName, CanvasSnapshot | null>>)[view]
+    );
+  }
+
+  return normalized;
+}
 
 function escapeSvgText(value: string) {
   return value
@@ -691,22 +746,98 @@ export default function CustomizerPage() {
   const [aiStatus, setAiStatus] = useState("");
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [designIdeaPrompt, setDesignIdeaPrompt] = useState("");
+  const [draftStatus, setDraftStatus] = useState("");
   const [previewScale, setPreviewScale] = useState(1);
   const [mockupNaturalSize, setMockupNaturalSize] = useState({ width: 0, height: 0 });
   const [textControls, setTextControls] = useState<TextControlsState>(DEFAULT_TEXT_CONTROLS);
   const printableAreaRef = useRef({ left: 0, top: 0, width: 0, height: 0 });
   const shouldDebugAiLogRef = useRef(false);
   const lastSentIframeHeightRef = useRef(0);
+  const draftAutosaveTimerRef = useRef<number | null>(null);
+  const lastSavedDraftRef = useRef("");
+  const restoredDraftKeyRef = useRef("");
+  const isRestoringDraftRef = useRef(false);
+  const isClearingDraftRef = useRef(false);
+  const suspendAutosaveRef = useRef(true);
 
-  const viewsRef = useRef<Record<ViewName, CanvasSnapshot | null>>({
-    front: null,
-    back: null,
-    leftSleeve: null,
-    rightSleeve: null,
-    neck: null,
-  });
+  const viewsRef = useRef<Record<ViewName, CanvasSnapshot | null>>(createEmptyViews());
 
   const getCanvas = () => fabricCanvasRef.current;
+  const normalizedProductHandle = productHandle.trim();
+  const normalizedVariantId = normalizeVariantId(variantId) || variantId;
+  const draftStorageKey =
+    normalizedProductHandle && normalizedVariantId
+      ? `${DRAFT_STORAGE_KEY_PREFIX}:${normalizedProductHandle}:${normalizedVariantId}`
+      : "";
+
+  const cancelDraftAutosave = () => {
+    if (draftAutosaveTimerRef.current === null) return;
+    window.clearTimeout(draftAutosaveTimerRef.current);
+    draftAutosaveTimerRef.current = null;
+  };
+
+  const captureViewSnapshot = (
+    canvasOverride?: Canvas | null,
+    viewOverride?: ViewName
+  ): CanvasSnapshot | null => {
+    const canvas = canvasOverride ?? getCanvas();
+    const targetView = viewOverride ?? currentView;
+    if (!canvas) return null;
+    const snapshot = canvas.toJSON();
+    viewsRef.current[targetView] = snapshot;
+    return snapshot;
+  };
+
+  const buildDraftPayload = (): DraftPayload | null => {
+    if (!draftStorageKey) return null;
+    const canvas = getCanvas();
+    if (!canvas) return null;
+
+    const activeCanvas = captureViewSnapshot(canvas, currentView);
+    return {
+      version: DRAFT_STORAGE_VERSION,
+      productHandle: normalizedProductHandle,
+      variantId: normalizedVariantId,
+      selectedColor,
+      selectedSize,
+      transferSize,
+      quantity: normalizeDraftQuantity(quantity),
+      currentView,
+      views: { ...viewsRef.current },
+      activeCanvas,
+      savedAt: Date.now(),
+    };
+  };
+
+  const requestDraftSave = (options?: { resume?: boolean }) => {
+    if (typeof window === "undefined") return;
+    if (!draftStorageKey) return;
+    if (restoredDraftKeyRef.current !== draftStorageKey) return;
+    if (isRestoringDraftRef.current || isClearingDraftRef.current) return;
+
+    if (options?.resume) {
+      suspendAutosaveRef.current = false;
+    }
+
+    if (suspendAutosaveRef.current) return;
+
+    cancelDraftAutosave();
+    draftAutosaveTimerRef.current = window.setTimeout(() => {
+      try {
+        const payload = buildDraftPayload();
+        if (!payload) return;
+
+        const serialized = JSON.stringify(payload);
+        if (serialized === lastSavedDraftRef.current) return;
+
+        window.localStorage.setItem(draftStorageKey, serialized);
+        lastSavedDraftRef.current = serialized;
+        setDraftStatus("Design autosaved");
+      } catch (error) {
+        console.error("Failed to autosave design draft:", error);
+      }
+    }, DRAFT_AUTOSAVE_DEBOUNCE_MS);
+  };
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -846,7 +977,7 @@ export default function CustomizerPage() {
   const saveCurrentView = () => {
     const canvas = getCanvas();
     if (!canvas) return;
-    viewsRef.current[currentView] = canvas.toJSON();
+    captureViewSnapshot(canvas, currentView);
   };
 
   const loadView = async (view: ViewName) => {
@@ -872,6 +1003,7 @@ export default function CustomizerPage() {
 
     canvas.renderAll();
     syncSelectedObject();
+    requestDraftSave({ resume: true });
   };
 
   const applyTextCurve = (textObject: Textbox, mode: CurveMode, bendCurve: number) => {
@@ -987,6 +1119,7 @@ export default function CustomizerPage() {
     replacement.setCoords();
     canvas.requestRenderAll();
     syncSelectedObject();
+    requestDraftSave({ resume: true });
     return true;
   };
 
@@ -1012,6 +1145,7 @@ export default function CustomizerPage() {
     nextImage.setCoords();
     canvas.requestRenderAll();
     syncSelectedObject();
+    requestDraftSave({ resume: true });
     return true;
   };
 
@@ -1388,6 +1522,8 @@ export default function CustomizerPage() {
     if (matchedSize) {
       setSelectedSize(matchedSize);
     }
+
+    requestDraftSave({ resume: true });
   };
 
   const handleSizeChange = (nextSize: string) => {
@@ -1410,6 +1546,18 @@ export default function CustomizerPage() {
     if (matchedColor) {
       setSelectedColor(matchedColor);
     }
+
+    requestDraftSave({ resume: true });
+  };
+
+  const handleTransferSizeChange = (nextTransferSize: string) => {
+    setTransferSize(nextTransferSize);
+    requestDraftSave({ resume: true });
+  };
+
+  const handleQuantityChange = (nextQuantity: number) => {
+    setQuantity(nextQuantity);
+    requestDraftSave({ resume: true });
   };
 
   const locationInfo = getPrintLocationDataForView(printLocations, currentView, productHandle);
@@ -1601,6 +1749,115 @@ export default function CustomizerPage() {
   }, [shouldDebugAiLog]);
 
   useEffect(() => {
+    return () => {
+      if (typeof window === "undefined") return;
+      cancelDraftAutosave();
+    };
+  }, []);
+
+  useEffect(() => {
+    cancelDraftAutosave();
+    suspendAutosaveRef.current = true;
+  }, [draftStorageKey]);
+
+  useEffect(() => {
+    if (!isReady || !draftStorageKey || !availableViews.length) return;
+    if (!fabricCanvasRef.current) return;
+    if (restoredDraftKeyRef.current === draftStorageKey) return;
+
+    let cancelled = false;
+
+    const restoreDraft = async () => {
+      restoredDraftKeyRef.current = draftStorageKey;
+      lastSavedDraftRef.current = "";
+
+      try {
+        const rawDraft = window.localStorage.getItem(draftStorageKey);
+        if (!rawDraft) return;
+
+        const parsedDraft = JSON.parse(rawDraft) as Partial<DraftPayload>;
+        const draftProductHandle =
+          typeof parsedDraft.productHandle === "string" ? parsedDraft.productHandle.trim() : "";
+        const draftVariantId =
+          typeof parsedDraft.variantId === "string"
+            ? normalizeVariantId(parsedDraft.variantId) || parsedDraft.variantId
+            : "";
+
+        if (
+          parsedDraft.version !== DRAFT_STORAGE_VERSION ||
+          draftProductHandle !== normalizedProductHandle ||
+          draftVariantId !== normalizedVariantId ||
+          !isViewName(parsedDraft.currentView)
+        ) {
+          window.localStorage.removeItem(draftStorageKey);
+          return;
+        }
+
+        const canvas = getCanvas();
+        if (!canvas || cancelled) return;
+
+        const restoredViews = normalizeDraftViews(parsedDraft.views);
+        const restoredView = availableViews.includes(parsedDraft.currentView)
+          ? parsedDraft.currentView
+          : availableViews[0];
+        const restoredActiveCanvas =
+          restoredView === parsedDraft.currentView
+            ? normalizeDraftSnapshot(parsedDraft.activeCanvas) || restoredViews[restoredView]
+            : restoredViews[restoredView];
+
+        isRestoringDraftRef.current = true;
+        setQuantity(normalizeDraftQuantity(parsedDraft.quantity));
+        setSelectedColor(typeof parsedDraft.selectedColor === "string" ? parsedDraft.selectedColor : "");
+        setSelectedSize(typeof parsedDraft.selectedSize === "string" ? parsedDraft.selectedSize : "Custom");
+        setTransferSize(
+          typeof parsedDraft.transferSize === "string" ? parsedDraft.transferSize : "12x12"
+        );
+        setCurrentView(restoredView);
+        viewsRef.current = restoredViews;
+
+        canvas.clear();
+        canvas.backgroundColor = "transparent";
+        canvas.discardActiveObject();
+
+        if (restoredActiveCanvas?.objects?.length) {
+          try {
+            await canvas.loadFromJSON(restoredActiveCanvas);
+          } catch (error) {
+            console.error("Failed to load saved design draft canvas JSON:", error);
+            window.localStorage.removeItem(draftStorageKey);
+            return;
+          }
+        }
+
+        if (cancelled) return;
+
+        canvas.renderAll();
+        syncSelectedObject();
+        suspendAutosaveRef.current = false;
+        setDraftStatus("Previous design restored");
+        lastSavedDraftRef.current = rawDraft;
+      } catch (error) {
+        console.error("Failed to restore saved design draft:", error);
+        window.localStorage.removeItem(draftStorageKey);
+      } finally {
+        isRestoringDraftRef.current = false;
+      }
+    };
+
+    void restoreDraft();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    availableViews,
+    draftStorageKey,
+    isReady,
+    normalizedProductHandle,
+    normalizedVariantId,
+  ]);
+
+  useEffect(() => {
     if (!canvasElRef.current) return;
 
     const canvas = new Canvas(canvasElRef.current, {
@@ -1625,14 +1882,26 @@ export default function CustomizerPage() {
 
     const handleObjectChange = () => {
       updateBoundaryWarning();
+      requestDraftSave({ resume: true });
+    };
+
+    const handleObjectAddedOrRemoved = () => {
+      requestDraftSave();
+    };
+
+    const handleDraftTextChange = () => {
+      requestDraftSave({ resume: true });
     };
 
     canvas.on("selection:created", handleSelection);
     canvas.on("selection:updated", handleSelection);
     canvas.on("selection:cleared", handleSelection);
+    canvas.on("object:added", handleObjectAddedOrRemoved);
     canvas.on("object:moving", handleObjectChange);
     canvas.on("object:scaling", handleObjectChange);
     canvas.on("object:modified", handleObjectChange);
+    canvas.on("object:removed", handleObjectAddedOrRemoved);
+    canvas.on("text:changed", handleDraftTextChange);
 
     setIsReady(true);
 
@@ -1640,9 +1909,12 @@ export default function CustomizerPage() {
       canvas.off("selection:created", handleSelection);
       canvas.off("selection:updated", handleSelection);
       canvas.off("selection:cleared", handleSelection);
+      canvas.off("object:added", handleObjectAddedOrRemoved);
       canvas.off("object:moving", handleObjectChange);
       canvas.off("object:scaling", handleObjectChange);
       canvas.off("object:modified", handleObjectChange);
+      canvas.off("object:removed", handleObjectAddedOrRemoved);
+      canvas.off("text:changed", handleDraftTextChange);
       canvas.dispose();
       fabricCanvasRef.current = null;
     };
@@ -1679,6 +1951,7 @@ export default function CustomizerPage() {
         canvas.setActiveObject(img);
         canvas.renderAll();
         syncSelectedObject();
+        requestDraftSave({ resume: true });
       } catch (error) {
         console.error("Image upload failed:", error);
       }
@@ -1707,6 +1980,7 @@ export default function CustomizerPage() {
     canvas.setActiveObject(text);
     canvas.renderAll();
     syncSelectedObject();
+    requestDraftSave({ resume: true });
   };
 
   const withActiveObject = (
@@ -1721,6 +1995,7 @@ export default function CustomizerPage() {
     activeObject.setCoords();
     canvas.requestRenderAll();
     syncSelectedObject();
+    requestDraftSave({ resume: true });
   };
 
   const removeSelected = () => {
@@ -1733,6 +2008,7 @@ export default function CustomizerPage() {
     canvas.discardActiveObject();
     canvas.renderAll();
     syncSelectedObject();
+    requestDraftSave({ resume: true });
   };
 
   const duplicateSelected = async () => {
@@ -1747,6 +2023,7 @@ export default function CustomizerPage() {
     canvas.setActiveObject(clone);
     canvas.renderAll();
     syncSelectedObject();
+    requestDraftSave({ resume: true });
   };
 
   const centerSelected = () => {
@@ -1810,6 +2087,7 @@ export default function CustomizerPage() {
     if (!canvas || !activeObject) return;
     canvas.bringObjectForward(activeObject);
     canvas.requestRenderAll();
+    requestDraftSave({ resume: true });
   };
 
   const sendBackward = () => {
@@ -1818,6 +2096,43 @@ export default function CustomizerPage() {
     if (!canvas || !activeObject) return;
     canvas.sendObjectBackwards(activeObject);
     canvas.requestRenderAll();
+    requestDraftSave({ resume: true });
+  };
+
+  const clearSavedDesign = () => {
+    if (typeof window === "undefined") return;
+
+    const shouldClear = window.confirm(
+      "Clear your saved design draft? This removes the autosaved design from this device."
+    );
+    if (!shouldClear) return;
+
+    cancelDraftAutosave();
+    isClearingDraftRef.current = true;
+    suspendAutosaveRef.current = true;
+
+    try {
+      if (draftStorageKey) {
+        window.localStorage.removeItem(draftStorageKey);
+      }
+    } catch (error) {
+      console.error("Failed to clear saved design draft:", error);
+    }
+
+    lastSavedDraftRef.current = "";
+    viewsRef.current = createEmptyViews();
+
+    const canvas = getCanvas();
+    if (canvas) {
+      canvas.clear();
+      canvas.backgroundColor = "transparent";
+      canvas.discardActiveObject();
+      canvas.renderAll();
+    }
+
+    syncSelectedObject();
+    setDraftStatus("Saved design cleared");
+    isClearingDraftRef.current = false;
   };
 
   const exportCurrentViewBlob = async () => {
@@ -1990,6 +2305,24 @@ export default function CustomizerPage() {
           <button type="button" onClick={() => fileInputRef.current?.click()} className="block w-full cursor-pointer rounded bg-[#1f1f1f] p-2 text-sm text-white hover:bg-[#333]">Upload Artwork</button>
         </div>
 
+        <div className="mt-3 rounded border border-[#2b2b2b] bg-[#171717] p-3">
+          {draftStatus ? (
+            <p aria-live="polite" className="text-xs text-gray-300">
+              {draftStatus}
+            </p>
+          ) : (
+            <p className="text-xs text-gray-300">
+              Your design is saved automatically while you work.
+            </p>
+          )}
+          <button type="button" onClick={clearSavedDesign} aria-describedby="clear-saved-design-help" className="mt-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-left text-sm text-white hover:bg-[#333]">
+            Clear Saved Design
+          </button>
+          <p id="clear-saved-design-help" className="sr-only">
+            Removes the autosaved design draft from this device after confirmation.
+          </p>
+        </div>
+
         <div className="mt-5 grid grid-cols-2 gap-2 text-sm">
           <button type="button" onClick={addText} className="rounded bg-[#1f1f1f] px-3 py-2 text-left hover:bg-[#333]">Add Text</button>
           <button type="button" onClick={duplicateSelected} className="rounded bg-[#1f1f1f] px-3 py-2 text-left hover:bg-[#333]">Duplicate</button>
@@ -2104,7 +2437,7 @@ export default function CustomizerPage() {
                   id="transfer-size-select"
                   name="transferSize"
                   value={transferSize}
-                  onChange={(e) => setTransferSize(e.target.value)}
+                  onChange={(e) => handleTransferSizeChange(e.target.value)}
                   className="mb-3 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm"
                 >
                   {TRANSFER_SIZE_PRESETS.map((size) => <option key={size} value={size}>{size}</option>)}
@@ -2178,7 +2511,7 @@ export default function CustomizerPage() {
           )}
 
           <label htmlFor="checkout-quantity-input" className="mb-2 block text-sm text-gray-300">Quantity</label>
-          <input id="checkout-quantity-input" name="quantity" type="number" min="1" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white" />
+          <input id="checkout-quantity-input" name="quantity" type="number" min="1" value={quantity} onChange={(e) => handleQuantityChange(Number(e.target.value))} className="mb-3 w-full rounded bg-[#1f1f1f] px-3 py-2 text-white" />
 
           <button type="button" onClick={handleAddToCart} disabled={isAddToCartDisabled} aria-describedby={addToCartDescriptionId} className="w-full rounded bg-white px-4 py-3 font-semibold text-black hover:bg-gray-200 disabled:cursor-not-allowed disabled:bg-gray-500">{isSubmitting ? "Uploading..." : "Add Custom Design to Cart"}</button>
           {cartStatus ? <p className="mt-3 text-sm text-gray-300">{cartStatus}</p> : null}
