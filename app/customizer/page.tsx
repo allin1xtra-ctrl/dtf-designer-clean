@@ -770,7 +770,7 @@ export default function CustomizerPage() {
       ? `${DRAFT_STORAGE_KEY_PREFIX}:${normalizedProductHandle}:${normalizedVariantId}`
       : "";
 
-  const clearDraftAutosaveTimer = () => {
+  const cancelDraftAutosave = () => {
     if (draftAutosaveTimerRef.current === null) return;
     window.clearTimeout(draftAutosaveTimerRef.current);
     draftAutosaveTimerRef.current = null;
@@ -821,7 +821,7 @@ export default function CustomizerPage() {
 
     if (suspendAutosaveRef.current) return;
 
-    clearDraftAutosaveTimer();
+    cancelDraftAutosave();
     draftAutosaveTimerRef.current = window.setTimeout(() => {
       try {
         const payload = buildDraftPayload();
@@ -1751,12 +1751,12 @@ export default function CustomizerPage() {
   useEffect(() => {
     return () => {
       if (typeof window === "undefined") return;
-      clearDraftAutosaveTimer();
+      cancelDraftAutosave();
     };
   }, []);
 
   useEffect(() => {
-    clearDraftAutosaveTimer();
+    cancelDraftAutosave();
     suspendAutosaveRef.current = true;
   }, [draftStorageKey]);
 
@@ -1820,7 +1820,13 @@ export default function CustomizerPage() {
         canvas.discardActiveObject();
 
         if (restoredActiveCanvas?.objects?.length) {
-          await canvas.loadFromJSON(restoredActiveCanvas);
+          try {
+            await canvas.loadFromJSON(restoredActiveCanvas);
+          } catch (error) {
+            console.error("Failed to load saved design draft canvas JSON:", error);
+            window.localStorage.removeItem(draftStorageKey);
+            return;
+          }
         }
 
         if (cancelled) return;
@@ -1879,7 +1885,7 @@ export default function CustomizerPage() {
       requestDraftSave({ resume: true });
     };
 
-    const handleDraftObjectEvent = () => {
+    const handleObjectAddedOrRemoved = () => {
       requestDraftSave();
     };
 
@@ -1890,11 +1896,11 @@ export default function CustomizerPage() {
     canvas.on("selection:created", handleSelection);
     canvas.on("selection:updated", handleSelection);
     canvas.on("selection:cleared", handleSelection);
-    canvas.on("object:added", handleDraftObjectEvent);
+    canvas.on("object:added", handleObjectAddedOrRemoved);
     canvas.on("object:moving", handleObjectChange);
     canvas.on("object:scaling", handleObjectChange);
     canvas.on("object:modified", handleObjectChange);
-    canvas.on("object:removed", handleDraftObjectEvent);
+    canvas.on("object:removed", handleObjectAddedOrRemoved);
     canvas.on("text:changed", handleDraftTextChange);
 
     setIsReady(true);
@@ -1903,11 +1909,11 @@ export default function CustomizerPage() {
       canvas.off("selection:created", handleSelection);
       canvas.off("selection:updated", handleSelection);
       canvas.off("selection:cleared", handleSelection);
-      canvas.off("object:added", handleDraftObjectEvent);
+      canvas.off("object:added", handleObjectAddedOrRemoved);
       canvas.off("object:moving", handleObjectChange);
       canvas.off("object:scaling", handleObjectChange);
       canvas.off("object:modified", handleObjectChange);
-      canvas.off("object:removed", handleDraftObjectEvent);
+      canvas.off("object:removed", handleObjectAddedOrRemoved);
       canvas.off("text:changed", handleDraftTextChange);
       canvas.dispose();
       fabricCanvasRef.current = null;
@@ -2096,7 +2102,12 @@ export default function CustomizerPage() {
   const clearSavedDesign = () => {
     if (typeof window === "undefined") return;
 
-    clearDraftAutosaveTimer();
+    const shouldClear = window.confirm(
+      "Clear your saved design draft? This removes the autosaved design from this device."
+    );
+    if (!shouldClear) return;
+
+    cancelDraftAutosave();
     isClearingDraftRef.current = true;
     suspendAutosaveRef.current = true;
 
