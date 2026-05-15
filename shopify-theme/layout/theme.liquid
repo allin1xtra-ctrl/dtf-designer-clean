@@ -91,98 +91,59 @@
   </footer>
 
 
-  <!-- DTF Designer Pro postMessage cart receiver + Cart Drawer Notification -->
-  <script>
-    window.addEventListener('message', function(event) {
-      // ✅ Always validate the origin for security!
-      if (event.origin !== 'https://dtf-designer-clean.vercel.app') return;
-      if (!event.data || event.data.type !== 'DTF_ADD_TO_CART') return;
-
-      const payload = event.data.data;
-
-      fetch('/cart/add.js', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-      .then(res => res.json())
-      .then(item => {
-        // Show cart drawer notification
-        var drawer = document.createElement('div');
-        drawer.innerHTML = '<div style="position:fixed;top:24px;right:24px;background:#18181b;color:#00fff7;padding:1.2rem 2rem;border-radius:1.2rem;box-shadow:0 4px 32px #00fff7cc;z-index:9999;font-size:1.2rem;font-weight:700;">✅ Added to cart! <a href=\"/cart\" style=\"color:#fff200;margin-left:1.5rem;text-decoration:underline;\">View Cart</a></div>';
-        document.body.appendChild(drawer.firstChild);
-        setTimeout(function(){
-          if(drawer.firstChild) drawer.firstChild.remove();
-        }, 3500);
-        document.dispatchEvent(new CustomEvent('cart:updated', { detail: item }));
-      })
-      .catch(err => {
-        console.error('❌ Cart add failed:', err);
-      });
-    });
-  </script>
-
   {{ content_for_footer }}
 
+  <!-- DTF Designer Pro: postMessage cart bridge (handles DTF_ADD_TO_CART from /pages/customizer iframe) -->
+  <script>
+  (function () {
+    var DESIGNER_ORIGIN = 'https://dtf-designer-clean.vercel.app';
 
+    window.addEventListener('message', async function (event) {
+      if (event.origin !== DESIGNER_ORIGIN) return;
 
-<script>
-(function () {
-  window.addEventListener("message", async function (event) {
-    const allowedOrigins = [
-      "https://dtf-designer-clean.vercel.app"
-    ];
+      var message = event.data || {};
+      if (message.type !== 'DTF_ADD_TO_CART') return;
 
-    if (!allowedOrigins.includes(event.origin)) return;
+      var data = message.data || {};
+      var variantId = Number(data.id);
+      var quantity  = Number(data.quantity || 1);
+      var properties = data.properties || {};
 
-    const message = event.data || {};
-
-    if (message.type !== "DTF_ADD_TO_CART") {
-      return;
-    }
-
-    const data = message.data || {};
-    const variantId = Number(data.id);
-    const quantity = Number(data.quantity || 1);
-    const properties = data.properties || {};
-
-    if (!variantId) {
-      console.error("Missing variant ID:", data);
-      alert("Missing product variant. Please choose a product again.");
-      return;
-    }
-
-    try {
-      const response = await fetch("/cart/add.js", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        body: JSON.stringify({
-          id: variantId,
-          quantity: quantity,
-          properties: properties
-        })
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        console.error("Cart add failed:", result);
-        alert("Cart add failed. Please check product availability.");
+      if (!variantId) {
+        console.error('DTF cart bridge: missing variant ID', data);
+        alert('Missing product variant. Please choose a product and try again.');
         return;
       }
 
-      window.location.href = "/cart";
+      try {
+        var response = await fetch('/cart/add.js', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify({ id: variantId, quantity: quantity, properties: properties })
+        });
 
-    } catch (error) {
-      console.error("Add to cart request failed:", error);
-      alert("Something went wrong adding your custom item to cart.");
-    }
-  });
-})();
-</script>
+        var result = await response.json();
+
+        if (!response.ok) {
+          console.error('DTF cart bridge: Shopify rejected add-to-cart', result);
+          alert('Could not add to cart: ' + (result.description || result.message || 'unknown error'));
+          return;
+        }
+
+        window.location.href = '/cart';
+
+      } catch (err) {
+        console.error('DTF cart bridge: fetch failed', err);
+        alert('Something went wrong adding your custom item to cart. Please try again.');
+      }
+    });
+  })();
+  </script>
 
 </body>
 </html>

@@ -1,0 +1,124 @@
+{% comment %}
+  dtf-customizer-page.liquid — Embedded Vercel customizer for /pages/customizer
+  Reads ?product=, ?variant=, ?product_id=, ?source= from the page URL and
+  passes them into the Vercel app iframe so the correct product/mockup loads.
+{% endcomment %}
+
+{% assign designer_base = 'https://dtf-designer-clean.vercel.app/customizer' %}
+{% assign param_product    = request.params.product    | default: '' %}
+{% assign param_variant    = request.params.variant    | default: '' %}
+{% assign param_product_id = request.params.product_id | default: '' %}
+{% assign param_source     = request.params.source     | default: 'shopify' %}
+{% assign param_reorder    = request.params.reorder    | default: '' %}
+{% assign param_artwork    = request.params.artwork    | default: '' %}
+
+{% capture iframe_src %}{{ designer_base }}?source={{ param_source | url_encode }}&product={{ param_product | url_encode }}&variant={{ param_variant | url_encode }}&product_id={{ param_product_id | url_encode }}{% if param_reorder != '' %}&reorder={{ param_reorder | url_encode }}{% endif %}{% if param_artwork != '' %}&artwork={{ param_artwork | url_encode }}{% endif %}{% endcapture %}
+
+<div class="dtf-customizer-page">
+  <div class="dtf-customizer-page__header">
+    <h1 class="dtf-customizer-page__title">🎨 DTF Designer Pro</h1>
+    <p class="dtf-customizer-page__sub">Design your custom product, upload your artwork, and add straight to cart.</p>
+  </div>
+
+  <div class="dtf-customizer-page__frame-wrap" id="dtf-customizer-frame-wrap">
+    <iframe
+      id="dtf-customizer-iframe"
+      src="{{ iframe_src }}"
+      title="DTF Designer Pro – custom product designer"
+      allow="clipboard-write"
+      allowfullscreen
+      loading="lazy"
+      class="dtf-customizer-page__iframe"
+    ></iframe>
+  </div>
+
+  <noscript>
+    <p style="text-align:center;padding:2rem;">Please enable JavaScript to use the DTF Designer.</p>
+  </noscript>
+</div>
+
+<style>
+  .dtf-customizer-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 3rem;
+  }
+  .dtf-customizer-page__header {
+    margin-bottom: 1.25rem;
+  }
+  .dtf-customizer-page__title {
+    font-size: 2rem;
+    font-weight: 800;
+    margin: 0 0 0.35rem;
+  }
+  .dtf-customizer-page__sub {
+    font-size: 1rem;
+    opacity: 0.75;
+    margin: 0;
+  }
+  .dtf-customizer-page__frame-wrap {
+    width: 100%;
+    min-height: 1100px;
+    border-radius: 1rem;
+    overflow: hidden;
+  }
+  .dtf-customizer-page__iframe {
+    width: 100%;
+    height: 1100px;
+    min-height: 1100px;
+    border: none;
+    border-radius: 1rem;
+    display: block;
+  }
+  @media screen and (max-width: 749px) {
+    .dtf-customizer-page__frame-wrap,
+    .dtf-customizer-page__iframe {
+      min-height: 1450px;
+      height: 1450px;
+    }
+  }
+</style>
+
+<script>
+(function () {
+  var iframe = document.getElementById('dtf-customizer-iframe');
+  if (!iframe) return;
+
+  var DESIGNER_ORIGIN = 'https://dtf-designer-clean.vercel.app';
+  var MIN_DESKTOP_H = 1100;
+  var MIN_MOBILE_H  = 1450;
+
+  function getMinH() {
+    return window.matchMedia('(max-width: 749px)').matches ? MIN_MOBILE_H : MIN_DESKTOP_H;
+  }
+
+  window.addEventListener('message', function (event) {
+    if (event.source !== iframe.contentWindow) return;
+    if (event.origin !== DESIGNER_ORIGIN) return;
+
+    var msg = event.data || {};
+
+    // Handle iframe resize requests
+    var h = NaN;
+    if (msg.type === 'dtf:resize' && msg.payload) {
+      h = Number(msg.payload.height);
+    } else if (msg.type === 'DTF_IFRAME_HEIGHT') {
+      h = Number(msg.height);
+    }
+    if (Number.isFinite(h) && h > 0) {
+      var next = Math.max(h, getMinH());
+      iframe.style.height = next + 'px';
+      var wrap = document.getElementById('dtf-customizer-frame-wrap');
+      if (wrap) wrap.style.minHeight = next + 'px';
+    }
+  });
+})();
+</script>
+
+{% schema %}
+{
+  "name": "DTF Customizer Page",
+  "settings": [],
+  "presets": [{ "name": "DTF Customizer Page" }]
+}
+{% endschema %}
