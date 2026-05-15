@@ -97,6 +97,13 @@ type CanvasSnapshot = ReturnType<Canvas["toJSON"]>;
 type DraftData = {
   views: Record<ViewName, CanvasSnapshot | null>;
   savedAt: number;
+  productHandle: string;
+  variantId: string;
+  currentView: ViewName;
+  selectedColor: string;
+  selectedSize: string;
+  transferSize: string;
+  quantity: number;
 };
 type UploadResponse = {
   error?: string;
@@ -565,9 +572,10 @@ function createDesignId() {
   return `DTF-${timestamp}-${Array.from(values, (value) => value.toString(36)).join("")}`;
 }
 
-function getDraftStorageKey(productHandle: string) {
-  const normalizedHandle = normalizeProductIdentifier(productHandle) || "default";
-  return `${DRAFT_STORAGE_PREFIX}:${normalizedHandle}`;
+function getDraftStorageKey(productHandle: string, variantId: string) {
+  const normalizedProductHandle = normalizeProductIdentifier(productHandle) || "default";
+  const normalizedVariantId = normalizeVariantId(variantId) || "default";
+  return `${DRAFT_STORAGE_PREFIX}:${normalizedProductHandle}:${normalizedVariantId}`;
 }
 
 function PrintLocationControls({
@@ -711,9 +719,14 @@ export default function CustomizerPage() {
   const shouldDebugAiLogRef = useRef(false);
   const lastSentIframeHeightRef = useRef(0);
   const productHandleRef = useRef(productHandle);
+  const variantIdRef = useRef(variantId);
   const currentViewRef = useRef<ViewName>(currentView);
+  const selectedColorRef = useRef(selectedColor);
+  const selectedSizeRef = useRef(selectedSize);
+  const transferSizeRef = useRef(transferSize);
+  const quantityRef = useRef(quantity);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const draftRestoredRef = useRef(false);
+  const lastRestoredDraftKeyRef = useRef("");
   const [draftStatus, setDraftStatus] = useState("");
 
   const viewsRef = useRef<Record<ViewName, CanvasSnapshot | null>>({
@@ -734,17 +747,48 @@ export default function CustomizerPage() {
     currentViewRef.current = currentView;
   }, [currentView]);
 
+  useEffect(() => {
+    variantIdRef.current = variantId;
+  }, [variantId]);
+
+  useEffect(() => {
+    selectedColorRef.current = selectedColor;
+  }, [selectedColor]);
+
+  useEffect(() => {
+    selectedSizeRef.current = selectedSize;
+  }, [selectedSize]);
+
+  useEffect(() => {
+    transferSizeRef.current = transferSize;
+  }, [transferSize]);
+
+  useEffect(() => {
+    quantityRef.current = quantity;
+  }, [quantity]);
+
   const scheduleSaveDraft = useCallback(() => {
     if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
     autosaveTimerRef.current = setTimeout(() => {
       const handle = productHandleRef.current;
+      const currentVariantId = variantIdRef.current;
       if (!handle) return;
       const canvas = fabricCanvasRef.current;
       if (!canvas) return;
       viewsRef.current[currentViewRef.current] = canvas.toJSON();
       try {
-        const key = getDraftStorageKey(handle);
-        const draft: DraftData = { views: viewsRef.current, savedAt: Date.now() };
+        const key = getDraftStorageKey(handle, currentVariantId);
+        const draft: DraftData = {
+          views: viewsRef.current,
+          savedAt: Date.now(),
+          productHandle: handle,
+          variantId: currentVariantId,
+          currentView: currentViewRef.current,
+          selectedColor: selectedColorRef.current,
+          selectedSize: selectedSizeRef.current,
+          transferSize: transferSizeRef.current,
+          quantity: Math.max(1, Number(quantityRef.current) || 1),
+        };
         localStorage.setItem(key, JSON.stringify(draft));
       } catch (err) {
         console.warn("DTF autosave failed:", err);
@@ -755,9 +799,10 @@ export default function CustomizerPage() {
   const clearDraft = () => {
     if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
     const handle = productHandleRef.current;
+    const currentVariantId = variantIdRef.current;
     if (handle) {
       try {
-        localStorage.removeItem(getDraftStorageKey(handle));
+        localStorage.removeItem(getDraftStorageKey(handle, currentVariantId));
       } catch (err) {
         console.warn("DTF clear draft failed:", err);
       }
@@ -1668,13 +1713,25 @@ export default function CustomizerPage() {
   }, [shouldDebugAiLog]);
 
   useEffect(() => {
-    if (!isReady || !productHandle || draftRestoredRef.current) return;
-    draftRestoredRef.current = true;
+    if (!isReady || !productHandle) return;
+    const draftKey = getDraftStorageKey(productHandle, variantId);
+    if (lastRestoredDraftKeyRef.current === draftKey) return;
+    lastRestoredDraftKeyRef.current = draftKey;
     try {
-      const raw = localStorage.getItem(getDraftStorageKey(productHandle));
+      const raw = localStorage.getItem(draftKey);
       if (!raw) return;
       const draft = JSON.parse(raw) as DraftData;
       if (!draft?.views) return;
+      const normalizedCurrentHandle = normalizeProductIdentifier(productHandle);
+      const normalizedCurrentVariantId = normalizeVariantId(variantId);
+      const normalizedDraftHandle = normalizeProductIdentifier(draft.productHandle);
+      const normalizedDraftVariantId = normalizeVariantId(draft.variantId);
+      if (
+        normalizedDraftHandle !== normalizedCurrentHandle ||
+        normalizedDraftVariantId !== normalizedCurrentVariantId
+      ) {
+        return;
+      }
       viewsRef.current = {
         front: draft.views.front ?? null,
         back: draft.views.back ?? null,
@@ -1682,22 +1739,57 @@ export default function CustomizerPage() {
         rightSleeve: draft.views.rightSleeve ?? null,
         neck: draft.views.neck ?? null,
       };
+      const restoredView: ViewName =
+        draft.currentView === "front" ||
+        draft.currentView === "back" ||
+        draft.currentView === "leftSleeve" ||
+        draft.currentView === "rightSleeve" ||
+        draft.currentView === "neck"
+          ? draft.currentView
+          : "front";
+      const restoredColor = typeof draft.selectedColor === "string" ? draft.selectedColor : "";
+      const restoredSize = typeof draft.selectedSize === "string" ? draft.selectedSize : "Custom";
+      const restoredTransferSize =
+        typeof draft.transferSize === "string" && draft.transferSize.trim()
+          ? draft.transferSize
+          : "12x12";
+      const restoredQuantity = Math.max(1, Number(draft.quantity) || 1);
+      setCurrentView(restoredView);
+      currentViewRef.current = restoredView;
+      setSelectedColor(restoredColor);
+      setSelectedSize(restoredSize);
+      setTransferSize(restoredTransferSize);
+      setQuantity(restoredQuantity);
       const canvas = getCanvas();
       if (!canvas) return;
-      const saved = viewsRef.current[currentViewRef.current];
-      if (!saved?.objects?.length) return;
-      canvas.loadFromJSON(saved).then(() => {
-        canvas.renderAll();
-        syncSelectedObject();
-        setDraftStatus(DRAFT_STATUS_RESTORED);
-        setTimeout(() => setDraftStatus((prev) => (prev === DRAFT_STATUS_RESTORED ? "" : prev)), 4000);
-      }).catch((err: unknown) => {
-        console.warn("DTF draft canvas restore failed:", err);
-      });
+      const saved = viewsRef.current[restoredView];
+      canvas.clear();
+      canvas.backgroundColor = "transparent";
+      if (saved?.objects?.length) {
+        canvas
+          .loadFromJSON(saved)
+          .then(() => {
+            canvas.renderAll();
+            syncSelectedObject();
+            setDraftStatus(DRAFT_STATUS_RESTORED);
+            setTimeout(
+              () => setDraftStatus((prev) => (prev === DRAFT_STATUS_RESTORED ? "" : prev)),
+              4000
+            );
+          })
+          .catch((err: unknown) => {
+            console.warn("DTF draft canvas restore failed:", err);
+          });
+        return;
+      }
+      canvas.renderAll();
+      syncSelectedObject();
+      setDraftStatus(DRAFT_STATUS_RESTORED);
+      setTimeout(() => setDraftStatus((prev) => (prev === DRAFT_STATUS_RESTORED ? "" : prev)), 4000);
     } catch (err) {
       console.warn("DTF draft restore failed:", err);
     }
-  }, [isReady, productHandle]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isReady, productHandle, variantId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!canvasElRef.current) return;
