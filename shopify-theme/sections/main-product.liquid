@@ -18,189 +18,303 @@
 {% assign current_variant = product.selected_or_first_available_variant %}
 
 <div class="dtf-product-section">
+  <div class="dtf-product-grid">
 
-  <!-- Product Media (square) -->
-  {% if product.featured_image %}
+    <!-- Left: Product Media (square) -->
     <div class="dtf-product-media">
-      <img
-        src="{{ product.featured_image | image_url: width: 800 }}"
-        alt="{{ product.featured_image.alt | escape | default: product.title | escape }}"
-        width="800"
-        height="800"
-        loading="eager"
-        class="dtf-product-img"
-      >
-    </div>
-  {% endif %}
-
-  <!-- Product Title -->
-  <h1 class="dtf-product-title">{{ product.title }}</h1>
-
-  <!-- Price -->
-  <div id="dtf-price-display" class="dtf-price-display">
-    {{ current_variant.price | money }}
-  </div>
-
-  <!-- Description -->
-  {% if product.description != blank %}
-    <div class="dtf-product-description">{{ product.description }}</div>
-  {% endif %}
-
-  <!-- Variant selector + Add to Cart -->
-  <form id="dtf-add-to-cart-form" method="post" action="/cart/add">
-    {%- if product.variants.size > 1 -%}
-      <label for="dtf-variant-select" class="dtf-label">Select Size:</label>
-      <select id="dtf-variant-select" name="id" class="dtf-select">
-        {% for variant in product.variants %}
-          <option
-            value="{{ variant.id }}"
-            data-price="{{ variant.price | money }}"
-            {% if variant == current_variant %}selected{% endif %}
-            {% unless variant.available %}disabled{% endunless %}
-          >
-            {{ variant.title }}{% unless variant.available %} — Sold Out{% endunless %}
-          </option>
-        {% endfor %}
-      </select>
-    {%- else -%}
-      <input type="hidden" name="id" id="dtf-variant-select" value="{{ product.variants.first.id }}">
-    {%- endif -%}
-    <input type="hidden" name="quantity" value="1">
-    <button type="submit" class="dtf-size-btn">🛒 Add to Cart</button>
-  </form>
-
-  <!-- Customize Now CTA (supported products only) -->
-  {% if show_customizer %}
-    <a
-      id="dtf-customize-btn"
-      class="dtf-size-btn dtf-customize-btn"
-      href="/pages/customizer?source=shopify&product={{ product.handle | url_encode }}&variant={{ current_variant.id }}&product_id={{ product.id }}"
-    >
-      🎨 Customize Now with DTF Designer
-    </a>
-  {% endif %}
-
-  <!-- Reorder Last Design (logged-in customers only) -->
-  {% if customer and customer.orders_count > 0 %}
-    {% assign last_order = customer.orders.first %}
-    {% assign last_line  = last_order.line_items.first %}
-    {% assign artwork_url = last_line.properties | where: "name", "_Artwork URL" | map: "value" | first %}
-    <div style="margin-top:0.75rem;">
-      {% if artwork_url %}
-        <a class="dtf-size-btn dtf-reorder-btn"
-           href="/pages/customizer?source=shopify&reorder=true&artwork={{ artwork_url | url_encode }}&variant={{ last_line.variant_id }}&product={{ product.handle | url_encode }}&product_id={{ product.id }}">
-          🔁 Reorder Last Design
-        </a>
+      {% if product.featured_image %}
+        <img
+          src="{{ product.featured_image | image_url: width: 900 }}"
+          alt="{{ product.featured_image.alt | escape | default: product.title | escape }}"
+          width="900"
+          height="900"
+          loading="eager"
+          class="dtf-product-img"
+        >
       {% else %}
-        <a class="dtf-size-btn dtf-reorder-btn"
-           href="/cart/add?id={{ last_line.variant_id }}&quantity=1">
-          🔁 Reorder Last Size
-        </a>
+        <div class="dtf-product-img dtf-img-placeholder"></div>
       {% endif %}
     </div>
-  {% endif %}
 
+    <!-- Right: Product Info -->
+    <div class="dtf-product-info">
+
+      <!-- Product Title -->
+      <h1 class="dtf-product-title">{{ product.title }}</h1>
+
+      <!-- Price -->
+      <div id="dtf-price-display" class="dtf-price-display">
+        {{ current_variant.price | money }}
+      </div>
+
+      <!-- Description -->
+      {% if product.description != blank %}
+        <div class="dtf-product-description">{{ product.description }}</div>
+      {% endif %}
+
+      <!-- Variant selector + Quantity + Add to Cart -->
+      <form id="dtf-add-to-cart-form" method="post" action="/cart/add">
+        {%- if product.variants.size > 1 -%}
+          <label for="dtf-variant-select" class="dtf-label">Select Size:</label>
+          <select id="dtf-variant-select" name="id" class="dtf-select">
+            {% for variant in product.variants %}
+              <option
+                value="{{ variant.id }}"
+                data-price="{{ variant.price | money }}"
+                {% if variant == current_variant %}selected{% endif %}
+                {% unless variant.available %}disabled{% endunless %}
+              >
+                {{ variant.title }}{% unless variant.available %} — Sold Out{% endunless %}
+              </option>
+            {% endfor %}
+          </select>
+        {%- else -%}
+          <input type="hidden" name="id" id="dtf-variant-select" value="{{ product.variants.first.id }}">
+        {%- endif -%}
+
+        <label for="dtf-quantity" class="dtf-label">Quantity:</label>
+        <input
+          id="dtf-quantity"
+          type="number"
+          name="quantity"
+          value="1"
+          min="1"
+          class="dtf-qty-input"
+        >
+
+        <button type="submit" class="dtf-size-btn dtf-cart-btn">🛒 Add to Cart</button>
+      </form>
+
+      <!-- Customize Now CTA (supported products only) -->
+      {% if show_customizer %}
+        <a
+          id="dtf-customize-btn"
+          class="dtf-size-btn dtf-customize-btn"
+          href="/pages/customizer?source=shopify&product={{ product.handle | url_encode }}&variant={{ current_variant.id }}&product_id={{ product.id }}"
+        >
+          🎨 Customize &amp; Upload Design
+        </a>
+      {% endif %}
+
+      <!-- Reorder Last Design (logged-in customers only) -->
+      {% if customer and customer.orders_count > 0 %}
+        {% assign last_order = customer.orders.first %}
+        {% assign last_line  = last_order.line_items.first %}
+        {% assign artwork_url = last_line.properties | where: "name", "_Artwork URL" | map: "value" | first %}
+        <div class="dtf-reorder-wrap">
+          {% if artwork_url %}
+            <a class="dtf-size-btn dtf-reorder-btn"
+               href="/pages/customizer?source=shopify&reorder=true&artwork={{ artwork_url | url_encode }}&variant={{ last_line.variant_id }}&product={{ product.handle | url_encode }}&product_id={{ product.id }}">
+              🔁 Reorder Last Design
+            </a>
+          {% else %}
+            <a class="dtf-size-btn dtf-reorder-btn"
+               href="/cart/add?id={{ last_line.variant_id }}&quantity=1">
+              🔁 Reorder Last Size
+            </a>
+          {% endif %}
+        </div>
+      {% endif %}
+
+    </div><!-- /.dtf-product-info -->
+  </div><!-- /.dtf-product-grid -->
 </div>
 
 <style>
+/* ─── Outer wrapper ─────────────────────────────────────── */
 .dtf-product-section {
   background: #18181b;
-  border-radius: 1.5rem;
   border: 2px solid #00fff7;
-  box-shadow: 0 0 24px #00fff730;
-  padding: 2.5rem 2rem 2rem;
+  box-shadow: 0 0 32px #00fff725;
+  border-radius: 1.5rem;
+  padding: 2.5rem 2.5rem 2rem;
   color: #fff;
   margin: 2rem auto;
-  max-width: 600px;
+  max-width: 1100px;
+  box-sizing: border-box;
 }
+
+/* ─── Two-column grid ───────────────────────────────────── */
+.dtf-product-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2.5rem;
+  align-items: start;
+}
+
+/* ─── Left column: media ────────────────────────────────── */
 .dtf-product-media {
-  margin-bottom: 1.25rem;
+  position: sticky;
+  top: 1.5rem;
 }
 .dtf-product-img {
   width: 100%;
   aspect-ratio: 1 / 1;
   object-fit: cover;
-  border-radius: 1rem;
+  border-radius: 1.25rem;
   display: block;
+  border: 1.5px solid #00fff740;
 }
+.dtf-img-placeholder {
+  background: #27272a;
+  border: 1.5px dashed #00fff740;
+}
+
+/* ─── Right column: info ────────────────────────────────── */
+.dtf-product-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
 .dtf-product-title {
-  font-size: 2rem;
+  font-size: 1.9rem;
   font-weight: 800;
   margin: 0 0 0.5rem;
   color: #fff200;
+  line-height: 1.2;
 }
+
 .dtf-price-display {
-  font-size: 1.4rem;
+  font-size: 1.5rem;
   font-weight: 800;
-  color: #fff200;
-  margin-bottom: 0.75rem;
+  color: #00fff7;
+  margin-bottom: 0.9rem;
 }
+
 .dtf-product-description {
-  font-size: 1rem;
+  font-size: 0.95rem;
   color: #b3b3b3;
   margin-bottom: 1.25rem;
   line-height: 1.6;
 }
+
+/* ─── Form controls ─────────────────────────────────────── */
 .dtf-label {
   color: #00fff7;
   font-weight: 700;
   display: block;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.9rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
+
 .dtf-select {
   width: 100%;
-  padding: 0.6rem 1rem;
+  padding: 0.65rem 1rem;
   border-radius: 0.75rem;
   background: #27272a;
   color: #fff;
   border: 1.5px solid #00fff7;
   font-size: 1rem;
   margin-bottom: 1rem;
+  box-sizing: border-box;
+  appearance: none;
+  cursor: pointer;
 }
+.dtf-select:focus {
+  outline: none;
+  border-color: #fff200;
+}
+
+.dtf-qty-input {
+  width: 5rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.75rem;
+  background: #27272a;
+  color: #fff;
+  border: 1.5px solid #00fff7;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+  text-align: center;
+}
+.dtf-qty-input:focus {
+  outline: none;
+  border-color: #fff200;
+}
+
+/* ─── Buttons ───────────────────────────────────────────── */
 .dtf-size-btn {
   display: block;
   width: 100%;
   background: linear-gradient(90deg, #00fff7 0%, #fff200 100%);
   color: #18181b;
-  font-weight: 700;
+  font-weight: 800;
   border: none;
-  border-radius: 0.75rem;
-  padding: 0.85rem 0;
+  border-radius: 0.85rem;
+  padding: 0.95rem 0;
   font-size: 1.1rem;
-  margin-top: 0.75rem;
+  margin-top: 0.6rem;
   cursor: pointer;
   text-decoration: none;
   text-align: center;
-  transition: background 0.2s, color 0.2s;
+  letter-spacing: 0.02em;
+  transition: filter 0.18s, transform 0.15s;
+  box-sizing: border-box;
 }
 .dtf-size-btn:hover {
-  background: linear-gradient(90deg, #fff200 0%, #00fff7 100%);
+  filter: brightness(1.1);
+  transform: translateY(-1px);
   color: #18181b;
+  text-decoration: none;
 }
+.dtf-size-btn:active {
+  transform: translateY(0);
+  filter: brightness(0.95);
+}
+
+.dtf-cart-btn {
+  margin-top: 0.5rem;
+}
+
 .dtf-customize-btn {
   background: linear-gradient(90deg, #a855f7 0%, #6366f1 100%);
   color: #fff;
+  margin-top: 0.75rem;
 }
 .dtf-customize-btn:hover {
-  background: linear-gradient(90deg, #9333ea 0%, #4f46e5 100%);
+  filter: brightness(1.12);
   color: #fff;
 }
+
+.dtf-reorder-wrap {
+  margin-top: 0.75rem;
+}
 .dtf-reorder-btn {
-  background: #fff200;
+  background: linear-gradient(90deg, #fff200 0%, #ffe000 100%);
   color: #18181b;
 }
 .dtf-reorder-btn:hover {
-  background: #ffe000;
+  filter: brightness(1.08);
   color: #18181b;
 }
-@media (max-width: 640px) {
+
+/* ─── Mobile ────────────────────────────────────────────── */
+@media (max-width: 768px) {
   .dtf-product-section {
-    padding: 1.5rem 1rem 1.2rem;
-    margin: 1rem;
-    max-width: 100%;
+    padding: 1.25rem 1rem 1.25rem;
+    margin: 0.75rem;
+    border-radius: 1rem;
   }
-  .dtf-product-title { font-size: 1.5rem; }
-  .dtf-size-btn { font-size: 1rem; padding: 0.9rem 0; }
+  .dtf-product-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+  .dtf-product-media {
+    position: static;
+  }
+  .dtf-product-title {
+    font-size: 1.45rem;
+  }
+  .dtf-price-display {
+    font-size: 1.25rem;
+  }
+  .dtf-size-btn {
+    font-size: 1rem;
+    padding: 1rem 0;
+  }
 }
 </style>
 
