@@ -93,6 +93,16 @@ const VIEW_LABELS: Record<ViewName, string> = {
   neck: "Neck Label",
 };
 
+function isViewName(value: unknown): value is ViewName {
+  return (
+    value === "front" ||
+    value === "back" ||
+    value === "leftSleeve" ||
+    value === "rightSleeve" ||
+    value === "neck"
+  );
+}
+
 type CanvasSnapshot = ReturnType<Canvas["toJSON"]>;
 type DraftData = {
   views: Record<ViewName, CanvasSnapshot | null>;
@@ -1739,14 +1749,7 @@ export default function CustomizerPage() {
         rightSleeve: draft.views.rightSleeve ?? null,
         neck: draft.views.neck ?? null,
       };
-      const restoredView: ViewName =
-        draft.currentView === "front" ||
-        draft.currentView === "back" ||
-        draft.currentView === "leftSleeve" ||
-        draft.currentView === "rightSleeve" ||
-        draft.currentView === "neck"
-          ? draft.currentView
-          : "front";
+      const restoredView: ViewName = isViewName(draft.currentView) ? draft.currentView : "front";
       const restoredColor = typeof draft.selectedColor === "string" ? draft.selectedColor : "";
       const restoredSize = typeof draft.selectedSize === "string" ? draft.selectedSize : "Custom";
       const restoredTransferSize =
