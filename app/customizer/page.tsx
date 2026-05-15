@@ -696,6 +696,7 @@ export default function CustomizerPage() {
   const [textControls, setTextControls] = useState<TextControlsState>(DEFAULT_TEXT_CONTROLS);
   const printableAreaRef = useRef({ left: 0, top: 0, width: 0, height: 0 });
   const shouldDebugAiLogRef = useRef(false);
+  const lastSentIframeHeightRef = useRef(0);
 
   const viewsRef = useRef<Record<ViewName, CanvasSnapshot | null>>({
     front: null,
@@ -710,27 +711,40 @@ export default function CustomizerPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    const MIN_HEIGHT_CHANGE_THRESHOLD = 80;
+    const HEIGHT_UPDATE_DEBOUNCE_MS = 250;
     let timer: ReturnType<typeof setTimeout> | null = null;
 
     const sendHeight = () => {
       if (timer) clearTimeout(timer);
 
       timer = setTimeout(() => {
-        const height = Math.max(
-          document.documentElement.scrollHeight,
-          document.body.scrollHeight,
-          document.documentElement.offsetHeight,
-          document.body.offsetHeight
+        const nextHeight = Math.ceil(
+          Math.max(
+            document.documentElement.scrollHeight,
+            document.body.scrollHeight,
+            document.documentElement.offsetHeight,
+            document.body.offsetHeight
+          )
         );
+
+        const previousHeight = lastSentIframeHeightRef.current;
+        const heightDifference = Math.abs(nextHeight - previousHeight);
+
+        if (previousHeight && heightDifference < MIN_HEIGHT_CHANGE_THRESHOLD) {
+          return;
+        }
+
+        lastSentIframeHeightRef.current = nextHeight;
 
         window.parent?.postMessage(
           {
             type: "DTF_IFRAME_HEIGHT",
-            height,
+            height: nextHeight,
           },
           "*"
         );
-      }, 120);
+      }, HEIGHT_UPDATE_DEBOUNCE_MS);
     };
 
     sendHeight();
