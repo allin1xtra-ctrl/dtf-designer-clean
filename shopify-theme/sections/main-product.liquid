@@ -88,7 +88,7 @@
 
       <form id="dtf-add-to-cart-form" method="post" action="/cart/add">
         {%- if product.variants.size > 1 -%}
-          <label for="dtf-variant-select" class="dtf-label">Select option</label>
+          <label for="dtf-variant-select" class="dtf-label">Select option:</label>
           <select id="dtf-variant-select" name="id" class="dtf-select">
             {% for variant in product.variants %}
               <option

@@ -138,7 +138,14 @@
   var iframe = document.getElementById('dtf-customizer-iframe');
   if (!iframe) return;
 
-  var DESIGNER_ORIGIN = 'https://dtf-designer-clean.vercel.app';
+  var designerBaseUrl = {{ designer_base | json }};
+  var DESIGNER_ORIGIN = (function () {
+    try {
+      return new URL(designerBaseUrl, window.location.origin).origin;
+    } catch (error) {
+      return 'https://dtf-designer-clean.vercel.app';
+    }
+  })();
   var sectionRoot = document.getElementById('shopify-section-{{ section.id }}');
 
   function cssPx(variableName, fallback) {

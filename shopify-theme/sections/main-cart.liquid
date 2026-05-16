@@ -1,9 +1,9 @@
 {% liquid
   assign subtotal_dollars = cart.total_price | divided_by: 100.0
-  assign tier_1 = section.settings.tier_1_threshold | default: 50
-  assign tier_2 = section.settings.tier_2_threshold | default: 100
-  assign tier_3 = section.settings.tier_3_threshold | default: 200
-  assign tier_4 = section.settings.tier_4_threshold | default: 500
+  assign tier_1 = section.settings.tier_1_threshold
+  assign tier_2 = section.settings.tier_2_threshold
+  assign tier_3 = section.settings.tier_3_threshold
+  assign tier_4 = section.settings.tier_4_threshold
   assign discount_percent = 0
   assign next_threshold = tier_1
 
@@ -62,10 +62,10 @@
       </div>
 
       <ul class="dtf-cart-progress__tiers" role="list">
-        <li>$50+ → 5%</li>
-        <li>$100+ → 10%</li>
-        <li>$200+ → 15%</li>
-        <li>$500+ → 20%</li>
+        <li>${{ tier_1 }}+ → 5%</li>
+        <li>${{ tier_2 }}+ → 10%</li>
+        <li>${{ tier_3 }}+ → 15%</li>
+        <li>${{ tier_4 }}+ → 20%</li>
       </ul>
     </div>
 
