@@ -50,6 +50,36 @@
   </div>
 </section>
 
+{% assign faq_json_items = '' %}
+{% for block in section.blocks %}
+  {% if block.settings.show_block %}
+    {% capture faq_json_item %}
+      {
+        "@type": "Question",
+        "name": {{ block.settings.question | strip_html | json }},
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": {{ block.settings.answer | strip_html | json }}
+        }
+      }
+    {% endcapture %}
+    {% if faq_json_items != '' %}
+      {% assign faq_json_items = faq_json_items | append: ',' %}
+    {% endif %}
+    {% assign faq_json_items = faq_json_items | append: faq_json_item %}
+  {% endif %}
+{% endfor %}
+
+{% if faq_json_items != '' %}
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [{{ faq_json_items }}]
+    }
+  </script>
+{% endif %}
+
 {% schema %}
 {
   "name": "DTF Pro FAQ",

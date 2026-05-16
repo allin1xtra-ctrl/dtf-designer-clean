@@ -139,6 +139,9 @@
   if (!iframe) return;
 
   var designerBaseUrl = {{ designer_base | json }};
+  if (!/^https?:\/\//i.test(designerBaseUrl || '')) {
+    designerBaseUrl = 'https://dtf-designer-clean.vercel.app/customizer';
+  }
   var DESIGNER_ORIGIN = (function () {
     try {
       return new URL(designerBaseUrl, window.location.origin).origin;
@@ -152,6 +155,7 @@
   function cssPx(variableName, fallback) {
     if (!sectionRoot || !window.getComputedStyle) return fallback;
     var raw = window.getComputedStyle(sectionRoot).getPropertyValue(variableName).trim();
+    if (!raw) return fallback;
     if (!raw.endsWith('px')) return fallback;
     var parsed = parseInt(raw.replace('px', ''), 10);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
