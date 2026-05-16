@@ -140,7 +140,13 @@
 
   var DEFAULT_DESIGNER_URL = 'https://dtf-designer-clean.vercel.app/customizer';
   var designerBaseUrl = {{ designer_base | json }};
-  if (!/^https?:\/\//i.test(designerBaseUrl || '')) {
+  try {
+    var parsedDesignerBaseUrl = new URL(designerBaseUrl, window.location.origin);
+    if (parsedDesignerBaseUrl.protocol !== 'https:' && parsedDesignerBaseUrl.protocol !== 'http:') {
+      throw new Error('Invalid protocol');
+    }
+    designerBaseUrl = parsedDesignerBaseUrl.toString();
+  } catch (error) {
     designerBaseUrl = DEFAULT_DESIGNER_URL;
   }
   var DESIGNER_ORIGIN = (function () {
