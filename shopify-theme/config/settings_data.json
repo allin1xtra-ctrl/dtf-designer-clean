@@ -17,7 +17,7 @@
         "text": "<p>Custom DTF Transfers • Gang Sheets • Custom T-Shirts • Custom Hoodies • No Minimums • Fast Turnaround • Upload Your Design Online</p>",
         "hero_image": "shopify://shop_images/hero-banner_19629971-6588-4b79-afbd-2371a685ce5c.png",
         "primary_label": "Customize & Upload Design",
-        "primary_link": "https://dtf-designer-clean.vercel.app/customizer",
+        "primary_link": "shopify://pages/customizer",
         "secondary_label": "No Minimums • Fast Turnaround • Vibrant Full-Color Prints",
         "secondary_link": "shopify://policies/shipping-policy",
         "stat_1_number": "300 DPI",
@@ -34,7 +34,7 @@
         "card_1": {
           "type": "card",
           "settings": {
-            "collection": "dtf-transfers-by-size",
+            "collection": "dtf-transfers",
             "title": "DTF Transfers",
             "text": "Upload your design and order custom DTF transfers with vibrant color, soft feel, and no minimums."
           }
@@ -177,7 +177,7 @@
         "heading": "Upload Artwork & Customize DTF Transfers Online",
         "text": "Use DTF Designer Pro to upload artwork, customize t-shirts, hoodies, DTF transfers, and gang sheets, then send your design to checkout.",
         "button_label": "Start Upload",
-        "button_link": "https://dtf-designer-clean.vercel.app/customizer",
+        "button_link": "shopify://pages/customizer",
         "side_title": "Designed for front, back, sleeve, and neck print placement",
         "side_text": "Great for brands, teams, and creators ordering custom transfers, shirts, and hoodies with no minimums."
       }
