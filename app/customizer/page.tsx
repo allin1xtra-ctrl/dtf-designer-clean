@@ -123,10 +123,25 @@ type PrintArea = {
   height: number;
 };
 
+type SizeMockupConfig = {
+  mockupUrl?: string;
+  url?: string;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  maxPrintWidth?: number;
+  maxPrintHeight?: number;
+  designArea?: Partial<PrintArea>;
+  printArea?: Partial<PrintArea>;
+  print_area?: Partial<PrintArea>;
+  colorMockups?: Record<string, string>;
+};
+
 type PrintLocationData = {
   mockupUrl?: string;
   colorMockups?: Record<string, string>;
-  sizeMockups?: Record<string, string>;
+  sizeMockups?: Record<string, string | SizeMockupConfig>;
   x?: number;
   y?: number;
   width?: number;
@@ -177,7 +192,7 @@ const SHOPIFY_PARENT_ORIGIN = "https://yourdtfplug.com";
 const DEFAULT_DESIGN_AREA: PrintArea = { x: 10, y: 10, width: 80, height: 80 };
 const MIN_CURVE_AMPLITUDE = 8;
 const MAX_CURVE_AMPLITUDE = 220;
-const TRANSFER_SIZE_PRESETS = ["3x3", "4x5", "8x8", "10x10", "12x12", "12x16", "14x16", "16x20"];
+const TRANSFER_SIZE_PRESETS = ["3x3", "4x5", "5x5", "8x8", "8x10", "10x10", "11x17", "12x12", "12x16", "14x16", "16x20"];
 const DRAFT_STORAGE_VERSION = 1;
 const DRAFT_STORAGE_KEY_PREFIX = "dtf-designer-draft";
 const DRAFT_AUTOSAVE_DEBOUNCE_MS = 800;
@@ -340,6 +355,46 @@ function resolveColorMockupUrl(location: PrintLocationData | undefined, selected
   );
 
   return exact || normalizedEntry?.[1] || location?.mockupUrl;
+}
+
+function resolveSizeMockupConfig(
+  location: PrintLocationData | undefined,
+  matchedSizeMockupKey: string
+) {
+  if (!matchedSizeMockupKey) return null;
+  const sizeMockups = location?.sizeMockups;
+  if (!sizeMockups || typeof sizeMockups !== "object") return null;
+  const raw = sizeMockups[matchedSizeMockupKey];
+  if (!raw) return null;
+
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    return {
+      mockupUrl: trimmed || undefined,
+    };
+  }
+
+  if (typeof raw !== "object") return null;
+  const config = raw as SizeMockupConfig;
+  const resolvedMockupUrl = typeof config.mockupUrl === "string"
+    ? config.mockupUrl.trim()
+    : typeof config.url === "string"
+      ? config.url.trim()
+      : "";
+
+  return {
+    mockupUrl: resolvedMockupUrl || undefined,
+    colorMockups: config.colorMockups,
+    x: config.x,
+    y: config.y,
+    width: config.width,
+    height: config.height,
+    maxPrintWidth: config.maxPrintWidth,
+    maxPrintHeight: config.maxPrintHeight,
+    designArea: config.designArea,
+    printArea: config.printArea,
+    print_area: config.print_area,
+  };
 }
 
 function findMatchingVariant(
@@ -1582,6 +1637,21 @@ export default function CustomizerPage() {
 
     return "";
   }, [activeLocationData?.sizeMockups, selectedSize]);
+  const activeSizeMockupKeys = useMemo(
+    () => Object.keys(activeLocationData?.sizeMockups || {}),
+    [activeLocationData?.sizeMockups]
+  );
+  const sizeMockupConfig = useMemo(
+    () => resolveSizeMockupConfig(activeLocationData, matchedSizeMockupKey),
+    [activeLocationData, matchedSizeMockupKey]
+  );
+  const resolvedLocationData = useMemo(
+    () =>
+      sizeMockupConfig
+        ? { ...activeLocationData, ...sizeMockupConfig }
+        : activeLocationData,
+    [activeLocationData, sizeMockupConfig]
+  );
   const selectedColorOption = selectedVariant?.selectedOptions?.find((option) => {
     const optionName = normalizeOptionLabel(String(option?.name || ""));
     return COLOR_OPTION_NAMES.includes(optionName);
@@ -1590,10 +1660,11 @@ export default function CustomizerPage() {
   const normalizedSelectedColor = normalizeColorName(
     selectedColorFromVariant || selectedColor || DEFAULT_COLOR
   );
-  const colorMockupUrl = resolveColorMockupUrl(activeLocationData, normalizedSelectedColor);
-  const mockupUrl = colorMockupUrl || activeLocationData?.mockupUrl;
+  const sizeMockupUrl = (sizeMockupConfig?.mockupUrl || "").trim();
+  const colorMockupUrl = sizeMockupUrl ? "" : resolveColorMockupUrl(resolvedLocationData, normalizedSelectedColor);
+  const mockupUrl = sizeMockupUrl || colorMockupUrl || resolvedLocationData?.mockupUrl;
   const resolvedMockupUrl = resolveMockupUrl(mockupUrl, currentView, productHandle);
-  const designArea = normalizeDesignArea(activeLocationData);
+  const designArea = normalizeDesignArea(resolvedLocationData);
   const mockupFitRatio = previewScale < 1 ? MOCKUP_FIT_RATIO_SMALL_SCREEN : MOCKUP_FIT_RATIO;
   const mockupRender = getMockupRenderDimensions(
     mockupNaturalSize.width,
@@ -1601,8 +1672,8 @@ export default function CustomizerPage() {
     mockupFitRatio
   );
   const resolvedPrintAreaBounds = getResolvedPrintAreaBounds(designArea, mockupRender);
-  const maxPrintWidth = normalizePrintLimit(activeLocationData?.maxPrintWidth);
-  const maxPrintHeight = normalizePrintLimit(activeLocationData?.maxPrintHeight);
+  const maxPrintWidth = normalizePrintLimit(resolvedLocationData?.maxPrintWidth);
+  const maxPrintHeight = normalizePrintLimit(resolvedLocationData?.maxPrintHeight);
   const availableViews = getAvailableViews(printLocations);
   const transferDimensions = parseTransferSize(transferSize);
   const isSmallLocation = isSmallPrintLocation(currentView);
@@ -1643,10 +1714,26 @@ export default function CustomizerPage() {
 
   useEffect(() => {
     console.log("DTF selected variant:", selectedVariant);
+    console.log("DTF selected variant ID:", variantId);
+    console.log("DTF selected variant title:", String(selectedVariant?.title || ""));
+    console.log("DTF selected size:", selectedSize);
+    console.log("DTF matched size mockup key:", matchedSizeMockupKey);
+    console.log("DTF active sizeMockups keys:", activeSizeMockupKeys);
+    console.log("DTF final transfer size:", transferSize);
     console.log("DTF selected color:", normalizedSelectedColor);
-    console.log("DTF active location data:", activeLocationData);
+    console.log("DTF active location data:", resolvedLocationData);
     console.log("DTF resolved color mockup URL:", resolvedMockupUrl);
-  }, [activeLocationData, normalizedSelectedColor, resolvedMockupUrl, selectedVariant]);
+  }, [
+    activeSizeMockupKeys,
+    matchedSizeMockupKey,
+    normalizedSelectedColor,
+    resolvedLocationData,
+    resolvedMockupUrl,
+    selectedSize,
+    selectedVariant,
+    transferSize,
+    variantId,
+  ]);
 
   useEffect(() => {
     if (!shouldDebugAiLogRef.current) return;
