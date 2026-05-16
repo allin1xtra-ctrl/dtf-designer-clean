@@ -88,7 +88,7 @@
 
       <form id="dtf-add-to-cart-form" method="post" action="/cart/add">
         {%- if product.variants.size > 1 -%}
-          <label for="dtf-variant-select" class="dtf-label">Select option:</label>
+          <label for="dtf-variant-select" class="dtf-label">Select variant:</label>
           <select id="dtf-variant-select" name="id" class="dtf-select">
             {% for variant in product.variants %}
               <option
@@ -106,7 +106,7 @@
           <input type="hidden" name="id" id="dtf-variant-select" value="{{ product.variants.first.id }}">
         {%- endif -%}
 
-        <label for="dtf-quantity" class="dtf-label">Quantity</label>
+        <label for="dtf-quantity" class="dtf-label">Quantity:</label>
         <input
           id="dtf-quantity"
           type="number"

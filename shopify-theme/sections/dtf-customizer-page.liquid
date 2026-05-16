@@ -138,21 +138,22 @@
   var iframe = document.getElementById('dtf-customizer-iframe');
   if (!iframe) return;
 
+  var DEFAULT_DESIGNER_URL = 'https://dtf-designer-clean.vercel.app/customizer';
   var designerBaseUrl = {{ designer_base | json }};
   if (!/^https?:\/\//i.test(designerBaseUrl || '')) {
-    designerBaseUrl = 'https://dtf-designer-clean.vercel.app/customizer';
+    designerBaseUrl = DEFAULT_DESIGNER_URL;
   }
   var DESIGNER_ORIGIN = (function () {
     try {
       return new URL(designerBaseUrl, window.location.origin).origin;
     } catch (error) {
       console.error('DTF customizer: invalid designer URL', error);
-      return 'https://dtf-designer-clean.vercel.app';
+      return new URL(DEFAULT_DESIGNER_URL, window.location.origin).origin;
     }
   })();
   var sectionRoot = document.getElementById('shopify-section-{{ section.id }}');
 
-  function cssPx(variableName, fallback) {
+  function getCssPixelValue(variableName, fallback) {
     if (!sectionRoot || !window.getComputedStyle) return fallback;
     var raw = window.getComputedStyle(sectionRoot).getPropertyValue(variableName).trim();
     if (!raw) return fallback;
@@ -162,8 +163,8 @@
   }
 
   function minHeight() {
-    var desktop = cssPx('--desktop-min-height', 1100);
-    var mobile = cssPx('--mobile-min-height', 1450);
+    var desktop = getCssPixelValue('--desktop-min-height', 1100);
+    var mobile = getCssPixelValue('--mobile-min-height', 1450);
     return window.matchMedia('(max-width: 989px)').matches ? mobile : desktop;
   }
 
