@@ -33,6 +33,14 @@
   endif
 
   assign remaining_amount = 0
+  assign next_discount_percent = 5
+  if discount_percent == 5
+    assign next_discount_percent = 10
+  elsif discount_percent == 10
+    assign next_discount_percent = 15
+  elsif discount_percent == 15
+    assign next_discount_percent = 20
+  endif
   if next_threshold > 0 and subtotal_dollars < next_threshold
     assign remaining_amount = next_threshold | minus: subtotal_dollars
   endif
@@ -53,7 +61,7 @@
         {% elsif discount_percent >= 20 %}
           You're at the max tier: <strong>20% off unlocked</strong> on orders ${{ tier_4 }}+.
         {% else %}
-          You're at <strong>{{ discount_percent }}% off</strong>. Spend <strong>${{ remaining_amount | round: 2 }}</strong> more to unlock <strong>{% if discount_percent == 0 %}5%{% elsif discount_percent == 5 %}10%{% elsif discount_percent == 10 %}15%{% else %}20%{% endif %}</strong>.
+          You're at <strong>{{ discount_percent }}% off</strong>. Spend <strong>${{ remaining_amount | round: 2 }}</strong> more to unlock <strong>{{ next_discount_percent }}%</strong>.
         {% endif %}
       </p>
 
