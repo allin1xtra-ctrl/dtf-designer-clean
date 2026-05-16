@@ -1,51 +1,368 @@
-<section class="cart-section page-width">
-  <h1>Your Cart</h1>
-  {% if cart.item_count == 0 %}
-    <p>Your cart is empty.</p>
-  {% else %}
-    <form action="/cart" method="post" novalidate>
-      <table class="cart-table">
-        <thead>
-          <tr>
-            <th>Product</th>
-            <th>Custom Design Details</th>
-            <th>Quantity</th>
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for item in cart.items %}
-            <tr>
-              <td>
-                <a href="{{ item.url }}">{{ item.product.title }}</a><br>
-                <span>{{ item.variant.title }}</span>
-              </td>
-              <td>
-                {% if item.properties %}
-                  <ul>
-                    {% for p in item.properties %}
-                      {% unless p.last == blank %}
-                        <li><strong>{{ p.first }}:</strong> {{ p.last }}</li>
-                      {% endunless %}
-                    {% endfor %}
-                  </ul>
-                {% else %}
-                  <span>-</span>
-                {% endif %}
-              </td>
-              <td>
-                <input type="number" name="updates[]" value="{{ item.quantity }}" min="0">
-              </td>
-              <td>{{ item.line_price | money }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      <div class="cart-footer">
-        <strong>Subtotal:</strong> {{ cart.total_price | money }}
-        <button type="submit" name="update" class="cart-update">Update Cart</button>
-        <a href="/checkout" class="cart-checkout">Checkout</a>
+{% liquid
+  assign subtotal_dollars = cart.total_price | divided_by: 100.0
+  assign tier_1 = section.settings.tier_1_threshold | default: 50
+  assign tier_2 = section.settings.tier_2_threshold | default: 100
+  assign tier_3 = section.settings.tier_3_threshold | default: 200
+  assign tier_4 = section.settings.tier_4_threshold | default: 500
+  assign discount_percent = 0
+  assign next_threshold = tier_1
+
+  if subtotal_dollars >= tier_1
+    assign discount_percent = 5
+    assign next_threshold = tier_2
+  endif
+  if subtotal_dollars >= tier_2
+    assign discount_percent = 10
+    assign next_threshold = tier_3
+  endif
+  if subtotal_dollars >= tier_3
+    assign discount_percent = 15
+    assign next_threshold = tier_4
+  endif
+  if subtotal_dollars >= tier_4
+    assign discount_percent = 20
+    assign next_threshold = 0
+  endif
+
+  assign progress_percent = 0
+  if tier_4 > 0
+    assign progress_percent = subtotal_dollars | times: 100.0 | divided_by: tier_4
+    if progress_percent > 100
+      assign progress_percent = 100
+    endif
+  endif
+
+  assign remaining_amount = 0
+  if next_threshold > 0 and subtotal_dollars < next_threshold
+    assign remaining_amount = next_threshold | minus: subtotal_dollars
+  endif
+
+  assign cart_bg_image = section.settings.background_image
+%}
+
+<section class="dtf-cart page-width dtf-cart-text-{{ section.settings.text_alignment }}">
+  <div class="dtf-cart__overlay"></div>
+
+  <div class="dtf-cart__inner">
+    <h1>{{ section.settings.heading }}</h1>
+
+    <div class="dtf-cart-progress" role="status" aria-live="polite">
+      <p class="dtf-cart-progress__message">
+        {% if cart.item_count == 0 %}
+          Your cart is empty.
+        {% elsif discount_percent >= 20 %}
+          You're at the max tier: <strong>20% off unlocked</strong> on orders ${{ tier_4 }}+.
+        {% else %}
+          You're at <strong>{{ discount_percent }}% off</strong>. Spend <strong>${{ remaining_amount | round: 2 }}</strong> more to unlock <strong>{% if discount_percent == 0 %}5%{% elsif discount_percent == 5 %}10%{% elsif discount_percent == 10 %}15%{% else %}20%{% endif %}</strong>.
+        {% endif %}
+      </p>
+
+      <div class="dtf-cart-progress__bar" aria-hidden="true">
+        <span class="dtf-cart-progress__fill" style="width: {{ progress_percent }}%;"></span>
       </div>
-    </form>
-  {% endif %}
+
+      <ul class="dtf-cart-progress__tiers" role="list">
+        <li>$50+ → 5%</li>
+        <li>$100+ → 10%</li>
+        <li>$200+ → 15%</li>
+        <li>$500+ → 20%</li>
+      </ul>
+    </div>
+
+    {% if section.settings.show_trust_badges %}
+      <div class="dtf-cart-trust" role="list">
+        {% for block in section.blocks %}
+          {% if block.settings.show_block %}
+            <div class="dtf-cart-trust__badge" role="listitem" {{ block.shopify_attributes }}>
+              {{ block.settings.label }}
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% if cart.item_count == 0 %}
+      <a class="dtf-cart__continue" href="{{ section.settings.continue_link | default: '/collections/dtf-transfers' }}">{{ section.settings.continue_label }}</a>
+    {% else %}
+      <form action="/cart" method="post" novalidate>
+        <div class="dtf-cart-table-wrap">
+          <table class="dtf-cart-table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Custom Details</th>
+                <th>Quantity</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in cart.items %}
+                <tr>
+                  <td>
+                    <a href="{{ item.url }}">{{ item.product.title }}</a><br>
+                    <span>{{ item.variant.title }}</span>
+                    {% render 'dtf-cart-preview', item: item %}
+                  </td>
+                  <td>
+                    {% if item.properties %}
+                      <ul>
+                        {% for p in item.properties %}
+                          {% unless p.last == blank %}
+                            <li><strong>{{ p.first }}:</strong> {{ p.last }}</li>
+                          {% endunless %}
+                        {% endfor %}
+                      </ul>
+                    {% else %}
+                      <span>-</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <input type="number" name="updates[]" value="{{ item.quantity }}" min="0">
+                  </td>
+                  <td>{{ item.line_price | money }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="dtf-cart-footer">
+          <strong>Subtotal: {{ cart.total_price | money }}</strong>
+          {% if discount_percent > 0 %}
+            <p class="dtf-cart-footer__tier">Current tier: {{ discount_percent }}% off target reached.</p>
+          {% endif %}
+          <div class="dtf-cart-footer__actions">
+            <button type="submit" name="update" class="dtf-cart-btn dtf-cart-btn--secondary">Update Cart</button>
+            <a href="/checkout" class="dtf-cart-btn dtf-cart-btn--primary">Checkout</a>
+          </div>
+        </div>
+      </form>
+    {% endif %}
+  </div>
 </section>
+
+<style>
+#shopify-section-{{ section.id }} .dtf-cart {
+  --desktop-padding: {{ section.settings.desktop_spacing }}px;
+  --mobile-padding: {{ section.settings.mobile_spacing }}px;
+  --desktop-min-height: {{ section.settings.desktop_height }}px;
+  --mobile-min-height: {{ section.settings.mobile_height }}px;
+  --overlay-opacity: {{ section.settings.overlay_opacity | divided_by: 100.0 }};
+  position: relative;
+  overflow: hidden;
+  margin: 16px auto;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: {{ section.settings.background_color }};
+  color: {{ section.settings.text_color }};
+  min-height: var(--desktop-min-height);
+  padding: var(--desktop-padding);
+}
+
+#shopify-section-{{ section.id }} .dtf-cart::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: {% if cart_bg_image != blank %}url('{{ cart_bg_image | image_url: width: 2000 }}') center/cover no-repeat{% else %}transparent{% endif %};
+  z-index: 0;
+}
+
+#shopify-section-{{ section.id }} .dtf-cart__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: {{ section.settings.overlay_color }};
+  opacity: var(--overlay-opacity);
+}
+
+#shopify-section-{{ section.id }} .dtf-cart__inner {
+  position: relative;
+  z-index: 2;
+}
+
+#shopify-section-{{ section.id }} .dtf-cart-text-center .dtf-cart__inner { text-align: center; }
+#shopify-section-{{ section.id }} .dtf-cart-text-right .dtf-cart__inner { text-align: right; }
+
+#shopify-section-{{ section.id }} .dtf-cart-progress {
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 14px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.88);
+  color: #0f172a;
+  margin-bottom: 14px;
+}
+
+#shopify-section-{{ section.id }} .dtf-cart-progress__message { margin: 0 0 8px; }
+
+#shopify-section-{{ section.id }} .dtf-cart-progress__bar {
+  height: 12px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+#shopify-section-{{ section.id }} .dtf-cart-progress__fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #06b6d4, #2563eb);
+}
+
+#shopify-section-{{ section.id }} .dtf-cart-progress__tiers {
+  margin: 8px 0 0;
+  padding-left: 1rem;
+  display: grid;
+  gap: 4px;
+}
+
+#shopify-section-{{ section.id }} .dtf-cart-trust {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+#shopify-section-{{ section.id }} .dtf-cart-trust__badge {
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(15, 23, 42, 0.86);
+  color: #fff;
+  text-align: center;
+  font-size: 0.86rem;
+}
+
+#shopify-section-{{ section.id }} .dtf-cart-table-wrap { overflow-x: auto; }
+
+#shopify-section-{{ section.id }} .dtf-cart-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(255, 255, 255, 0.95);
+  color: #0f172a;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+#shopify-section-{{ section.id }} .dtf-cart-table th,
+#shopify-section-{{ section.id }} .dtf-cart-table td {
+  padding: 12px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  vertical-align: top;
+}
+
+#shopify-section-{{ section.id }} .dtf-cart-table input[type='number'] {
+  width: 72px;
+  padding: 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+}
+
+#shopify-section-{{ section.id }} .dtf-cart-footer {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #0f172a;
+}
+
+#shopify-section-{{ section.id }} .dtf-cart-footer__tier {
+  margin: 6px 0 0;
+}
+
+#shopify-section-{{ section.id }} .dtf-cart-footer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+#shopify-section-{{ section.id }} .dtf-cart-btn,
+#shopify-section-{{ section.id }} .dtf-cart__continue {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 10px 16px;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+#shopify-section-{{ section.id }} .dtf-cart-btn--primary {
+  background: {{ section.settings.primary_button_background }};
+  color: {{ section.settings.primary_button_text }};
+}
+
+#shopify-section-{{ section.id }} .dtf-cart-btn--secondary,
+#shopify-section-{{ section.id }} .dtf-cart__continue {
+  background: {{ section.settings.secondary_button_background }};
+  color: {{ section.settings.secondary_button_text }};
+  border: none;
+}
+
+@media (max-width: 989px) {
+  #shopify-section-{{ section.id }} .dtf-cart {
+    min-height: var(--mobile-min-height);
+    padding: var(--mobile-padding);
+  }
+
+  #shopify-section-{{ section.id }} .dtf-cart-table th,
+  #shopify-section-{{ section.id }} .dtf-cart-table td {
+    min-width: 140px;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-cart-footer__actions {
+    flex-direction: column;
+  }
+}
+</style>
+
+{% schema %}
+{
+  "name": "Main cart",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Your Cart" },
+    { "type": "checkbox", "id": "show_trust_badges", "label": "Show trust badges", "default": true },
+    { "type": "text", "id": "continue_label", "label": "Continue shopping label", "default": "Shop DTF Transfers" },
+    { "type": "url", "id": "continue_link", "label": "Continue shopping link" },
+    { "type": "range", "id": "tier_1_threshold", "label": "Tier 1 threshold", "min": 10, "max": 1000, "step": 5, "default": 50 },
+    { "type": "range", "id": "tier_2_threshold", "label": "Tier 2 threshold", "min": 20, "max": 1200, "step": 5, "default": 100 },
+    { "type": "range", "id": "tier_3_threshold", "label": "Tier 3 threshold", "min": 30, "max": 1500, "step": 5, "default": 200 },
+    { "type": "range", "id": "tier_4_threshold", "label": "Tier 4 threshold", "min": 40, "max": 2500, "step": 5, "default": 500 },
+    { "type": "select", "id": "text_alignment", "label": "Text alignment", "default": "left", "options": [{"value":"left","label":"Left"},{"value":"center","label":"Center"},{"value":"right","label":"Right"}] },
+    { "type": "range", "id": "desktop_spacing", "label": "Desktop spacing", "min": 8, "max": 100, "step": 4, "default": 28, "unit": "px" },
+    { "type": "range", "id": "mobile_spacing", "label": "Mobile spacing", "min": 8, "max": 70, "step": 2, "default": 14, "unit": "px" },
+    { "type": "range", "id": "desktop_height", "label": "Desktop height", "min": 260, "max": 1300, "step": 20, "default": 560, "unit": "px" },
+    { "type": "range", "id": "mobile_height", "label": "Mobile height", "min": 260, "max": 1800, "step": 20, "default": 620, "unit": "px" },
+    { "type": "color", "id": "background_color", "label": "Background color", "default": "#ffffff" },
+    { "type": "image_picker", "id": "background_image", "label": "Background image" },
+    { "type": "color", "id": "overlay_color", "label": "Overlay color", "default": "#000000" },
+    { "type": "range", "id": "overlay_opacity", "label": "Overlay opacity", "min": 0, "max": 90, "step": 5, "default": 0, "unit": "%" },
+    { "type": "color", "id": "text_color", "label": "Text color", "default": "#0f172a" },
+    { "type": "color", "id": "primary_button_background", "label": "Primary button background", "default": "#0f172a" },
+    { "type": "color", "id": "primary_button_text", "label": "Primary button text", "default": "#ffffff" },
+    { "type": "color", "id": "secondary_button_background", "label": "Secondary button background", "default": "#e2e8f0" },
+    { "type": "color", "id": "secondary_button_text", "label": "Secondary button text", "default": "#0f172a" }
+  ],
+  "blocks": [
+    {
+      "type": "trust_badge",
+      "name": "Trust badge",
+      "settings": [
+        { "type": "checkbox", "id": "show_block", "label": "Show block", "default": true },
+        { "type": "text", "id": "label", "label": "Label", "default": "Secure checkout" }
+      ]
+    }
+  ],
+  "max_blocks": 6,
+  "presets": [
+    {
+      "name": "Main cart",
+      "blocks": [
+        { "type": "trust_badge", "settings": { "label": "Secure checkout" } },
+        { "type": "trust_badge", "settings": { "label": "Fast turnaround" } },
+        { "type": "trust_badge", "settings": { "label": "No minimums" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -1,41 +1,45 @@
 {% liquid
-  assign cta_url = section.settings.cta_url | default: '/collections/custom-apparel'
+  assign cta_url = section.settings.cta_url | default: '/pages/customizer'
+  assign video_bg_image = section.settings.background_image
 %}
 
 <style>
-  #shopify-section-{{ section.id }} .dtf-video-section {
-    margin: 20px auto 32px;
-    padding: clamp(18px, 2.5vw, 28px);
-    background: #ffffff;
-    color: #0f172a;
-    border: 1px solid #e2e8f0;
-    border-radius: 22px;
-    box-shadow: 0 14px 35px rgba(15, 23, 42, 0.08);
-  }
-  #shopify-section-{{ section.id }} .dtf-video-shell { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; align-items: start; }
-  #shopify-section-{{ section.id }} .dtf-section-kicker { margin: 0 0 8px; color: #2563eb; font-size: 12px; font-weight: 800; letter-spacing: 0.16em; }
-  #shopify-section-{{ section.id }} .dtf-video-frame { background: linear-gradient(180deg, #f8fafc, #eef2ff); border: 1px solid #dbeafe; border-radius: 18px; padding: 16px; }
-  #shopify-section-{{ section.id }} .dtf-theme-video { display: block; width: 100%; border-radius: 16px; }
-  #shopify-section-{{ section.id }} .dtf-video-points { padding-left: 18px; }
-  #shopify-section-{{ section.id }} .dtf-button { display: inline-flex; align-items: center; justify-content: center; padding: 12px 18px; border-radius: 999px; text-decoration: none; font-weight: 800; margin-top: 10px; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; }
+#shopify-section-{{ section.id }} .dtf-video-section {
+  --desktop-padding: {{ section.settings.desktop_spacing }}px;
+  --mobile-padding: {{ section.settings.mobile_spacing }}px;
+  --desktop-min-height: {{ section.settings.desktop_height }}px;
+  --mobile-min-height: {{ section.settings.mobile_height }}px;
+  --overlay-opacity: {{ section.settings.overlay_opacity | divided_by: 100.0 }};
+  margin: 16px auto;
+  padding: var(--desktop-padding);
+  min-height: var(--desktop-min-height);
+  border-radius: 20px;
+  background: {{ section.settings.background_color }};
+  color: {{ section.settings.text_color }};
+  position: relative;
+  overflow: hidden;
+}
+#shopify-section-{{ section.id }} .dtf-video-section::before { content:''; position:absolute; inset:0; background:{% if video_bg_image != blank %}url('{{ video_bg_image | image_url: width: 2200 }}') center/cover no-repeat{% else %}transparent{% endif %}; z-index:0; }
+#shopify-section-{{ section.id }} .dtf-video-section::after { content:''; position:absolute; inset:0; background:{{ section.settings.overlay_color }}; opacity:var(--overlay-opacity); z-index:1; }
+#shopify-section-{{ section.id }} .dtf-video-section > * { position:relative; z-index:2; }
+#shopify-section-{{ section.id }} .dtf-video-shell { align-items: {{ section.settings.vertical_alignment }}; }
+#shopify-section-{{ section.id }} .dtf-video-copy { display:flex; flex-direction:column; justify-content:{{ section.settings.content_position }}; align-items:{{ section.settings.content_alignment }}; text-align:{{ section.settings.text_alignment }}; }
+#shopify-section-{{ section.id }} .dtf-theme-video { object-position: {{ section.settings.image_alignment }} center; }
+#shopify-section-{{ section.id }} .dtf-video-copy .dtf-button { align-self: {{ section.settings.cta_alignment }}; }
+@media (max-width: 989px) { #shopify-section-{{ section.id }} .dtf-video-section { padding: var(--mobile-padding); min-height: var(--mobile-min-height); } }
 </style>
 
 <section class="dtf-video-section page-width">
   <div class="dtf-video-shell">
     <div class="dtf-video-copy">
-      {% if section.settings.kicker != blank %}
-        <p class="dtf-section-kicker">{{ section.settings.kicker }}</p>
-      {% endif %}
-
+      {% if section.settings.kicker != blank %}<p class="dtf-section-kicker">{{ section.settings.kicker }}</p>{% endif %}
       <h2>{{ section.settings.heading }}</h2>
       <p>{{ section.settings.subtext }}</p>
-
       <ul class="dtf-video-points" role="list">
         <li>{{ section.settings.point_one }}</li>
         <li>{{ section.settings.point_two }}</li>
         <li>{{ section.settings.point_three }}</li>
       </ul>
-
       {% if section.settings.cta_label != blank %}
         <a href="{{ cta_url }}" class="dtf-button dtf-button-primary">{{ section.settings.cta_label }}</a>
       {% endif %}
@@ -48,7 +52,6 @@
         <div class="dtf-video-placeholder">
           <div class="dtf-chip">VIDEO READY</div>
           <strong>Upload a promo video in the section settings.</strong>
-          <span>Use this area for product walkthroughs, gang sheet demos, or starter pack promos.</span>
         </div>
       {% endif %}
     </div>
@@ -68,10 +71,23 @@
     { "type": "text", "id": "point_two", "label": "Point 2", "default": "Highlight gang sheets, transfer sizing, and apparel options" },
     { "type": "text", "id": "point_three", "label": "Point 3", "default": "Keep shoppers engaged longer on the page" },
     { "type": "url", "id": "cta_url", "label": "Button link" },
-    { "type": "text", "id": "cta_label", "label": "Button label", "default": "Shop now" }
+    { "type": "text", "id": "cta_label", "label": "Button label", "default": "Design Your Transfer Now" },
+    { "type": "select", "id": "content_alignment", "label": "Content alignment", "default": "flex-start", "options": [{"value":"flex-start","label":"Left"},{"value":"center","label":"Center"},{"value":"flex-end","label":"Right"}] },
+    { "type": "select", "id": "content_position", "label": "Content position", "default": "center", "options": [{"value":"flex-start","label":"Top"},{"value":"center","label":"Center"},{"value":"flex-end","label":"Bottom"}] },
+    { "type": "select", "id": "vertical_alignment", "label": "Vertical alignment", "default": "start", "options": [{"value":"start","label":"Top"},{"value":"center","label":"Center"},{"value":"end","label":"Bottom"}] },
+    { "type": "select", "id": "text_alignment", "label": "Text alignment", "default": "left", "options": [{"value":"left","label":"Left"},{"value":"center","label":"Center"},{"value":"right","label":"Right"}] },
+    { "type": "select", "id": "cta_alignment", "label": "CTA alignment", "default": "flex-start", "options": [{"value":"flex-start","label":"Left"},{"value":"center","label":"Center"},{"value":"flex-end","label":"Right"}] },
+    { "type": "select", "id": "image_alignment", "label": "Image alignment", "default": "center", "options": [{"value":"left","label":"Left"},{"value":"center","label":"Center"},{"value":"right","label":"Right"}] },
+    { "type": "range", "id": "desktop_spacing", "label": "Desktop spacing", "min": 12, "max": 120, "step": 4, "default": 24, "unit": "px" },
+    { "type": "range", "id": "mobile_spacing", "label": "Mobile spacing", "min": 8, "max": 80, "step": 2, "default": 14, "unit": "px" },
+    { "type": "range", "id": "desktop_height", "label": "Desktop section height", "min": 260, "max": 1100, "step": 20, "default": 420, "unit": "px" },
+    { "type": "range", "id": "mobile_height", "label": "Mobile section height", "min": 300, "max": 1400, "step": 20, "default": 520, "unit": "px" },
+    { "type": "color", "id": "background_color", "label": "Background color", "default": "#ffffff" },
+    { "type": "image_picker", "id": "background_image", "label": "Background image" },
+    { "type": "color", "id": "overlay_color", "label": "Overlay color", "default": "#000000" },
+    { "type": "range", "id": "overlay_opacity", "label": "Overlay opacity", "min": 0, "max": 90, "step": 5, "default": 0, "unit": "%" },
+    { "type": "color", "id": "text_color", "label": "Text color", "default": "#0f172a" }
   ],
-  "presets": [
-    { "name": "DTF Pro video" }
-  ]
+  "presets": [{ "name": "DTF Pro video" }]
 }
 {% endschema %}

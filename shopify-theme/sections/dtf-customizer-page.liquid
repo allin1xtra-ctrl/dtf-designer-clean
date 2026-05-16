@@ -1,10 +1,8 @@
 {% comment %}
   dtf-customizer-page.liquid — Embedded Vercel customizer for /pages/customizer
-  Reads ?product=, ?variant=, ?product_id=, ?source= from the page URL and
-  passes them into the Vercel app iframe so the correct product/mockup loads.
 {% endcomment %}
 
-{% assign designer_base = 'https://dtf-designer-clean.vercel.app/customizer' %}
+{% assign designer_base = section.settings.designer_url | default: 'https://dtf-designer-clean.vercel.app/customizer' %}
 {% assign param_product    = request.params.product    | default: '' %}
 {% assign param_variant    = request.params.variant    | default: '' %}
 {% assign param_product_id = request.params.product_id | default: '' %}
@@ -12,13 +10,18 @@
 {% assign param_reorder    = request.params.reorder    | default: '' %}
 {% assign param_artwork    = request.params.artwork    | default: '' %}
 
+{% assign page_bg_image = section.settings.background_image %}
 {% capture iframe_src %}{{ designer_base }}?source={{ param_source | url_encode }}&product={{ param_product | url_encode }}&variant={{ param_variant | url_encode }}&product_id={{ param_product_id | url_encode }}{% if param_reorder != '' %}&reorder={{ param_reorder | url_encode }}{% endif %}{% if param_artwork != '' %}&artwork={{ param_artwork | url_encode }}{% endif %}{% endcapture %}
 
-<div class="dtf-customizer-page">
-  <div class="dtf-customizer-page__header">
-    <h1 class="dtf-customizer-page__title">🎨 DTF Designer Pro</h1>
-    <p class="dtf-customizer-page__sub">Design your custom product, upload your artwork, and add straight to cart.</p>
-  </div>
+<div class="dtf-customizer-page dtf-customizer-page--{{ section.settings.text_alignment }}">
+  <div class="dtf-customizer-page__overlay"></div>
+
+  {% if section.settings.show_header %}
+    <div class="dtf-customizer-page__header">
+      <h1 class="dtf-customizer-page__title">{{ section.settings.heading }}</h1>
+      <p class="dtf-customizer-page__sub">{{ section.settings.subheading }}</p>
+    </div>
+  {% endif %}
 
   <div class="dtf-customizer-page__frame-wrap" id="dtf-customizer-frame-wrap">
     <iframe
@@ -38,45 +41,96 @@
 </div>
 
 <style>
-  .dtf-customizer-page {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 1.5rem 1rem 3rem;
+#shopify-section-{{ section.id }} .dtf-customizer-page {
+  --desktop-padding: {{ section.settings.desktop_spacing }}px;
+  --mobile-padding: {{ section.settings.mobile_spacing }}px;
+  --desktop-min-height: {{ section.settings.desktop_height }}px;
+  --mobile-min-height: {{ section.settings.mobile_height }}px;
+  --overlay-opacity: {{ section.settings.overlay_opacity | divided_by: 100.0 }};
+  --content-align: {{ section.settings.content_alignment }};
+  --cta-align: {{ section.settings.cta_alignment }};
+  position: relative;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: var(--desktop-padding);
+  min-height: var(--desktop-min-height);
+  border-radius: 18px;
+  overflow: hidden;
+  background: {{ section.settings.background_color }};
+  color: {{ section.settings.text_color }};
+}
+
+#shopify-section-{{ section.id }} .dtf-customizer-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: {% if page_bg_image != blank %}url('{{ page_bg_image | image_url: width: 2200 }}') center/cover no-repeat{% else %}transparent{% endif %};
+  z-index: 0;
+}
+
+#shopify-section-{{ section.id }} .dtf-customizer-page__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: {{ section.settings.overlay_color }};
+  opacity: var(--overlay-opacity);
+}
+
+#shopify-section-{{ section.id }} .dtf-customizer-page__header,
+#shopify-section-{{ section.id }} .dtf-customizer-page__frame-wrap {
+  position: relative;
+  z-index: 2;
+}
+
+#shopify-section-{{ section.id }} .dtf-customizer-page__header {
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: var(--content-align);
+  text-align: {{ section.settings.text_alignment }};
+}
+
+#shopify-section-{{ section.id }} .dtf-customizer-page__title {
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+  margin: 0 0 0.35rem;
+}
+
+#shopify-section-{{ section.id }} .dtf-customizer-page__sub {
+  margin: 0;
+  max-width: 70ch;
+}
+
+#shopify-section-{{ section.id }} .dtf-customizer-page__frame-wrap {
+  width: 100%;
+  min-height: var(--desktop-min-height);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+#shopify-section-{{ section.id }} .dtf-customizer-page__iframe {
+  width: 100%;
+  min-height: var(--desktop-min-height);
+  height: var(--desktop-min-height);
+  border: none;
+  border-radius: 14px;
+  display: block;
+}
+
+@media screen and (max-width: 989px) {
+  #shopify-section-{{ section.id }} .dtf-customizer-page {
+    padding: var(--mobile-padding);
+    min-height: var(--mobile-min-height);
   }
-  .dtf-customizer-page__header {
-    margin-bottom: 1.25rem;
+
+  #shopify-section-{{ section.id }} .dtf-customizer-page__frame-wrap,
+  #shopify-section-{{ section.id }} .dtf-customizer-page__iframe {
+    min-height: var(--mobile-min-height);
+    height: var(--mobile-min-height);
   }
-  .dtf-customizer-page__title {
-    font-size: 2rem;
-    font-weight: 800;
-    margin: 0 0 0.35rem;
-  }
-  .dtf-customizer-page__sub {
-    font-size: 1rem;
-    opacity: 0.75;
-    margin: 0;
-  }
-  .dtf-customizer-page__frame-wrap {
-    width: 100%;
-    min-height: 1100px;
-    border-radius: 1rem;
-    overflow: hidden;
-  }
-  .dtf-customizer-page__iframe {
-    width: 100%;
-    height: 1100px;
-    min-height: 1100px;
-    border: none;
-    border-radius: 1rem;
-    display: block;
-  }
-  @media screen and (max-width: 749px) {
-    .dtf-customizer-page__frame-wrap,
-    .dtf-customizer-page__iframe {
-      min-height: 1450px;
-      height: 1450px;
-    }
-  }
+}
 </style>
 
 <script>
@@ -85,31 +139,51 @@
   if (!iframe) return;
 
   var DESIGNER_ORIGIN = 'https://dtf-designer-clean.vercel.app';
-  var MIN_DESKTOP_H = 1100;
-  var MIN_MOBILE_H  = 1450;
+  var sectionRoot = document.getElementById('shopify-section-{{ section.id }}');
 
-  function getMinH() {
-    return window.matchMedia('(max-width: 749px)').matches ? MIN_MOBILE_H : MIN_DESKTOP_H;
+  function cssPx(variableName, fallback) {
+    if (!sectionRoot || !window.getComputedStyle) return fallback;
+    var raw = window.getComputedStyle(sectionRoot).getPropertyValue(variableName).trim();
+    var parsed = parseInt(raw, 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
   }
+
+  function minHeight() {
+    var desktop = cssPx('--desktop-min-height', 1100);
+    var mobile = cssPx('--mobile-min-height', 1450);
+    return window.matchMedia('(max-width: 989px)').matches ? mobile : desktop;
+  }
+
+  function applyHeight(nextHeight) {
+    var wrap = document.getElementById('dtf-customizer-frame-wrap');
+    iframe.style.height = nextHeight + 'px';
+    iframe.style.minHeight = nextHeight + 'px';
+    if (wrap) {
+      wrap.style.height = nextHeight + 'px';
+      wrap.style.minHeight = nextHeight + 'px';
+    }
+  }
+
+  applyHeight(minHeight());
+
+  window.addEventListener('resize', function () {
+    applyHeight(Math.max(minHeight(), parseInt(iframe.style.height || '0', 10) || 0));
+  });
 
   window.addEventListener('message', function (event) {
     if (event.source !== iframe.contentWindow) return;
     if (event.origin !== DESIGNER_ORIGIN) return;
 
     var msg = event.data || {};
-
-    // Handle iframe resize requests
-    var h = NaN;
+    var requestedHeight = NaN;
     if (msg.type === 'dtf:resize' && msg.payload) {
-      h = Number(msg.payload.height);
+      requestedHeight = Number(msg.payload.height);
     } else if (msg.type === 'DTF_IFRAME_HEIGHT') {
-      h = Number(msg.height);
+      requestedHeight = Number(msg.height);
     }
-    if (Number.isFinite(h) && h > 0) {
-      var next = Math.max(h, getMinH());
-      iframe.style.height = next + 'px';
-      var wrap = document.getElementById('dtf-customizer-frame-wrap');
-      if (wrap) wrap.style.minHeight = next + 'px';
+
+    if (Number.isFinite(requestedHeight) && requestedHeight > 0) {
+      applyHeight(Math.max(requestedHeight, minHeight()));
     }
   });
 })();
@@ -118,7 +192,24 @@
 {% schema %}
 {
   "name": "DTF Customizer Page",
-  "settings": [],
+  "settings": [
+    { "type": "url", "id": "designer_url", "label": "Customizer app URL", "default": "https://dtf-designer-clean.vercel.app/customizer" },
+    { "type": "checkbox", "id": "show_header", "label": "Show header", "default": true },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "🎨 DTF Designer Pro" },
+    { "type": "textarea", "id": "subheading", "label": "Subheading", "default": "Design your custom product, upload your artwork, and add straight to cart." },
+    { "type": "select", "id": "content_alignment", "label": "Content alignment", "default": "flex-start", "options": [{"value":"flex-start","label":"Left"},{"value":"center","label":"Center"},{"value":"flex-end","label":"Right"}] },
+    { "type": "select", "id": "text_alignment", "label": "Text alignment", "default": "left", "options": [{"value":"left","label":"Left"},{"value":"center","label":"Center"},{"value":"right","label":"Right"}] },
+    { "type": "select", "id": "cta_alignment", "label": "CTA alignment", "default": "flex-start", "options": [{"value":"flex-start","label":"Left"},{"value":"center","label":"Center"},{"value":"flex-end","label":"Right"}] },
+    { "type": "range", "id": "desktop_spacing", "label": "Desktop spacing", "min": 0, "max": 120, "step": 4, "default": 24, "unit": "px" },
+    { "type": "range", "id": "mobile_spacing", "label": "Mobile spacing", "min": 0, "max": 80, "step": 2, "default": 12, "unit": "px" },
+    { "type": "range", "id": "desktop_height", "label": "Desktop height", "min": 700, "max": 1800, "step": 20, "default": 1100, "unit": "px" },
+    { "type": "range", "id": "mobile_height", "label": "Mobile height", "min": 900, "max": 2400, "step": 20, "default": 1450, "unit": "px" },
+    { "type": "color", "id": "background_color", "label": "Background color", "default": "#ffffff" },
+    { "type": "image_picker", "id": "background_image", "label": "Background image" },
+    { "type": "color", "id": "overlay_color", "label": "Overlay color", "default": "#000000" },
+    { "type": "range", "id": "overlay_opacity", "label": "Overlay opacity", "min": 0, "max": 90, "step": 5, "default": 0, "unit": "%" },
+    { "type": "color", "id": "text_color", "label": "Text color", "default": "#0f172a" }
+  ],
   "presets": [{ "name": "DTF Customizer Page" }]
 }
 {% endschema %}

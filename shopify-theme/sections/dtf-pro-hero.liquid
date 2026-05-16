@@ -1,130 +1,91 @@
 {% liquid
-  assign apparel_url = section.settings.custom_drip_url | default: '/collections/custom-apparel'
-  assign transfer_url = section.settings.custom_transfers_url | default: '/collections/dtf-transfers-by-size'
-  assign premade_transfer_url = section.settings.premade_transfers_url | default: '/collections/dtf-transfers-by-size'
-  assign gang_sheet_url = section.settings.gang_sheets_url | default: '/products/dtf-gang-sheet-builder-build-your-own-sheet'
+  assign apparel_url = section.settings.custom_drip_url | default: '/collections/apparel'
+  assign transfer_url = section.settings.custom_transfers_url | default: '/collections/dtf-transfers'
+  assign premade_transfer_url = section.settings.premade_transfers_url | default: '/collections/dtf-transfers'
+  assign gang_sheet_url = section.settings.gang_sheets_url | default: '/collections/gang-sheets'
   assign starter_pack_url = section.settings.starter_packs_url | default: '/pages/customizer'
   assign transfer_joiner = '?'
   if transfer_url contains '?'
     assign transfer_joiner = '&'
   endif
-  assign customize_url = apparel_url
+  assign customize_url = starter_pack_url
   assign upload_url = transfer_url | append: transfer_joiner | append: 'dtf_mode=transfer&upload=1#dtf-designer'
+  assign hero_bg_image = section.settings.background_image
 %}
 
 {{ 'dtf-pro-theme.css' | asset_url | stylesheet_tag }}
 
 <style>
-  #shopify-section-{{ section.id }} .dtf-hero-section,
-  #shopify-section-{{ section.id }} .dtf-value-section,
-  #shopify-section-{{ section.id }} .dtf-faq-section,
-  #shopify-section-{{ section.id }} .dtf-video-section,
-  #shopify-section-{{ section.id }} .dtf-process-section {
-    margin: 20px auto 32px;
-    padding: clamp(18px, 2.5vw, 28px);
-    background: #ffffff;
-    color: #0f172a;
-    border: 1px solid #e2e8f0;
-    border-radius: 22px;
-    box-shadow: 0 14px 35px rgba(15, 23, 42, 0.08);
+#shopify-section-{{ section.id }} .dtf-hero-section {
+  --desktop-padding: {{ section.settings.desktop_spacing }}px;
+  --mobile-padding: {{ section.settings.mobile_spacing }}px;
+  --desktop-min-height: {{ section.settings.desktop_height }}px;
+  --mobile-min-height: {{ section.settings.mobile_height }}px;
+  --overlay-opacity: {{ section.settings.overlay_opacity | divided_by: 100.0 }};
+  margin: 16px auto;
+  padding: var(--desktop-padding);
+  min-height: var(--desktop-min-height);
+  border-radius: 22px;
+  background: {{ section.settings.background_color }};
+  color: {{ section.settings.text_color }};
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+#shopify-section-{{ section.id }} .dtf-hero-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: {% if hero_bg_image != blank %}url('{{ hero_bg_image | image_url: width: 2200 }}') center/cover no-repeat{% else %}transparent{% endif %};
+  z-index: 0;
+}
+
+#shopify-section-{{ section.id }} .dtf-hero-section::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: {{ section.settings.overlay_color }};
+  opacity: var(--overlay-opacity);
+  z-index: 1;
+}
+
+#shopify-section-{{ section.id }} .dtf-hero-shell {
+  position: relative;
+  z-index: 2;
+  min-height: calc(var(--desktop-min-height) - (var(--desktop-padding) * 2));
+  align-items: {{ section.settings.vertical_alignment }};
+}
+
+#shopify-section-{{ section.id }} .dtf-hero-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: {{ section.settings.content_position }};
+  align-items: {{ section.settings.content_alignment }};
+  text-align: {{ section.settings.text_alignment }};
+}
+
+#shopify-section-{{ section.id }} .dtf-hero-actions {
+  justify-content: {{ section.settings.cta_alignment }};
+}
+
+#shopify-section-{{ section.id }} .dtf-hero-image {
+  object-position: {{ section.settings.image_alignment }} center;
+}
+
+@media (max-width: 989px) {
+  #shopify-section-{{ section.id }} .dtf-hero-section {
+    padding: var(--mobile-padding);
+    min-height: var(--mobile-min-height);
   }
-  #shopify-section-{{ section.id }} .dtf-hero-shell,
-  #shopify-section-{{ section.id }} .dtf-faq-grid,
-  #shopify-section-{{ section.id }} .dtf-video-shell {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 18px;
-    align-items: start;
+
+  #shopify-section-{{ section.id }} .dtf-hero-shell {
+    min-height: calc(var(--mobile-min-height) - (var(--mobile-padding) * 2));
   }
-  #shopify-section-{{ section.id }} .dtf-value-grid,
-  #shopify-section-{{ section.id }} .dtf-process-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 14px;
-  }
-  #shopify-section-{{ section.id }} .dtf-hero-card,
-  #shopify-section-{{ section.id }} .dtf-value-card,
-  #shopify-section-{{ section.id }} .dtf-video-frame,
-  #shopify-section-{{ section.id }} .dtf-process-card,
-  #shopify-section-{{ section.id }} .dtf-inline-cta,
-  #shopify-section-{{ section.id }} .dtf-faq-item {
-    background: linear-gradient(180deg, #f8fafc, #eef2ff);
-    border: 1px solid #dbeafe;
-    border-radius: 18px;
-    padding: 16px;
-  }
-  #shopify-section-{{ section.id }} .dtf-section-kicker,
-  #shopify-section-{{ section.id }} .dtf-hero-kicker {
-    margin: 0 0 8px;
-    color: #2563eb;
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 0.16em;
-  }
-  #shopify-section-{{ section.id }} .dtf-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 12px 18px;
-    border-radius: 999px;
-    text-decoration: none;
-    font-weight: 800;
-    margin-right: 10px;
-    margin-top: 10px;
-  }
-  #shopify-section-{{ section.id }} .dtf-button-primary {
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
-    color: #ffffff;
-  }
-  #shopify-section-{{ section.id }} .dtf-button-secondary {
-    background: #0f172a;
-    color: #ffffff;
-  }
-  #shopify-section-{{ section.id }} .dtf-hero-actions,
-  #shopify-section-{{ section.id }} .dtf-order-rail {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 14px;
-  }
-  #shopify-section-{{ section.id }} .dtf-order-card {
-    display: block;
-    text-decoration: none;
-    color: #0f172a;
-    background: #ffffff;
-    border: 1px solid #dbeafe;
-    border-radius: 14px;
-    padding: 12px;
-    min-width: 150px;
-  }
-  #shopify-section-{{ section.id }} .dtf-order-title,
-  #shopify-section-{{ section.id }} .dtf-process-number,
-  #shopify-section-{{ section.id }} .dtf-value-icon,
-  #shopify-section-{{ section.id }} .dtf-chip {
-    font-weight: 800;
-    color: #1d4ed8;
-  }
-  #shopify-section-{{ section.id }} .dtf-hero-image,
-  #shopify-section-{{ section.id }} .dtf-theme-video {
-    display: block;
-    width: 100%;
-    border-radius: 16px;
-  }
-  #shopify-section-{{ section.id }} .dtf-inline-cta,
-  #shopify-section-{{ section.id }} .dtf-process-footer {
-    margin-top: 16px;
-  }
-  #shopify-section-{{ section.id }} .dtf-faq-list {
-    display: grid;
-    gap: 12px;
-  }
-  #shopify-section-{{ section.id }} .dtf-faq-item summary {
-    cursor: pointer;
-    font-weight: 700;
-  }
+}
 </style>
 
-<section class="dtf-hero-section" style="--dtf-hero-overlay: {{ section.settings.overlay_opacity | divided_by: 100.0 }};">
+<section class="dtf-hero-section">
   <div class="dtf-hero-shell page-width">
     <div class="dtf-hero-copy">
       {% if section.settings.kicker != blank %}
@@ -208,13 +169,13 @@
     { "type": "text", "id": "kicker", "label": "Kicker", "default": "YOUR FAVORITE DTF PLUG" },
     { "type": "text", "id": "heading", "label": "Heading", "default": "Custom DTF Transfers Made Easy" },
     { "type": "richtext", "id": "text", "label": "Text", "default": "<p>Upload your artwork, build gang sheets, customize apparel, and get vibrant ready-to-press transfers with no minimums and fast turnaround.</p>" },
-    { "type": "url", "id": "custom_drip_url", "label": "Custom Drip collection URL" },
-    { "type": "url", "id": "custom_transfers_url", "label": "Custom Transfers designer product URL" },
-    { "type": "url", "id": "premade_transfers_url", "label": "Pre-made Transfers product URL" },
-    { "type": "url", "id": "gang_sheets_url", "label": "Gang Sheets product URL" },
-    { "type": "url", "id": "starter_packs_url", "label": "Starter Packs product URL" },
-    { "type": "text", "id": "customize_label", "label": "Customize button label", "default": "Customize Apparel" },
-    { "type": "text", "id": "upload_label", "label": "Upload button label", "default": "Order DTF Transfers" },
+    { "type": "url", "id": "custom_drip_url", "label": "Custom apparel collection URL" },
+    { "type": "url", "id": "custom_transfers_url", "label": "Custom Transfers URL" },
+    { "type": "url", "id": "premade_transfers_url", "label": "Pre-made Transfers URL" },
+    { "type": "url", "id": "gang_sheets_url", "label": "Gang Sheets URL" },
+    { "type": "url", "id": "starter_packs_url", "label": "Customizer URL" },
+    { "type": "text", "id": "customize_label", "label": "Primary CTA label", "default": "Design Your Transfer Now" },
+    { "type": "text", "id": "upload_label", "label": "Secondary CTA label", "default": "Shop DTF Transfers" },
     { "type": "image_picker", "id": "hero_image", "label": "Hero image" },
     { "type": "text", "id": "stat_one_value", "label": "Stat 1 value", "default": "No minimums" },
     { "type": "text", "id": "stat_one_label", "label": "Stat 1 label", "default": "Order any quantity" },
@@ -225,7 +186,21 @@
     { "type": "text", "id": "point_one", "label": "Point 1", "default": "Custom DTF transfers and gang sheets for every order size" },
     { "type": "text", "id": "point_two", "label": "Point 2", "default": "Custom t-shirts and hoodies with full-color artwork upload" },
     { "type": "text", "id": "point_three", "label": "Point 3", "default": "Simple online design flow with secure Shopify checkout" },
-    { "type": "range", "id": "overlay_opacity", "label": "Overlay opacity", "min": 0, "max": 70, "step": 5, "default": 20, "unit": "%" }
+    { "type": "select", "id": "content_alignment", "label": "Content alignment", "default": "flex-start", "options": [{"value":"flex-start","label":"Left"},{"value":"center","label":"Center"},{"value":"flex-end","label":"Right"}] },
+    { "type": "select", "id": "content_position", "label": "Content position", "default": "center", "options": [{"value":"flex-start","label":"Top"},{"value":"center","label":"Center"},{"value":"flex-end","label":"Bottom"}] },
+    { "type": "select", "id": "vertical_alignment", "label": "Vertical alignment", "default": "center", "options": [{"value":"start","label":"Top"},{"value":"center","label":"Center"},{"value":"end","label":"Bottom"}] },
+    { "type": "select", "id": "text_alignment", "label": "Text alignment", "default": "left", "options": [{"value":"left","label":"Left"},{"value":"center","label":"Center"},{"value":"right","label":"Right"}] },
+    { "type": "select", "id": "cta_alignment", "label": "CTA alignment", "default": "flex-start", "options": [{"value":"flex-start","label":"Left"},{"value":"center","label":"Center"},{"value":"flex-end","label":"Right"}] },
+    { "type": "select", "id": "image_alignment", "label": "Image alignment", "default": "center", "options": [{"value":"left","label":"Left"},{"value":"center","label":"Center"},{"value":"right","label":"Right"}] },
+    { "type": "range", "id": "desktop_spacing", "label": "Desktop spacing", "min": 12, "max": 120, "step": 4, "default": 28, "unit": "px" },
+    { "type": "range", "id": "mobile_spacing", "label": "Mobile spacing", "min": 8, "max": 80, "step": 2, "default": 16, "unit": "px" },
+    { "type": "range", "id": "desktop_height", "label": "Desktop section height", "min": 320, "max": 1100, "step": 20, "default": 620, "unit": "px" },
+    { "type": "range", "id": "mobile_height", "label": "Mobile section height", "min": 360, "max": 1400, "step": 20, "default": 780, "unit": "px" },
+    { "type": "color", "id": "background_color", "label": "Background color", "default": "#ffffff" },
+    { "type": "image_picker", "id": "background_image", "label": "Background image" },
+    { "type": "color", "id": "overlay_color", "label": "Overlay color", "default": "#000000" },
+    { "type": "range", "id": "overlay_opacity", "label": "Overlay opacity", "min": 0, "max": 90, "step": 5, "default": 0, "unit": "%" },
+    { "type": "color", "id": "text_color", "label": "Text color", "default": "#0f172a" }
   ],
   "presets": [
     { "name": "DTF Pro hero" }
