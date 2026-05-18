@@ -84,7 +84,7 @@ return (
               onLoad={(event) => {
                 const image = event.currentTarget;
                 const naturalWidth = image.naturalWidth || 0;
-                const naturalHeight = image.naturalHeight || 0;
+                const nextHeight = 620;
 
                 setMockupNaturalSize((prev) =>
                   prev.width === naturalWidth && prev.height === naturalHeight
