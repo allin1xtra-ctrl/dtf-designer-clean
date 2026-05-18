@@ -1,6 +1,11 @@
 return (
-  <div className="h-[100dvh] overflow-hidden bg-black text-white">
+  <div className="h-[100dvh] overflow-hidden bg-[#0e0e0e] text-white">
     <style jsx global>{`
+      html,
+      body {
+        overflow-x: hidden;
+      }
+
       .canvas-container,
       .upper-canvas,
       .lower-canvas {
@@ -14,32 +19,46 @@ return (
       .canvas-container {
         z-index: 10 !important;
       }
-
-      html,
-      body {
-        overflow-x: hidden;
-      }
     `}</style>
 
     <div className="flex h-full min-w-[960px] flex-row overflow-hidden bg-black">
-      <aside className="w-[360px] shrink-0 overflow-y-auto overflow-x-hidden border-r border-[#222] bg-[#111]">
-        <PrintLocationControls
-          availableViews={availableViews}
-          currentView={currentView}
-          isReady={isReady}
-          loadView={loadView}
-          printLocationsError={printLocationsError}
-        />
+      <aside className="h-full w-[360px] shrink-0 overflow-y-auto overflow-x-hidden border-r border-[#222] bg-[#111] p-5">
+        <div>
+          <h1 className="text-xl font-bold">DTF Designer Pro</h1>
+          <p className="mt-1 text-sm text-gray-400">
+            Upload artwork, customize DTF transfers and gang sheets, place designs on custom
+            t-shirts and hoodies, then send your order details to Shopify checkout.
+          </p>
+        </div>
 
-        {/* KEEP ALL YOUR EXISTING CONTROLS HERE */}
-        {/* Everything currently inside <aside> stays here */}
-        {/* Upload, AI tools, object tools, text tools, checkout, Add to Cart */}
+        <div className="mt-5">
+          <PrintLocationControls
+            availableViews={availableViews}
+            currentView={currentView}
+            isReady={isReady}
+            loadView={loadView}
+            printLocationsError={printLocationsError}
+          />
+        </div>
+
+        {draftStatus ? (
+          <div
+            role="status"
+            aria-live="polite"
+            className="mt-3 rounded border border-[#2b2b2b] bg-[#1a1a1a] px-3 py-2 text-xs text-gray-300"
+          >
+            {draftStatus}
+          </div>
+        ) : null}
+
+        {/* PASTE ALL EXISTING CONTROL BLOCKS HERE */}
+        {/* Everything from Upload Artwork through Checkout/Add to Cart stays here. */}
       </aside>
 
-      <main className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+      <main className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
         <div
           ref={previewPaneRef}
-          className="flex h-full w-full items-center justify-center overflow-hidden bg-[#181818] px-2 py-2"
+          className="flex h-full w-full items-start justify-center overflow-hidden bg-[#181818] px-2 py-2"
         >
           <div
             className={getPreviewStageClassName(currentView)}
@@ -47,7 +66,7 @@ return (
               width: `${CANVAS_DEFAULT_WIDTH}px`,
               height: `${CANVAS_DEFAULT_HEIGHT}px`,
               transform: `scale(${previewScale})`,
-              transformOrigin: "center center",
+              transformOrigin: "top center",
             }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
