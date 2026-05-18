@@ -1,5 +1,5 @@
 return (
-  <div className="overflow-hidden bg-[#0e0e0e] text-white">
+  <div className="w-full overflow-hidden bg-[#0e0e0e] text-white">
     <style jsx global>{`
       html,
       body {
@@ -20,10 +20,41 @@ return (
       .canvas-container {
         z-index: 10 !important;
       }
+
+      @media (max-width: 768px) {
+        .dtf-builder-shell {
+          height: auto !important;
+          min-width: 0 !important;
+          flex-direction: column !important;
+          background: #111 !important;
+        }
+
+        .dtf-builder-sidebar {
+          width: 100% !important;
+          height: auto !important;
+          border-right: 0 !important;
+          border-bottom: 1px solid #222 !important;
+        }
+
+        .dtf-builder-preview {
+          height: auto !important;
+          min-height: 360px !important;
+          background: transparent !important;
+        }
+
+        .dtf-preview-pane {
+          height: auto !important;
+          min-height: 360px !important;
+          align-items: flex-start !important;
+          padding-top: 12px !important;
+          padding-bottom: 12px !important;
+          background: transparent !important;
+        }
+      }
     `}</style>
 
-    <div className="flex h-[620px] min-w-[960px] flex-row overflow-hidden bg-black">
-      <aside className="h-full w-[360px] shrink-0 overflow-y-auto overflow-x-hidden border-r border-[#222] bg-[#111] p-5">
+    <div className="dtf-builder-shell flex h-[620px] min-w-[960px] flex-row overflow-hidden bg-black">
+      <aside className="dtf-builder-sidebar h-full w-[360px] shrink-0 overflow-y-auto overflow-x-hidden border-r border-[#222] bg-[#111] p-5">
         <div>
           <h1 className="text-xl font-bold">DTF Designer Pro</h1>
           <p className="mt-1 text-sm text-gray-400">
@@ -55,10 +86,10 @@ return (
         {/* KEEP YOUR EXISTING CONTROLS HERE */}
       </aside>
 
-      <main className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden bg-[#181818]">
+      <main className="dtf-builder-preview flex h-full min-h-0 min-w-0 flex-1 overflow-hidden bg-[#181818]">
         <div
           ref={previewPaneRef}
-          className="flex h-full w-full items-center justify-center overflow-hidden px-2 py-2"
+          className="dtf-preview-pane flex h-full w-full items-center justify-center overflow-hidden px-2 py-2"
         >
           <div
             className={getPreviewStageClassName(currentView)}
@@ -66,7 +97,7 @@ return (
               width: `${CANVAS_DEFAULT_WIDTH}px`,
               height: `${CANVAS_DEFAULT_HEIGHT}px`,
               transform: `scale(${previewScale})`,
-              transformOrigin: "center center",
+              transformOrigin: "top center",
             }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -84,7 +115,7 @@ return (
               onLoad={(event) => {
                 const image = event.currentTarget;
                 const naturalWidth = image.naturalWidth || 0;
-                const nextHeight = 620;
+                const naturalHeight = image.naturalHeight || 0;
 
                 setMockupNaturalSize((prev) =>
                   prev.width === naturalWidth && prev.height === naturalHeight
