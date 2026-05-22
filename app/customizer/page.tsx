@@ -2446,6 +2446,25 @@ export default function CustomizerPage() {
             overflow-x: hidden;
           }
 
+          .customizer-mobile-shell-wrap {
+            display: flex;
+            height: 100%;
+            width: 100%;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+          }
+
+          .customizer-mobile-shell {
+            display: grid;
+            grid-template-columns: 320px minmax(0, 1fr);
+            width: 920px;
+            min-width: 920px;
+            height: 100dvh;
+            transform: scale(min(1, calc(100vw / 920)));
+            transform-origin: center center;
+          }
+
           .canvas-container,
           .upper-canvas,
           .lower-canvas {
@@ -2461,8 +2480,9 @@ export default function CustomizerPage() {
         </p>
       </div>
 
-      <div className="flex h-full min-w-0 flex-col overflow-hidden md:grid md:grid-cols-[360px_minmax(0,1fr)]">
-        <aside className="order-2 w-full shrink-0 overflow-y-auto border-t border-[#222] bg-[#111] p-4 pb-12 md:order-1 md:h-dvh md:w-auto md:border-t-0 md:border-r md:p-5">
+      <div className="customizer-mobile-shell-wrap">
+      <div className="customizer-mobile-shell flex h-full min-w-0 overflow-hidden md:grid md:grid-cols-[360px_minmax(0,1fr)]">
+        <aside className="order-1 h-dvh w-[320px] shrink-0 overflow-y-auto border-r border-[#222] bg-[#111] p-4 pb-12 md:w-auto md:p-5">
           <div className="hidden md:block">
             <h1 className="text-xl font-bold">DTF Designer Pro</h1>
             <p className="mt-1 text-sm text-gray-400">
@@ -2717,10 +2737,10 @@ export default function CustomizerPage() {
         </div>
       </aside>
 
-        <main className="order-1 flex min-h-0 min-w-0 flex-1 flex-col bg-[#181818] md:order-2 md:px-6 md:py-6">
+        <main className="order-2 flex min-h-0 min-w-0 flex-1 flex-col bg-[#181818] px-3 py-3 md:px-6 md:py-6">
           <div
             ref={previewPaneRef}
-            className="flex h-full min-h-[420px] w-full max-w-full items-center justify-center overflow-hidden px-2 py-3 md:min-h-0 md:px-4 md:py-4"
+            className="flex h-full min-h-0 w-full max-w-full items-center justify-center overflow-hidden px-2 py-2 md:min-h-0 md:px-4 md:py-4"
           >
             <div
               className={getPreviewStageClassName(currentView)}
@@ -2767,6 +2787,7 @@ export default function CustomizerPage() {
               </div>
             </div>
         </main>
+      </div>
       </div>
     </div>
   );
