@@ -2483,8 +2483,8 @@ export default function CustomizerPage() {
         }
       `}</style>
       <div className="customizer-mobile-shell-wrap">
-      <div className="customizer-mobile-shell flex h-full min-w-0 overflow-hidden md:grid md:grid-cols-[360px_minmax(0,1fr)]">
-        <aside className="order-1 h-full w-[320px] shrink-0 overflow-y-auto border-r border-[#222] bg-[#111] p-4 pb-12 md:w-auto md:p-5">
+        <div className="customizer-mobile-shell flex h-full min-w-0 overflow-hidden md:grid md:grid-cols-[360px_minmax(0,1fr)]">
+          <aside className="order-1 h-full w-[320px] shrink-0 overflow-y-auto border-r border-[#222] bg-[#111] p-4 pb-12 md:w-auto md:p-5">
           <div>
             <h1 className="text-xl font-bold">DTF Designer Pro</h1>
             <p className="mt-1 text-sm text-gray-400">
@@ -2737,9 +2737,9 @@ export default function CustomizerPage() {
           <button type="button" onClick={handleAddToCart} disabled={isAddToCartDisabled} aria-describedby={addToCartDescriptionId} className="w-full rounded bg-white px-4 py-3 font-semibold text-black hover:bg-gray-200 disabled:cursor-not-allowed disabled:bg-gray-500">{isSubmitting ? "Uploading..." : "Add Custom Design to Cart"}</button>
           {cartStatus ? <p className="mt-3 text-sm text-gray-300">{cartStatus}</p> : null}
         </div>
-      </aside>
+          </aside>
 
-        <main className="order-2 flex min-h-0 min-w-0 flex-1 flex-col bg-[#181818] px-3 py-3 md:px-6 md:py-6">
+          <main className="order-2 flex min-h-0 min-w-0 flex-1 flex-col bg-[#181818] px-3 py-3 md:px-6 md:py-6">
           <div
             ref={previewPaneRef}
             className="flex h-full min-h-0 w-full max-w-full items-center justify-center overflow-hidden px-2 py-2 md:min-h-0 md:px-4 md:py-4"
@@ -2788,8 +2788,8 @@ export default function CustomizerPage() {
                 <canvas ref={canvasElRef} className="relative z-10" />
               </div>
             </div>
-        </main>
-      </div>
+          </main>
+        </div>
       </div>
     </div>
   );
