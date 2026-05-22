@@ -5,7 +5,10 @@ const CLOUDINARY_URL_PREFIX = "https://res.cloudinary.com/";
 
 export async function POST(request: Request) {
   try {
-    const cloudName = process.env.CLOUDINARY_CLOUD_NAME?.trim();
+    const cloudName = (
+      process.env.CLOUDINARY_CLOUD_NAME ||
+      process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+    )?.trim();
     const apiKey = process.env.CLOUDINARY_API_KEY?.trim();
     const apiSecret = process.env.CLOUDINARY_API_SECRET?.trim();
 
@@ -13,7 +16,7 @@ export async function POST(request: Request) {
       return Response.json(
         {
           error:
-            "Cloudinary is not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.",
+            "Cloudinary is not configured. Set CLOUDINARY_CLOUD_NAME (or NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME), CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.",
         },
         { status: 503 }
       );
