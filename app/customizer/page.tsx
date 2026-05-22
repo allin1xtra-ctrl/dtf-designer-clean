@@ -1,144 +1,129 @@
-return (
-  <div className="w-full overflow-hidden bg-[#0e0e0e] text-white">
-    <style jsx global>{`
-      html,
-      body {
-        overflow-x: hidden;
-        overflow-y: auto;
-      }
+'use client';
 
-      .canvas-container,
-      .upper-canvas,
-      .lower-canvas {
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-        max-width: 100% !important;
-        max-height: 100% !important;
-      }
+import { ChangeEvent, useMemo, useState } from 'react';
 
-      .canvas-container {
-        z-index: 10 !important;
-      }
+type Placement = 'front' | 'back' | 'left_sleeve' | 'right_sleeve' | 'neck_tag';
 
-      @media (max-width: 768px) {
-        .dtf-builder-shell {
-          height: auto !important;
-          min-width: 0 !important;
-          flex-direction: column !important;
-          background: #111 !important;
-        }
+type PlacementState = {
+  imageUrl: string | null;
+  fileName: string | null;
+};
 
-        .dtf-builder-sidebar {
-          width: 100% !important;
-          height: auto !important;
-          border-right: 0 !important;
-          border-bottom: 1px solid #222 !important;
-        }
+const PLACEMENTS: Placement[] = ['front', 'back', 'left_sleeve', 'right_sleeve', 'neck_tag'];
 
-        .dtf-builder-preview {
-          height: auto !important;
-          min-height: 360px !important;
-          background: transparent !important;
-        }
+const LABELS: Record<Placement, string> = {
+  front: 'Front',
+  back: 'Back',
+  left_sleeve: 'Left Sleeve',
+  right_sleeve: 'Right Sleeve',
+  neck_tag: 'Neck Tag',
+};
 
-        .dtf-preview-pane {
-          height: auto !important;
-          min-height: 360px !important;
-          align-items: flex-start !important;
-          padding-top: 12px !important;
-          padding-bottom: 12px !important;
-          background: transparent !important;
-        }
-      }
-    `}</style>
+const EMPTY_STATE: PlacementState = { imageUrl: null, fileName: null };
 
-    <div className="dtf-builder-shell flex h-[620px] min-w-[960px] flex-row overflow-hidden bg-black">
-      <aside className="dtf-builder-sidebar h-full w-[360px] shrink-0 overflow-y-auto overflow-x-hidden border-r border-[#222] bg-[#111] p-5">
-        <div>
-          <h1 className="text-xl font-bold">DTF Designer Pro</h1>
-          <p className="mt-1 text-sm text-gray-400">
-            Upload artwork, customize DTF transfers and gang sheets, place designs on custom
-            t-shirts and hoodies, then send your order details to Shopify checkout.
-          </p>
-        </div>
+export default function CustomizerPage() {
+  const [selectedPlacement, setSelectedPlacement] = useState<Placement>('front');
+  const [designStateByPlacement, setDesignStateByPlacement] = useState<Record<Placement, PlacementState>>({
+    front: EMPTY_STATE,
+    back: EMPTY_STATE,
+    left_sleeve: EMPTY_STATE,
+    right_sleeve: EMPTY_STATE,
+    neck_tag: EMPTY_STATE,
+  });
 
-        <div className="mt-5">
-          <PrintLocationControls
-            availableViews={availableViews}
-            currentView={currentView}
-            isReady={isReady}
-            loadView={loadView}
-            printLocationsError={printLocationsError}
-          />
-        </div>
+  const activePlacementState = designStateByPlacement[selectedPlacement] ?? EMPTY_STATE;
 
-        {draftStatus ? (
-          <div
-            role="status"
-            aria-live="polite"
-            className="mt-3 rounded border border-[#2b2b2b] bg-[#1a1a1a] px-3 py-2 text-xs text-gray-300"
+  const hasDesignForPlacement = useMemo(
+    () => Boolean(activePlacementState.imageUrl),
+    [activePlacementState.imageUrl],
+  );
+
+  const serializeCurrentPlacementState = () => {
+    setDesignStateByPlacement((prev) => ({
+      ...prev,
+      [selectedPlacement]: {
+        imageUrl: prev[selectedPlacement]?.imageUrl ?? null,
+        fileName: prev[selectedPlacement]?.fileName ?? null,
+      },
+    }));
+  };
+
+  const handlePlacementSwitch = (nextPlacement: Placement) => {
+    if (nextPlacement === selectedPlacement) return;
+    serializeCurrentPlacementState();
+    setSelectedPlacement(nextPlacement);
+  };
+
+  const handleUpload = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const fileUrl = URL.createObjectURL(file);
+
+    setDesignStateByPlacement((prev) => ({
+      ...prev,
+      [selectedPlacement]: {
+        imageUrl: fileUrl,
+        fileName: file.name,
+      },
+    }));
+
+    event.target.value = '';
+  };
+
+  const handleRemoveArtwork = () => {
+    setDesignStateByPlacement((prev) => ({
+      ...prev,
+      [selectedPlacement]: EMPTY_STATE,
+    }));
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0e0e0e] p-6 text-white">
+      <h1 className="mb-2 text-2xl font-bold">DTF Designer Pro</h1>
+      <p className="mb-6 text-sm text-gray-300">Placement-specific artwork state now persists across view switches.</p>
+
+      <div className="mb-4 flex flex-wrap gap-2">
+        {PLACEMENTS.map((placement) => (
+          <button
+            key={placement}
+            type="button"
+            onClick={() => handlePlacementSwitch(placement)}
+            className={`rounded border px-3 py-2 text-sm ${selectedPlacement === placement ? 'border-cyan-400 bg-cyan-500/20' : 'border-gray-600 bg-black/30'}`}
           >
-            {draftStatus}
-          </div>
-        ) : null}
+            {LABELS[placement]}
+          </button>
+        ))}
+      </div>
 
-        {/* KEEP YOUR EXISTING CONTROLS HERE */}
-      </aside>
-
-      <main className="dtf-builder-preview flex h-full min-h-0 min-w-0 flex-1 overflow-hidden bg-[#181818]">
-        <div
-          ref={previewPaneRef}
-          className="dtf-preview-pane flex h-full w-full items-center justify-center overflow-hidden px-2 py-2"
+      <div className="mb-4 flex items-center gap-3">
+        <label className="cursor-pointer rounded bg-cyan-600 px-3 py-2 text-sm font-medium hover:bg-cyan-500">
+          Upload Artwork
+          <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+        </label>
+        <button
+          type="button"
+          onClick={handleRemoveArtwork}
+          className="rounded border border-red-400 px-3 py-2 text-sm text-red-300 hover:bg-red-500/10"
         >
-          <div
-            className={getPreviewStageClassName(currentView)}
-            style={{
-              width: `${CANVAS_DEFAULT_WIDTH}px`,
-              height: `${CANVAS_DEFAULT_HEIGHT}px`,
-              transform: `scale(${previewScale})`,
-              transformOrigin: "top center",
-            }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={resolvedMockupUrl}
-              alt={`${VIEW_LABELS[currentView]} mockup`}
-              className={getMockupImageClassName()}
-              style={{
-                width: `${mockupRender.renderedWidth}px`,
-                height: `${mockupRender.renderedHeight}px`,
-                left: "50%",
-                top: "50%",
-                transform: "translate(-50%, -50%)",
-              }}
-              onLoad={(event) => {
-                const image = event.currentTarget;
-                const naturalWidth = image.naturalWidth || 0;
-                const naturalHeight = image.naturalHeight || 0;
+          Remove Artwork
+        </button>
+        {activePlacementState.fileName ? <span className="text-xs text-gray-400">{activePlacementState.fileName}</span> : null}
+      </div>
 
-                setMockupNaturalSize((prev) =>
-                  prev.width === naturalWidth && prev.height === naturalHeight
-                    ? prev
-                    : { width: naturalWidth, height: naturalHeight }
-                );
-              }}
-            />
-
-            <div
-              className="pointer-events-none absolute z-20 border border-dashed border-cyan-400"
-              style={{
-                left: `${resolvedPrintAreaBounds.left}px`,
-                top: `${resolvedPrintAreaBounds.top}px`,
-                width: `${resolvedPrintAreaBounds.width}px`,
-                height: `${resolvedPrintAreaBounds.height}px`,
-              }}
-            />
-
-            <canvas ref={canvasElRef} className="relative z-10" />
+      <div className="relative h-[520px] w-full max-w-[520px] overflow-hidden rounded border border-gray-700 bg-[#1a1a1a]">
+        {hasDesignForPlacement ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={activePlacementState.imageUrl ?? ''}
+            alt={`${LABELS[selectedPlacement]} artwork`}
+            className="h-full w-full object-contain"
+          />
+        ) : (
+          <div className="grid h-full place-items-center text-sm text-gray-400">
+            Blank canvas for {LABELS[selectedPlacement]}.
           </div>
-        </div>
-      </main>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+}
