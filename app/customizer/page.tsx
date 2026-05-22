@@ -2485,7 +2485,7 @@ export default function CustomizerPage() {
       <div className="customizer-mobile-shell-wrap">
         <div className="customizer-mobile-shell flex h-full min-w-0 overflow-hidden md:grid md:grid-cols-[360px_minmax(0,1fr)]">
           <aside className="order-1 h-full w-[320px] shrink-0 overflow-y-auto border-r border-[#222] bg-[#111] p-4 pb-12 md:w-auto md:p-5">
-          <div>
+            <div>
             <h1 className="text-xl font-bold">DTF Designer Pro</h1>
             <p className="mt-1 text-sm text-gray-400">
               Upload artwork, customize DTF transfers and gang sheets, place designs on custom
@@ -2790,6 +2790,7 @@ export default function CustomizerPage() {
             </div>
           </main>
         </div>
+      </div>
       </div>
     </div>
   );
