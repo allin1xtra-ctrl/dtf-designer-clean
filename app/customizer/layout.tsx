@@ -11,10 +11,9 @@ export default function CustomizerLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <>
-      {/* Hide the global site footer and lock the body to the viewport so the
-          canvas workspace fills exactly 100dvh with no black gaps. */}
+      {/* Keep footer hidden in the customizer route, but do not lock global
+          page scrolling to avoid Shopify host-page clipping issues. */}
       <style>{`
-        html, body { height: 100%; overflow: hidden; }
         body > footer { display: none; }
       `}</style>
       {children}
