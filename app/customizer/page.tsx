@@ -206,6 +206,7 @@ const MOCKUP_FIT_RATIO = 0.9;
 const MOCKUP_FIT_RATIO_SMALL_SCREEN = 0.92;
 const PREVIEW_PADDING = 8;
 const MIN_PREVIEW_SCALE = 0.01;
+const MIN_MOBILE_PREVIEW_SCALE = 0.32;
 const SCALE_CHANGE_THRESHOLD = 0.001;
 const VIEW_LOCATION_KEYS: Record<ViewName, string[]> = {
   front: ["front"],
@@ -828,6 +829,7 @@ export default function CustomizerPage() {
   const [draftStatus, setDraftStatus] = useState("");
   const [previewScale, setPreviewScale] = useState(1);
   const [mockupNaturalSize, setMockupNaturalSize] = useState({ width: 0, height: 0 });
+  const [mockupLoadFailed, setMockupLoadFailed] = useState(false);
   const [textControls, setTextControls] = useState<TextControlsState>(DEFAULT_TEXT_CONTROLS);
   const printableAreaRef = useRef({ left: 0, top: 0, width: 0, height: 0 });
   const shouldDebugAiLogRef = useRef(false);
@@ -1222,11 +1224,10 @@ export default function CustomizerPage() {
 
     const nextImage = await FabricImage.fromURL(nextDataUrl);
     const { left: areaLeft, top: areaTop, width: areaWidth, height: areaHeight } = printableAreaRef.current;
-
-    nextImage.scaleToWidth(areaWidth);
-    if (nextImage.getScaledHeight() > areaHeight) {
-      nextImage.scaleToHeight(areaHeight);
-    }
+    const baseWidth = nextImage.width || 1;
+    const baseHeight = nextImage.height || 1;
+    const coverScale = Math.max(areaWidth / baseWidth, areaHeight / baseHeight);
+    nextImage.scale(coverScale);
 
     nextImage.set({
       left: areaLeft + (areaWidth - nextImage.getScaledWidth()) / 2,
@@ -1243,7 +1244,17 @@ export default function CustomizerPage() {
   };
 
   const runAiRouteAction = async (route: string, actionName: string) => {
-    const activeObject = getCanvas()?.getActiveObject();
+    const canvas = getCanvas();
+    if (!canvas) return;
+
+    let activeObject = canvas.getActiveObject();
+    if (!isImageObject(activeObject)) {
+      const firstImage = canvas.getObjects().find((obj) => getObjectType(obj) === "image");
+      if (firstImage) {
+        canvas.setActiveObject(firstImage);
+        activeObject = firstImage;
+      }
+    }
 
     if (!isImageObject(activeObject)) {
       setAiStatus("Select an image first.");
@@ -1384,9 +1395,30 @@ export default function CustomizerPage() {
       });
 
       if (!response.ok || result.ok === false) {
-        setAiStatus(
-          result.error || "AI design generation is not configured. Add OPENAI_API_KEY in Vercel."
-        );
+        const canvas = getCanvas();
+        if (canvas) {
+          const fallbackText = new Textbox(prompt.slice(0, 80), {
+            left: printableAreaRef.current.left + 12,
+            top: printableAreaRef.current.top + 12,
+            fill: textControls.textColor,
+            stroke: textControls.outlineColor,
+            strokeWidth: textControls.outlineWidth,
+            fontSize: Math.max(18, Math.min(44, textControls.fontSize)),
+            fontFamily: textControls.fontFamily,
+            width: Math.max(140, printableAreaRef.current.width - 24),
+          });
+          canvas.add(fallbackText);
+          canvas.setActiveObject(fallbackText);
+          fallbackText.setCoords();
+          canvas.requestRenderAll();
+          syncSelectedObject();
+          requestDraftSave({ resume: true });
+          setAiStatus("AI service unavailable. Added prompt text to canvas as a fallback.");
+        } else {
+          setAiStatus(
+            result.error || "AI design generation is not configured. Add OPENAI_API_KEY in Vercel."
+          );
+        }
         return;
       }
 
@@ -1411,7 +1443,28 @@ export default function CustomizerPage() {
       }
     } catch (error) {
       console.error("AI design generation failed:", error);
-      setAiStatus("AI design generation failed. Please try a different prompt.");
+      const canvas = getCanvas();
+      if (canvas) {
+        const fallbackText = new Textbox(prompt.slice(0, 80), {
+          left: printableAreaRef.current.left + 12,
+          top: printableAreaRef.current.top + 12,
+          fill: textControls.textColor,
+          stroke: textControls.outlineColor,
+          strokeWidth: textControls.outlineWidth,
+          fontSize: Math.max(18, Math.min(44, textControls.fontSize)),
+          fontFamily: textControls.fontFamily,
+          width: Math.max(140, printableAreaRef.current.width - 24),
+        });
+        canvas.add(fallbackText);
+        canvas.setActiveObject(fallbackText);
+        fallbackText.setCoords();
+        canvas.requestRenderAll();
+        syncSelectedObject();
+        requestDraftSave({ resume: true });
+        setAiStatus("AI request failed. Added prompt text to canvas as a fallback.");
+      } else {
+        setAiStatus("AI design generation failed. Please try a different prompt.");
+      }
     }
   };
 
@@ -1740,11 +1793,11 @@ export default function CustomizerPage() {
   const exceedsPrintLimits = exceedsPrintWidth || exceedsPrintHeight;
 
   useEffect(() => {
-    if (!matchedSizeMockupKey) return;
+    if (!matchedSizeMockupKey || shouldShowTransferSizePreview) return;
     setTransferSize((currentTransferSize) =>
       currentTransferSize === matchedSizeMockupKey ? currentTransferSize : matchedSizeMockupKey
     );
-  }, [matchedSizeMockupKey, setTransferSize]);
+  }, [matchedSizeMockupKey, setTransferSize, shouldShowTransferSizePreview]);
   const isAddToCartDisabled = isSubmitting || Boolean(printLocationsError);
   const addToCartDescriptionId = printLocationsError ? "print-locations-error" : undefined;
 
@@ -1793,15 +1846,11 @@ export default function CustomizerPage() {
       const rect = previewPaneRef.current?.getBoundingClientRect();
       if (!rect) return;
 
-      const widthScale = Math.max(
-        (rect.width - PREVIEW_PADDING) / CANVAS_DEFAULT_WIDTH,
-        MIN_PREVIEW_SCALE
-      );
-      const heightScale = Math.max(
-        (rect.height - PREVIEW_PADDING) / CANVAS_DEFAULT_HEIGHT,
-        MIN_PREVIEW_SCALE
-      );
-      const nextScale = Math.min(widthScale, heightScale, 1);
+      const widthScale = (rect.width - PREVIEW_PADDING) / CANVAS_DEFAULT_WIDTH;
+      const heightScale = (rect.height - PREVIEW_PADDING) / CANVAS_DEFAULT_HEIGHT;
+      const isMobileViewport = window.innerWidth <= 768;
+      const minScale = isMobileViewport ? MIN_MOBILE_PREVIEW_SCALE : MIN_PREVIEW_SCALE;
+      const nextScale = Math.min(Math.max(Math.min(widthScale, heightScale), minScale), 1);
       // Ignore tiny float-only changes so ResizeObserver doesn't trigger unnecessary re-renders.
       setPreviewScale((prev) =>
         Math.abs(prev - nextScale) < SCALE_CHANGE_THRESHOLD ? prev : nextScale
@@ -1821,6 +1870,7 @@ export default function CustomizerPage() {
 
   useEffect(() => {
     setMockupNaturalSize({ width: 0, height: 0 });
+    setMockupLoadFailed(false);
   }, [resolvedMockupUrl]);
 
   useEffect(() => {
@@ -2079,11 +2129,10 @@ export default function CustomizerPage() {
       try {
         const img = await FabricImage.fromURL(result);
         const { left: areaLeft, top: areaTop, width: areaWidth, height: areaHeight } = printableAreaRef.current;
-
-        img.scaleToWidth(areaWidth);
-        if (img.getScaledHeight() > areaHeight) {
-          img.scaleToHeight(areaHeight);
-        }
+        const baseWidth = img.width || 1;
+        const baseHeight = img.height || 1;
+        const coverScale = Math.max(areaWidth / baseWidth, areaHeight / baseHeight);
+        img.scale(coverScale);
 
         img.set({
           left: areaLeft + (areaWidth - img.getScaledWidth()) / 2,
@@ -2480,14 +2529,13 @@ export default function CustomizerPage() {
           }
 
           .customizer-mobile-shell {
-            grid-template-columns: 320px minmax(0, 1fr);
-            width: 920px;
-            min-width: 920px;
+            display: grid;
+            grid-template-columns: minmax(170px, 40vw) minmax(170px, 1fr);
+            width: 100%;
+            min-width: 0;
             height: 100dvh;
             max-height: 100dvh;
             overflow: hidden;
-            transform: scale(min(1, calc(100vw / 920)));
-            transform-origin: top left;
           }
 
           .canvas-container,
@@ -2499,7 +2547,7 @@ export default function CustomizerPage() {
       `}</style>
       <div className="customizer-mobile-shell-wrap">
         <div className="customizer-mobile-shell flex h-full min-w-0 overflow-hidden md:grid md:grid-cols-[360px_minmax(0,1fr)]">
-          <aside className="order-1 h-full w-[320px] shrink-0 overflow-y-auto border-r border-[#222] bg-[#111] p-4 pb-12 md:w-auto md:p-5">
+          <aside className="order-1 h-full min-w-0 overflow-y-auto border-r border-[#222] bg-[#111] p-3 pb-12 md:p-5">
           <div>
             <h1 className="text-xl font-bold">DTF Designer Pro</h1>
             <p className="mt-1 text-sm text-gray-400">
@@ -2754,56 +2802,60 @@ export default function CustomizerPage() {
         </div>
         </aside>
 
-        <main className="order-2 flex min-h-0 min-w-0 flex-1 flex-col bg-[#181818] px-3 py-3 md:px-6 md:py-6">
+        <main className="order-2 flex h-full min-h-0 min-w-0 overflow-hidden bg-[#181818]">
+          <div
+            ref={previewPaneRef}
+            className="relative flex h-full min-h-0 w-full min-w-0 items-center justify-center overflow-hidden px-1 py-1 md:px-4 md:py-4"
+          >
             <div
-              ref={previewPaneRef}
-              className="flex h-full min-h-0 w-full max-w-full items-center justify-center overflow-hidden px-2 py-2 md:min-h-0 md:px-4 md:py-4"
-            >
-              <div
-                className={getPreviewStageClassName(currentView)}
+              className={`${getPreviewStageClassName(currentView)} relative shrink-0`}
               style={{
                 width: `${CANVAS_DEFAULT_WIDTH}px`,
                 height: `${CANVAS_DEFAULT_HEIGHT}px`,
                 transform: `scale(${previewScale})`,
                 transformOrigin: "center center",
               }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={resolvedMockupUrl}
-                  alt={`${VIEW_LABELS[currentView]} mockup`}
-                  className={getMockupImageClassName()}
-                  style={{
-                    width: `${mockupRender.renderedWidth}px`,
-                    height: `${mockupRender.renderedHeight}px`,
-                    left: "50%",
-                    top: "50%",
-                    transform: "translate(-50%, -50%)",
-                  }}
-                  onLoad={(event) => {
-                    const image = event.currentTarget;
-                    const naturalWidth = image.naturalWidth || 0;
-                    const naturalHeight = image.naturalHeight || 0;
-                    setMockupNaturalSize((prev) =>
-                      prev.width === naturalWidth && prev.height === naturalHeight
-                        ? prev
-                        : { width: naturalWidth, height: naturalHeight }
-                    );
-                  }}
-                />
-                <div
-                  className="pointer-events-none absolute z-20 border border-dashed border-cyan-400"
-                  style={{
-                    left: `${resolvedPrintAreaBounds.left}px`,
-                    top: `${resolvedPrintAreaBounds.top}px`,
-                    width: `${resolvedPrintAreaBounds.width}px`,
-                    height: `${resolvedPrintAreaBounds.height}px`,
-                  }}
-                />
-                <canvas ref={canvasElRef} className="relative z-10" />
-              </div>
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={mockupLoadFailed ? GENERIC_BLANK_MOCKUPS[currentView] : resolvedMockupUrl}
+                alt={`${VIEW_LABELS[currentView]} mockup`}
+                className={getMockupImageClassName()}
+                style={{
+                  width: `${mockupRender.renderedWidth}px`,
+                  height: `${mockupRender.renderedHeight}px`,
+                  left: "50%",
+                  top: "50%",
+                  transform: "translate(-50%, -50%)",
+                }}
+                onLoad={(event) => {
+                  const image = event.currentTarget;
+                  const naturalWidth = image.naturalWidth || 0;
+                  const naturalHeight = image.naturalHeight || 0;
+                  setMockupNaturalSize((prev) =>
+                    prev.width === naturalWidth && prev.height === naturalHeight
+                      ? prev
+                      : { width: naturalWidth, height: naturalHeight }
+                  );
+                }}
+                onError={() => {
+                  if (mockupLoadFailed) return;
+                  setMockupLoadFailed(true);
+                }}
+              />
+              <div
+                className="pointer-events-none absolute z-20 border border-dashed border-cyan-400"
+                style={{
+                  left: `${resolvedPrintAreaBounds.left}px`,
+                  top: `${resolvedPrintAreaBounds.top}px`,
+                  width: `${resolvedPrintAreaBounds.width}px`,
+                  height: `${resolvedPrintAreaBounds.height}px`,
+                }}
+              />
+              <canvas ref={canvasElRef} className="relative z-10" />
             </div>
-          </main>
+          </div>
+        </main>
         </div>
       </div>
     </div>
