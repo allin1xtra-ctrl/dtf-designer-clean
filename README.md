@@ -1,109 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Campaign Concept Studio (Next.js + OpenAI Responses API)
 
-## Getting Started
+A full-stack campaign concept studio for marketing teams. Users enter a short campaign brief and receive:
+- a concise campaign concept
+- 3 headline/body copy variants
+- a launch checklist
+- image prompts and generated images
 
-First, run the development server:
+## Stack
+- Next.js App Router
+- Server Route Handler (`app/api/campaign-studio/route.ts`)
+- OpenAI Node SDK via the **Responses API** (text + image generation)
+
+## Client/Server Boundary
+- **Client UI**: `app/campaign-studio/page.tsx` collects form inputs and renders results.
+- **Server API**: `app/api/campaign-studio/route.ts` performs all OpenAI calls.
+- `OPENAI_API_KEY` is never exposed to the browser.
+
+## Environment Variables
+Create `.env.local`:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+OPENAI_API_KEY=your_api_key_here
+# Optional overrides
+OPENAI_TEXT_MODEL=gpt-5.4-mini
+OPENAI_IMAGE_MODEL=gpt-image-2
+OPENAI_IMAGE_SIZE=1024x1024
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Model guidance reference: https://developers.openai.com/api/docs/models
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Install & Run
+```bash
+npm install
+npm run dev
+```
+Open `http://localhost:3000/campaign-studio`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Production Build
+```bash
+npm run build
+npm run start
+```
 
-## Learn More
+## Deployment Notes
+- Add the same environment variables to your hosting provider (e.g. Vercel Project Settings → Environment Variables).
+- Keep OpenAI requests server-side only (`app/api/campaign-studio/route.ts`).
+- If you need lower latency/cost, start by adjusting `OPENAI_TEXT_MODEL` and image size.
 
-To learn more about Next.js, take a look at the following resources:
+## Validation Plan (small)
+1. **Happy path**: Submit all 5 fields and verify concept, 3 variants, checklist, 3 prompts, and 3 images render.
+2. **Validation path**: Leave a field blank; confirm server returns 400 and UI shows an error state.
+3. **Key missing path**: Remove `OPENAI_API_KEY`; confirm clear setup error message.
+4. **Loading/empty states**: Confirm pre-submit empty state and in-flight loading copy are visible.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Where to Adjust Later
+- **Model choice**: `DEFAULT_TEXT_MODEL` / `DEFAULT_IMAGE_MODEL` in `app/api/campaign-studio/route.ts` or env vars.
+- **Prompting**: system prompt + `sharedContext` in `app/api/campaign-studio/route.ts`.
+- **Image settings**: `OPENAI_IMAGE_SIZE` and the generated `imagePrompts` handling in `app/api/campaign-studio/route.ts`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
+## Workflow Example
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```ts
+import { sleep } from "workflow";
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+export async function handleUserSignup(email: string) {
+  "use workflow";
 
----
+  const user = await createUser(email);
+  await sendWelcomeEmail(user);
 
-## Performance Optimization Checklist (Shopify/Next.js)
+  await sleep("5s");
 
-### 1. Fix Forced Reflows (Layout Thrashing)
-- Refactor all DOM reads (offsetHeight, getBoundingClientRect) to occur before DOM writes (style changes, element insertion).
-- If a read must happen after a write, wrap it in requestAnimationFrame().
-- Example:
-  ```js
-  // BAD
-  element.style.height = '100px';
-  const height = element.offsetHeight; // Forces reflow
-
-  // GOOD
-  const height = element.offsetHeight;
-  element.style.height = '100px';
-
-  // Or, if you must read after write:
-  element.style.height = '100px';
-  requestAnimationFrame(() => {
-    const height = element.offsetHeight;
-    // ...use height
-  });
-  ```
-
-### 2. Reduce LCP Render Delay
-- Use SSR (getServerSideProps/getStaticProps) for H1 and main layout.
-- Code split non-critical components (React.lazy, dynamic()).
-- Defer non-essential JS until after main content renders.
-
-### 3. Stabilize Layout Shifts (CLS)
-- Pre-allocate space for iframes and dynamic containers (min-height, aspect-ratio, or skeleton loaders).
-- Example:
-  ```jsx
-  <div style={{ minHeight: 900, aspectRatio: '4/3' }}>
-    {isLoaded ? <iframe ... /> : <Skeleton />}
-  </div>
-  ```
-
-### 4. Remove Legacy JavaScript
-- Set build targets to esnext or modern browsers in Babel/Vite/Next.js config.
-- Use browserslist: ["defaults", "not IE 11", "not dead"] in package.json.
-- Remove polyfills for features supported by your target browsers.
-- Use <script type="module"> for modern JS and <script nomodule> for legacy fallback if needed.
-
----
-
-## Shopify Admin Performance Fixes (Implementation Plan)
-
-### 1. Eliminate Forced Reflows (Layout Thrashing)
-- Audit setTopBarOffset and setGlobalRibbonHeight in render-common-d44506a258ea.js.
-- Refactor: Ensure all DOM reads (offsetHeight, getBoundingClientRect) happen before DOM writes (style changes, element insertion).
-- If a read must happen after a write, wrap it in requestAnimationFrame().
-
-### 2. Optimize LCP & Reduce Render Delay
-- Ensure H1 and main content are rendered server-side (SSR), not injected by JS.
-- Inline critical CSS for header/above-the-fold content.
-- Defer non-critical JS until after main content is visible.
-
-### 3. Fix Layout Shifts (CLS)
-- Reserve space for iframes and dynamic containers using min-height or aspect-ratio.
-- Example: `.dynamic-container { min-height: 900px; }`
-
-### 4. Remove Legacy JavaScript
-- Update build config (Vite, Babel, Next.js) to target modern browsers (esnext or similar).
-- In package.json, use: `"browserslist": ["defaults", "not IE 11", "not dead"]`
-- Remove unnecessary polyfills for supported features.
-
----
-
-> For more details, see the performance diagnostics and recommendations in your project documentation or ask your AI assistant for targeted code reviews.
-> Deploy trigger: 2026-05-05
+  await sendOnboardingEmail(user);
+  return { userId: user.id, status: "onboarded" };
+}
+```
