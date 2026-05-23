@@ -44,6 +44,12 @@ export default function Home() {
           >
             Customize Apparel
           </Link>
+          <Link
+            href="/campaign-studio"
+            className="rounded-full border border-cyan-400/40 bg-cyan-400/10 px-8 py-4 font-bold text-cyan-200 transition hover:bg-cyan-400/20"
+          >
+            Campaign Concept Studio
+          </Link>
         </div>
 
         <div className="mt-12 grid max-w-5xl gap-4 text-left md:grid-cols-3">
