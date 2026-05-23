@@ -2752,22 +2752,22 @@ export default function CustomizerPage() {
           <button type="button" onClick={handleAddToCart} disabled={isAddToCartDisabled} aria-describedby={addToCartDescriptionId} className="w-full rounded bg-white px-4 py-3 font-semibold text-black hover:bg-gray-200 disabled:cursor-not-allowed disabled:bg-gray-500">{isSubmitting ? "Uploading..." : "Add Custom Design to Cart"}</button>
           {cartStatus ? <p className="mt-3 text-sm text-gray-300">{cartStatus}</p> : null}
         </div>
-          </aside>
+        </aside>
 
-          <main className="order-2 flex min-h-0 min-w-0 flex-1 flex-col bg-[#181818] px-3 py-3 md:px-6 md:py-6">
-          <div
-            ref={previewPaneRef}
-            className="flex h-full min-h-0 w-full max-w-full items-center justify-center overflow-hidden px-2 py-2 md:min-h-0 md:px-4 md:py-4"
-          >
+        <main className="order-2 flex min-h-0 min-w-0 flex-1 flex-col bg-[#181818] px-3 py-3 md:px-6 md:py-6">
             <div
-              className={getPreviewStageClassName(currentView)}
+              ref={previewPaneRef}
+              className="flex h-full min-h-0 w-full max-w-full items-center justify-center overflow-hidden px-2 py-2 md:min-h-0 md:px-4 md:py-4"
+            >
+              <div
+                className={getPreviewStageClassName(currentView)}
               style={{
                 width: `${CANVAS_DEFAULT_WIDTH}px`,
                 height: `${CANVAS_DEFAULT_HEIGHT}px`,
                 transform: `scale(${previewScale})`,
                 transformOrigin: "center center",
               }}
-            >
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={resolvedMockupUrl}
