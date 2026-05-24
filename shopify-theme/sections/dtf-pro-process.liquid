@@ -1,28 +1,31 @@
 {% liquid
   assign product_url = section.settings.product_url | default: '/pages/customizer'
-  assign query_joiner = '?'
-  if product_url contains '?'
-    assign query_joiner = '&'
-  endif
-  assign designer_url = product_url | append: query_joiner | append: 'dtf_mode=apparel#dtf-designer'
+  assign process_bg_image = section.settings.background_image
 %}
 
 <style>
-  #shopify-section-{{ section.id }} .dtf-process-section {
-    margin: 20px auto 32px;
-    padding: clamp(18px, 2.5vw, 28px);
-    background: #ffffff;
-    color: #0f172a;
-    border: 1px solid #e2e8f0;
-    border-radius: 22px;
-    box-shadow: 0 14px 35px rgba(15, 23, 42, 0.08);
-  }
-  #shopify-section-{{ section.id }} .dtf-section-kicker { margin: 0 0 8px; color: #2563eb; font-size: 12px; font-weight: 800; letter-spacing: 0.16em; }
-  #shopify-section-{{ section.id }} .dtf-process-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
-  #shopify-section-{{ section.id }} .dtf-process-card { background: linear-gradient(180deg, #f8fafc, #eef2ff); border: 1px solid #dbeafe; border-radius: 18px; padding: 16px; }
-  #shopify-section-{{ section.id }} .dtf-process-number { font-weight: 800; color: #1d4ed8; display: inline-block; margin-bottom: 8px; }
-  #shopify-section-{{ section.id }} .dtf-button { display: inline-flex; align-items: center; justify-content: center; padding: 12px 18px; border-radius: 999px; text-decoration: none; font-weight: 800; margin-top: 10px; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; }
-  #shopify-section-{{ section.id }} .dtf-process-footer { margin-top: 16px; }
+#shopify-section-{{ section.id }} .dtf-process-section {
+  --desktop-padding: {{ section.settings.desktop_spacing }}px;
+  --mobile-padding: {{ section.settings.mobile_spacing }}px;
+  --desktop-min-height: {{ section.settings.desktop_height }}px;
+  --mobile-min-height: {{ section.settings.mobile_height }}px;
+  --overlay-opacity: {{ section.settings.overlay_opacity | divided_by: 100.0 }};
+  margin: 16px auto;
+  padding: var(--desktop-padding);
+  min-height: var(--desktop-min-height);
+  background: {{ section.settings.background_color }};
+  color: {{ section.settings.text_color }};
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+}
+#shopify-section-{{ section.id }} .dtf-process-section::before { content:''; position:absolute; inset:0; background:{% if process_bg_image != blank %}url('{{ process_bg_image | image_url: width: 2200 }}') center/cover no-repeat{% else %}transparent{% endif %}; z-index:0; }
+#shopify-section-{{ section.id }} .dtf-process-section::after { content:''; position:absolute; inset:0; background:{{ section.settings.overlay_color }}; opacity:var(--overlay-opacity); z-index:1; }
+#shopify-section-{{ section.id }} .dtf-process-section > * { position:relative; z-index:2; }
+#shopify-section-{{ section.id }} .dtf-section-header { text-align: {{ section.settings.text_alignment }}; align-items: {{ section.settings.content_alignment }}; display:flex; flex-direction:column; }
+#shopify-section-{{ section.id }} .dtf-process-grid { align-items: {{ section.settings.vertical_alignment }}; }
+#shopify-section-{{ section.id }} .dtf-process-footer { text-align: {{ section.settings.cta_alignment }}; }
+@media (max-width: 989px) { #shopify-section-{{ section.id }} .dtf-process-section { padding: var(--mobile-padding); min-height: var(--mobile-min-height); } }
 </style>
 
 <section class="dtf-process-section page-width">
@@ -33,35 +36,19 @@
   </div>
 
   <div class="dtf-process-grid">
-    {% if section.blocks.size > 0 %}
-      {% for block in section.blocks %}
+    {% for block in section.blocks %}
+      {% if block.settings.show_block %}
         <article class="dtf-process-card" {{ block.shopify_attributes }}>
           <span class="dtf-process-number">{{ forloop.index }}</span>
           <h3>{{ block.settings.title }}</h3>
           <p>{{ block.settings.text }}</p>
         </article>
-      {% endfor %}
-    {% else %}
-      <article class="dtf-process-card">
-        <span class="dtf-process-number">1</span>
-        <h3>Choose your order path</h3>
-        <p>Send shoppers into apparel mode, transfer mode, or a fast upload flow.</p>
-      </article>
-      <article class="dtf-process-card">
-        <span class="dtf-process-number">2</span>
-        <h3>Customize the details</h3>
-        <p>Let them pick colors, sizes, artwork placement, and other product options.</p>
-      </article>
-      <article class="dtf-process-card">
-        <span class="dtf-process-number">3</span>
-        <h3>Checkout in Shopify</h3>
-        <p>The final order moves right into your existing cart and payment flow.</p>
-      </article>
-    {% endif %}
+      {% endif %}
+    {% endfor %}
   </div>
 
   <div class="dtf-process-footer">
-    <a href="{{ designer_url }}" class="dtf-button dtf-button-primary">{{ section.settings.cta_label }}</a>
+    <a href="{{ product_url }}" class="dtf-button dtf-button-primary">{{ section.settings.cta_label }}</a>
   </div>
 </section>
 
@@ -72,24 +59,34 @@
     { "type": "text", "id": "kicker", "label": "Kicker", "default": "HOW TO ORDER" },
     { "type": "text", "id": "heading", "label": "Heading", "default": "How Your Custom DTF Order Works" },
     { "type": "textarea", "id": "subtext", "label": "Subtext", "default": "Choose your product, upload artwork, customize your print, checkout securely, and we print and ship with fast turnaround." },
-    { "type": "url", "id": "product_url", "label": "Designer product URL" },
-    { "type": "text", "id": "cta_label", "label": "CTA label", "default": "Start Upload" }
+    { "type": "url", "id": "product_url", "label": "Designer URL" },
+    { "type": "text", "id": "cta_label", "label": "CTA label", "default": "Design Your Transfer Now" },
+    { "type": "select", "id": "content_alignment", "label": "Content alignment", "default": "flex-start", "options": [{"value":"flex-start","label":"Left"},{"value":"center","label":"Center"},{"value":"flex-end","label":"Right"}] },
+    { "type": "select", "id": "vertical_alignment", "label": "Vertical alignment", "default": "start", "options": [{"value":"start","label":"Top"},{"value":"center","label":"Center"},{"value":"end","label":"Bottom"}] },
+    { "type": "select", "id": "text_alignment", "label": "Text alignment", "default": "left", "options": [{"value":"left","label":"Left"},{"value":"center","label":"Center"},{"value":"right","label":"Right"}] },
+    { "type": "select", "id": "cta_alignment", "label": "CTA alignment", "default": "left", "options": [{"value":"left","label":"Left"},{"value":"center","label":"Center"},{"value":"right","label":"Right"}] },
+    { "type": "range", "id": "desktop_spacing", "label": "Desktop spacing", "min": 12, "max": 120, "step": 4, "default": 28, "unit": "px" },
+    { "type": "range", "id": "mobile_spacing", "label": "Mobile spacing", "min": 8, "max": 80, "step": 2, "default": 16, "unit": "px" },
+    { "type": "range", "id": "desktop_height", "label": "Desktop section height", "min": 220, "max": 1000, "step": 20, "default": 340, "unit": "px" },
+    { "type": "range", "id": "mobile_height", "label": "Mobile section height", "min": 240, "max": 1300, "step": 20, "default": 360, "unit": "px" },
+    { "type": "color", "id": "background_color", "label": "Background color", "default": "#ffffff" },
+    { "type": "image_picker", "id": "background_image", "label": "Background image" },
+    { "type": "color", "id": "overlay_color", "label": "Overlay color", "default": "#000000" },
+    { "type": "range", "id": "overlay_opacity", "label": "Overlay opacity", "min": 0, "max": 90, "step": 5, "default": 0, "unit": "%" },
+    { "type": "color", "id": "text_color", "label": "Text color", "default": "#0f172a" }
   ],
   "blocks": [
     {
       "type": "step",
       "name": "Step",
       "settings": [
+        { "type": "checkbox", "id": "show_block", "label": "Show block", "default": true },
         { "type": "text", "id": "title", "label": "Title", "default": "Choose your product" },
         { "type": "textarea", "id": "text", "label": "Text", "default": "Select a DTF transfer, gang sheet, custom t-shirt, hoodie, or apparel option." }
       ]
     }
   ],
-  "max_blocks": 4,
-  "presets": [
-    {
-      "name": "DTF Pro process"
-    }
-  ]
+  "max_blocks": 6,
+  "presets": [{ "name": "DTF Pro process" }]
 }
 {% endschema %}

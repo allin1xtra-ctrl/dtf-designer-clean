@@ -9,6 +9,7 @@ import {
 } from "../_utils";
 
 export const runtime = "nodejs";
+export const maxDuration = 30;
 
 type RemoveBackgroundBody = {
   imageDataUrl?: string;

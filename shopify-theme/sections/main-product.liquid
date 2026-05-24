@@ -1,174 +1,377 @@
 {% comment %}
-  main-product.liquid — Premium DTF Product Page
-  - Variant selector synced to Customize + ATC buttons
-  - Passes product handle + variant_id to Vercel customizer
-  - Reorder Last Design for logged-in customers
+  main-product.liquid — DTF Product Page (Theme 3.0)
+  - Displays product media, title, price, description
+  - Variant selector inside Add to Cart form
+  - "🎨 Customize Now with DTF Designer" CTA → /pages/customizer (supported handles only)
+  - Upload-only handle (dtf-gang-sheet-upload-print-ready-file) never shows the CTA
+  - Reorder Last Design for logged-in customers with saved artwork URL
 {% endcomment %}
-  <a
-    id="dtf-customize-btn"
-    class="dtf-size-btn"
-    style="background:#00fff7;color:#18181b;margin-top:0.75rem;"
-    href="https://dtf-designer-clean.vercel.app/customizer?product={{ product.handle }}&variant={{ current_variant.id }}"
-    target="_blank" rel="noopener"
-  >
-    ⚡ Start Customizing
-  </a>
-  <!-- Variant Selector -->
-  {%- if product.variants.size > 1 -%}
-    <label for="dtf-variant-select" style="color:#00fff7;font-weight:700;display:block;margin-bottom:0.5rem;">
-      Select Size:
-    </label>
-    <select id="dtf-variant-select" name="id" style="width:100%;padding:0.6rem 1rem;border-radius:0.75rem;background:#18181b;color:#fff;border:1.5px solid #00fff7;font-size:1rem;margin-bottom:1rem;">
-      {% for variant in product.variants %}
-        <option
-          value="{{ variant.id }}"
-          data-price="{{ variant.price | money }}"
-          {% if variant == current_variant %}selected{% endif %}
-          {% unless variant.available %}disabled{% endunless %}
+
+{% assign customizer_handles = 'custom-dtf-transfer-by-size,dtf-gang-sheet-builder-build-your-own-sheet,custom-t-shirt-upload-customize,custom-hoodie-upload-customize' | split: ',' %}
+{% assign customizer_failsafe_fragments = 'custom-dtf-transfer,gang-sheet-builder,custom-t-shirt,custom-hoodie' | split: ',' %}
+{% assign current_handle = product.handle | downcase | strip %}
+{% assign customizer_blocked = false %}
+{% assign allowlist_match = false %}
+{% assign failsafe_match = false %}
+{% assign matched_customizer_fragment = '' %}
+{% assign debug_match_source = 'none' %}
+{% assign show_customizer = false %}
+{% if current_handle contains 'upload-print-ready-file' %}
+  {% assign customizer_blocked = true %}
+  {% assign debug_match_source = 'blocked' %}
+{% endif %}
+{% unless customizer_blocked %}
+  {% for h in customizer_handles %}
+    {% assign allowed_handle = h | downcase | strip %}
+    {% if current_handle == allowed_handle %}
+      {% assign allowlist_match = true %}
+      {% assign debug_match_source = 'allowlist' %}
+      {% assign show_customizer = true %}
+      {% break %}
+    {% endif %}
+  {% endfor %}
+
+  {% if show_customizer == false %}
+    {% for fragment in customizer_failsafe_fragments %}
+      {% assign normalized_fragment = fragment | downcase | strip %}
+      {% if current_handle contains normalized_fragment %}
+        {% assign failsafe_match = true %}
+        {% assign matched_customizer_fragment = normalized_fragment %}
+        {% assign debug_match_source = normalized_fragment %}
+        {% assign show_customizer = true %}
+        {% break %}
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+{% endunless %}
+
+{% assign current_variant = product.selected_or_first_available_variant %}
+{% assign product_bg_image = section.settings.background_image %}
+{% capture customizer_cta_base_url %}{{ routes.root_url }}pages/customizer?source=shopify&product={{ product.handle | url_encode }}{% endcapture %}
+{% assign is_theme_preview = false %}
+{% if request.design_mode or content_for_header contains 'previewBarInjector' %}
+  {% assign is_theme_preview = true %}
+{% endif %}
+{% if is_theme_preview %}
+  <!-- DTF customizer CTA debug: handle={{ current_handle }}, blocked={{ customizer_blocked }}, show_customizer={{ show_customizer }}, match={{ debug_match_source }} -->
+{% endif %}
+
+<div class="dtf-product-section dtf-product-text-{{ section.settings.text_alignment }}">
+  <div class="dtf-product-overlay"></div>
+
+  <div class="dtf-product-grid dtf-product-media-{{ section.settings.media_position }}">
+    <div class="dtf-product-media">
+      {% if product.featured_image %}
+        <img
+          src="{{ product.featured_image | image_url: width: 1200 }}"
+          alt="{{ product.featured_image.alt | escape | default: product.title | escape }}"
+          width="1200"
+          height="1200"
+          loading="eager"
+          class="dtf-product-img"
         >
-          {{ variant.title }}{% unless variant.available %} — Sold Out{% endunless %}
-        </option>
-      {% endfor %}
-    </select>
-  {%- else -%}
-    <input type="hidden" name="id" value="{{ product.variants.first.id }}">
-  {%- endif -%}
-
-  <!-- Price Display -->
-  <div id="dtf-price-display" style="font-size:1.4rem;font-weight:800;color:#fff200;margin-bottom:1rem;">
-    {{ current_variant.price | money }}
-  </div>
-
-  <!-- Add to Cart -->
-  <form id="dtf-add-to-cart-form" method="post" action="/cart/add">
-    <input type="hidden" name="id" id="dtf-atc-variant-id" value="{{ current_variant.id }}">
-    <input type="hidden" name="quantity" value="1">
-    <button type="submit" class="dtf-size-btn">⚡ Add to Cart</button>
-  </form>
-
-    <!-- Start Customizing Button -->
-    <a
-      id="dtf-start-customizing-btn"
-      href="https://dtf-designer-clean.vercel.app/customizer?product={{ product.handle }}&variant={{ current_variant.id }}"
-      style="display:block;width:100%;margin-top:0.75rem;padding:1rem 0;border-radius:0.75rem;background:#18181b;color:#39ff14;font-weight:900;font-size:1.1rem;text-align:center;text-decoration:none;border:2.5px solid #39ff14;box-shadow:0 2px 12px #39ff1440;letter-spacing:0.03em;transition:background 0.18s,border 0.18s;"
-      target="_blank" rel="noopener"
-      onmouseover="this.style.background='#232323'"
-      onmouseout="this.style.background='#18181b'"
-    >
-      ⚡ Start Customizing
-    </a>
-
-  <!-- Customize Button -->
-  <a
-    id="dtf-customize-btn"
-    class="dtf-size-btn"
-    style="background:#00fff7;color:#18181b;margin-top:0.75rem;"
-    href="https://dtf-designer-clean.vercel.app/customizer?product={{ product.handle }}&variant={{ current_variant.id }}"
-    target="_blank" rel="noopener"
-  >
-    ⚡ Start Customizing
-  </a>
-
-  <!-- Reorder (logged-in customers only) -->
-  {% if customer and customer.orders_count > 0 %}
-    {% assign last_order = customer.orders.first %}
-    {% assign last_line  = last_order.line_items.first %}
-    {% assign artwork_url = last_line.properties | where: "name", "_Artwork URL" | map: "value" | first %}
-    <div style="margin-top:0.75rem;">
-      {% if artwork_url %}
-        <a class="dtf-size-btn" style="background:#fff200;color:#18181b;"
-           href="https://dtf-designer-clean.vercel.app/customizer?reorder=true&artwork={{ artwork_url | url_encode }}&variant={{ last_line.variant_id }}"
-           target="_blank" rel="noopener">
-          🔁 Reorder Last Design
-        </a>
       {% else %}
-        <a class="dtf-size-btn" style="background:#fff200;color:#18181b;"
-           href="/cart/add?id={{ last_line.variant_id }}&quantity=1">
-          🔁 Reorder Last Size
-        </a>
+        <div class="dtf-product-img dtf-img-placeholder"></div>
       {% endif %}
     </div>
-  {% endif %}
 
+    <div class="dtf-product-info">
+      <h1 class="dtf-product-title">{{ product.title }}</h1>
+
+      <div id="dtf-price-display" class="dtf-price-display">
+        {{ current_variant.price | money }}
+      </div>
+
+      {% if product.description != blank %}
+        <div class="dtf-product-description">{{ product.description }}</div>
+      {% endif %}
+
+      <form id="dtf-add-to-cart-form" method="post" action="/cart/add">
+        {%- if product.variants.size > 1 -%}
+          <label for="dtf-variant-select" class="dtf-label">Select Variant:</label>
+          <select id="dtf-variant-select" name="id" class="dtf-select">
+            {% for variant in product.variants %}
+              <option
+                value="{{ variant.id }}"
+                data-price="{{ variant.price | money }}"
+                data-customizer-price="{{ variant.price | money_without_currency }}"
+                {% if variant == current_variant %}selected{% endif %}
+                {% unless variant.available %}disabled{% endunless %}
+              >
+                {{ variant.title }}{% unless variant.available %} — Sold Out{% endunless %}
+              </option>
+            {% endfor %}
+          </select>
+        {%- else -%}
+          <input type="hidden" name="id" id="dtf-variant-select" value="{{ product.variants.first.id }}">
+        {%- endif -%}
+
+        <label for="dtf-quantity" class="dtf-label">Quantity:</label>
+        <input
+          id="dtf-quantity"
+          type="number"
+          name="quantity"
+          value="1"
+          min="1"
+          class="dtf-qty-input"
+        >
+
+        <div class="dtf-action-row">
+          <button type="submit" class="dtf-size-btn dtf-cart-btn">{{ section.settings.add_to_cart_label }}</button>
+
+          {% if show_customizer %}
+            <a
+              id="dtf-customize-btn"
+              class="dtf-size-btn dtf-customize-btn"
+              href="{{ customizer_cta_base_url }}&variant={{ current_variant.id }}&product_id={{ product.id }}&price={{ current_variant.price | money_without_currency | url_encode }}"
+            >
+              {{ section.settings.customizer_button_label }}
+            </a>
+          {% endif %}
+        </div>
+      </form>
+
+      {% if customer and customer.orders_count > 0 and section.settings.show_reorder_button %}
+        {% assign last_order = customer.orders.first %}
+        {% assign last_line  = last_order.line_items.first %}
+        {% assign artwork_url = last_line.properties | where: "name", "_Artwork URL" | map: "value" | first %}
+        <div class="dtf-reorder-wrap">
+          {% if artwork_url %}
+            <a class="dtf-size-btn dtf-reorder-btn"
+               href="/pages/customizer?source=shopify&reorder=true&artwork={{ artwork_url | url_encode }}&variant={{ last_line.variant_id }}&product={{ product.handle | url_encode }}&product_id={{ product.id }}">
+              {{ section.settings.reorder_label }}
+            </a>
+          {% else %}
+            <a class="dtf-size-btn dtf-reorder-btn"
+               href="/cart/add?id={{ last_line.variant_id }}&quantity=1">
+              Reorder Last Size
+            </a>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
 </div>
 
 <style>
-.dtf-product-section {
-  background: #18181b;
-  border-radius: 1.5rem;
-  border: 2px solid #00fff7;
-  box-shadow: 0 0 16px #00fff7;
-  padding: 2.5rem 2rem 2rem;
-  color: #fff;
-  margin: 2rem auto;
-  max-width: 540px;
+#shopify-section-{{ section.id }} .dtf-product-section {
+  --desktop-padding: {{ section.settings.desktop_spacing }}px;
+  --mobile-padding: {{ section.settings.mobile_spacing }}px;
+  --desktop-min-height: {{ section.settings.desktop_height }}px;
+  --mobile-min-height: {{ section.settings.mobile_height }}px;
+  --overlay-opacity: {{ section.settings.overlay_opacity | divided_by: 100.0 }};
+  --content-align: {{ section.settings.content_alignment }};
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  border-radius: 22px;
+  padding: var(--desktop-padding);
+  margin: 16px auto;
+  max-width: 1180px;
+  min-height: var(--desktop-min-height);
+  background: {{ section.settings.background_color }};
+  color: {{ section.settings.text_color }};
 }
-.dtf-product-title {
-  font-size: 2rem;
-  font-weight: 800;
-  margin-bottom: 0.5rem;
-  color: #fff200;
+
+#shopify-section-{{ section.id }} .dtf-product-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: {% if product_bg_image != blank %}url('{{ product_bg_image | image_url: width: 2200 }}') center/cover no-repeat{% else %}transparent{% endif %};
+  z-index: 0;
 }
-.dtf-product-description {
-  font-size: 1.1rem;
-  color: #b3b3b3;
-  margin-bottom: 1.5rem;
+
+#shopify-section-{{ section.id }} .dtf-product-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: {{ section.settings.overlay_color }};
+  opacity: var(--overlay-opacity);
 }
-.dtf-size-btn {
+
+#shopify-section-{{ section.id }} .dtf-product-grid {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(16px, 2vw, 28px);
+  align-items: {{ section.settings.vertical_alignment }};
+  min-height: calc(var(--desktop-min-height) - (var(--desktop-padding) * 2));
+}
+
+#shopify-section-{{ section.id }} .dtf-product-media-right .dtf-product-media { order: 2; }
+#shopify-section-{{ section.id }} .dtf-product-media-right .dtf-product-info { order: 1; }
+
+#shopify-section-{{ section.id }} .dtf-product-media {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#shopify-section-{{ section.id }} .dtf-product-img {
+  width: min(100%, 640px);
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  object-position: {{ section.settings.image_alignment }} center;
+  border-radius: 18px;
   display: block;
-  width: 100%;
-  background: linear-gradient(90deg, #00fff7 0%, #fff200 100%);
-  color: #18181b;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+#shopify-section-{{ section.id }} .dtf-img-placeholder {
+  background: rgba(15, 23, 42, 0.08);
+  border: 1px dashed rgba(148, 163, 184, 0.5);
+}
+
+#shopify-section-{{ section.id }} .dtf-product-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: {{ section.settings.content_position }};
+  align-items: var(--content-align);
+  text-align: {{ section.settings.text_alignment }};
+}
+
+#shopify-section-{{ section.id }} .dtf-product-title {
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+  margin: 0 0 0.5rem;
+  line-height: 1.2;
+}
+
+#shopify-section-{{ section.id }} .dtf-price-display {
+  font-size: clamp(1.2rem, 2.4vw, 1.8rem);
   font-weight: 700;
-  border: none;
-  border-radius: 0.75rem;
-  padding: 0.75rem 0;
-  font-size: 1.1rem;
-  margin-top: 1rem;
-  cursor: pointer;
-  transition: background 0.2s;
+  margin-bottom: 0.75rem;
+}
+
+#shopify-section-{{ section.id }} .dtf-product-description {
+  font-size: 0.98rem;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+#shopify-section-{{ section.id }} #dtf-add-to-cart-form {
+  width: min(100%, 460px);
+}
+
+#shopify-section-{{ section.id }} .dtf-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+#shopify-section-{{ section.id }} .dtf-select,
+#shopify-section-{{ section.id }} .dtf-qty-input {
+  width: 100%;
+  padding: 0.68rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(255, 255, 255, 0.95);
+  color: #0f172a;
+  margin-bottom: 0.85rem;
+  box-sizing: border-box;
+}
+
+#shopify-section-{{ section.id }} .dtf-action-row {
+  display: flex;
+  flex-direction: column;
+  align-items: {{ section.settings.cta_alignment }};
+  gap: 10px;
+}
+
+#shopify-section-{{ section.id }} .dtf-size-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.88rem 1rem;
+  border-radius: 12px;
+  border: 0;
   text-decoration: none;
-  text-align: center;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
 }
-.dtf-size-btn:hover {
-  background: linear-gradient(90deg, #fff200 0%, #00fff7 100%);
-  color: #18181b;
+
+#shopify-section-{{ section.id }} .dtf-size-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
 }
-@media (max-width: 640px) {
-  .dtf-product-section {
-    padding: 1.5rem 1rem 1.2rem;
-    margin: 1rem;
-    max-width: 100%;
+
+#shopify-section-{{ section.id }} .dtf-cart-btn {
+  background: {{ section.settings.primary_button_background }};
+  color: {{ section.settings.primary_button_text }};
+}
+
+#shopify-section-{{ section.id }} .dtf-customize-btn {
+  background: {{ section.settings.secondary_button_background }};
+  color: {{ section.settings.secondary_button_text }};
+}
+
+#shopify-section-{{ section.id }} .dtf-reorder-wrap {
+  margin-top: 0.75rem;
+  width: min(100%, 460px);
+}
+
+#shopify-section-{{ section.id }} .dtf-reorder-btn {
+  background: #f8fafc;
+  color: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+}
+
+#shopify-section-{{ section.id }} .dtf-product-text-center #dtf-add-to-cart-form,
+#shopify-section-{{ section.id }} .dtf-product-text-center .dtf-reorder-wrap {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+#shopify-section-{{ section.id }} .dtf-product-text-right #dtf-add-to-cart-form,
+#shopify-section-{{ section.id }} .dtf-product-text-right .dtf-reorder-wrap {
+  margin-left: auto;
+}
+
+@media (max-width: 989px) {
+  #shopify-section-{{ section.id }} .dtf-product-section {
+    min-height: var(--mobile-min-height);
+    padding: var(--mobile-padding);
   }
-  .dtf-product-title { font-size: 1.5rem; }
-  .dtf-size-btn { font-size: 1rem; padding: 0.85rem 0; } /* larger tap target */
+
+  #shopify-section-{{ section.id }} .dtf-product-grid {
+    min-height: calc(var(--mobile-min-height) - (var(--mobile-padding) * 2));
+    grid-template-columns: 1fr;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-product-media-right .dtf-product-media,
+  #shopify-section-{{ section.id }} .dtf-product-media-right .dtf-product-info {
+    order: initial;
+  }
 }
 </style>
 
 <script>
 (function () {
   var select       = document.getElementById('dtf-variant-select');
-  var atcInput     = document.getElementById('dtf-atc-variant-id');
   var customizeBtn = document.getElementById('dtf-customize-btn');
-  var productHandle = '{{ product.handle }}';
   var priceDisplay = document.getElementById('dtf-price-display');
-  var productId    = '{{ product.id }}';
+  var customizerBaseUrl = {{ customizer_cta_base_url | json }};
+  var productId    = {{ product.id | json }};
 
-  if (!select) return;
+  if (!select || select.tagName !== 'SELECT') return;
 
   select.addEventListener('change', function () {
     var variantId = select.value;
     var selectedOption = select.options[select.selectedIndex];
 
-    // ✅ Sync ATC form
-    if (atcInput) atcInput.value = variantId;
-
-    // ✅ Sync Customize button URL (now external Vercel app)
     if (customizeBtn) {
-      customizeBtn.href = 'https://dtf-designer-clean.vercel.app/customizer?product={{ product.handle }}&variant=' + variantId;
+      customizeBtn.href = customizerBaseUrl
+        + '&variant=' + encodeURIComponent(variantId)
+        + '&product_id=' + encodeURIComponent(productId)
+        + '&price=' + encodeURIComponent(selectedOption.dataset.customizerPrice || '');
     }
 
-    // ✅ Update price display
     if (priceDisplay && selectedOption.dataset.price) {
       priceDisplay.textContent = selectedOption.dataset.price;
     }
@@ -179,7 +382,32 @@
 {% schema %}
 {
   "name": "Main product",
-  "settings": [],
+  "settings": [
+    { "type": "text", "id": "add_to_cart_label", "label": "Add to cart label", "default": "🛒 Add to Cart" },
+    { "type": "text", "id": "customizer_button_label", "label": "Customizer button label", "default": "🎨 Customize & Upload Design" },
+    { "type": "checkbox", "id": "show_reorder_button", "label": "Show reorder button for customers", "default": true },
+    { "type": "text", "id": "reorder_label", "label": "Reorder button label", "default": "🔁 Reorder Last Design" },
+    { "type": "select", "id": "content_alignment", "label": "Content alignment", "default": "flex-start", "options": [{"value":"flex-start","label":"Left"},{"value":"center","label":"Center"},{"value":"flex-end","label":"Right"}] },
+    { "type": "select", "id": "content_position", "label": "Content position", "default": "center", "options": [{"value":"flex-start","label":"Top"},{"value":"center","label":"Center"},{"value":"flex-end","label":"Bottom"}] },
+    { "type": "select", "id": "vertical_alignment", "label": "Vertical alignment", "default": "center", "options": [{"value":"start","label":"Top"},{"value":"center","label":"Center"},{"value":"end","label":"Bottom"}] },
+    { "type": "select", "id": "text_alignment", "label": "Text alignment", "default": "left", "options": [{"value":"left","label":"Left"},{"value":"center","label":"Center"},{"value":"right","label":"Right"}] },
+    { "type": "select", "id": "cta_alignment", "label": "CTA/button alignment", "default": "flex-start", "options": [{"value":"flex-start","label":"Left"},{"value":"center","label":"Center"},{"value":"flex-end","label":"Right"}] },
+    { "type": "select", "id": "media_position", "label": "Media position", "default": "left", "options": [{"value":"left","label":"Left"},{"value":"right","label":"Right"}] },
+    { "type": "select", "id": "image_alignment", "label": "Image alignment", "default": "center", "options": [{"value":"left","label":"Left"},{"value":"center","label":"Center"},{"value":"right","label":"Right"}] },
+    { "type": "range", "id": "desktop_spacing", "label": "Desktop spacing", "min": 12, "max": 120, "step": 4, "default": 36, "unit": "px" },
+    { "type": "range", "id": "mobile_spacing", "label": "Mobile spacing", "min": 8, "max": 72, "step": 2, "default": 18, "unit": "px" },
+    { "type": "range", "id": "desktop_height", "label": "Desktop section height", "min": 340, "max": 1100, "step": 20, "default": 620, "unit": "px" },
+    { "type": "range", "id": "mobile_height", "label": "Mobile section height", "min": 380, "max": 1300, "step": 20, "default": 760, "unit": "px" },
+    { "type": "color", "id": "background_color", "label": "Background color", "default": "#ffffff" },
+    { "type": "image_picker", "id": "background_image", "label": "Background image" },
+    { "type": "color", "id": "overlay_color", "label": "Overlay color", "default": "#000000" },
+    { "type": "range", "id": "overlay_opacity", "label": "Overlay opacity", "min": 0, "max": 90, "step": 5, "default": 0, "unit": "%" },
+    { "type": "color", "id": "text_color", "label": "Text color", "default": "#0f172a" },
+    { "type": "color", "id": "primary_button_background", "label": "Primary button background", "default": "#0f172a" },
+    { "type": "color", "id": "primary_button_text", "label": "Primary button text", "default": "#ffffff" },
+    { "type": "color", "id": "secondary_button_background", "label": "Secondary button background", "default": "#4f46e5" },
+    { "type": "color", "id": "secondary_button_text", "label": "Secondary button text", "default": "#ffffff" }
+  ],
   "presets": [{ "name": "Main product" }]
 }
 {% endschema %}
