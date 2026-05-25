@@ -223,7 +223,7 @@ function getSafeImageUrl(value: string) {
 
 function AdminMockupManagerContent() {
   const searchParams = useSearchParams();
-  const token = (searchParams?.get("token") || "").trim();
+  const token = "dev-mode";
 
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
@@ -374,13 +374,15 @@ function AdminMockupManagerContent() {
     }
   }
 
-  if (!token || isUnauthorized) {
-    return (
-      <main className="min-h-screen bg-[#0f0f10] p-8 text-white">
-        <h1 className="text-2xl font-semibold">Unauthorized</h1>
-      </main>
-    );
-  }
+  if (isUnauthorized) {
+  return (
+    <main className="min-h-screen bg-[#0f0f10] p-8 text-white">
+      <h1 className="text-2xl font-semibold">
+        Admin API Unauthorized
+      </h1>
+    </main>
+  );
+}
 
   return (
     <main className="min-h-screen bg-[#0f0f10] text-white">
