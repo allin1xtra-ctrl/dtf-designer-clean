@@ -1,65 +1,48 @@
-import type { Metadata } from "next";
-import localFont from "next/font/local";
-import "./globals.css";
+"use client";
 
-const geistSans = localFont({
-  src: "../public/fonts/GeistVF.woff2",
-  variable: "--font-geist-sans",
-});
+import { useState } from "react";
 
-const geistMono = localFont({
-  src: "../public/fonts/GeistMonoVF.woff2",
-  variable: "--font-geist-mono",
-});
+export default function MockupsPage() {
+  const [file, setFile] = useState<File | null>(null);
+  const [message, setMessage] = useState("");
 
-export const metadata: Metadata = {
-  metadataBase: new URL("https://dtf-designer-clean.vercel.app"),
-  title: {
-    default: "Custom DTF Transfers, Gang Sheets & Custom Apparel | Your Favorite DTF Plug",
-    template: "%s | Your Favorite DTF Plug",
-  },
-  description:
-    "Order premium custom DTF transfers, gang sheets, custom t-shirts, and hoodies with no minimums, vibrant color, fast turnaround, and easy online artwork upload.",
-  openGraph: {
-    type: "website",
-    title: "Custom DTF Transfers, Gang Sheets & Custom Apparel | Your Favorite DTF Plug",
-    description:
-      "Order premium custom DTF transfers, gang sheets, custom t-shirts, and hoodies with no minimums, vibrant color, fast turnaround, and easy online artwork upload.",
-    url: "https://dtf-designer-clean.vercel.app",
-    siteName: "Your Favorite DTF Plug",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Custom DTF Transfers, Gang Sheets & Custom Apparel | Your Favorite DTF Plug",
-    description:
-      "Order premium custom DTF transfers, gang sheets, custom t-shirts, and hoodies with no minimums, vibrant color, fast turnaround, and easy online artwork upload.",
-  },
-};
+  async function upload() {
+    if (!file) return;
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch("/api/admin/mockups", {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await res.json();
+    setMessage(JSON.stringify(data));
+  }
+
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col bg-slate-950 text-white">
-        <div className="flex-1">{children}</div>
-        <footer className="border-t border-white/10 bg-slate-950/95 px-4 py-4 text-sm text-slate-300">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
-            <span>Your Favorite DTF Plug</span>
-            <nav className="flex flex-wrap gap-4">
-              <a href="/terms" className="hover:text-white">Terms</a>
-              <a href="/privacy" className="hover:text-white">Privacy</a>
-              <a href="/refund-policy" className="hover:text-white">Refunds</a>
-              <a href="/shipping-policy" className="hover:text-white">Shipping</a>
-            </nav>
-          </div>
-        </footer>
-      </body>
-    </html>
+    <div style={{ padding: 40 }}>
+      <h1>Mockup Upload Test</h1>
+
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) => setFile(e.target.files?.[0] || null)}
+      />
+
+      <button
+        onClick={upload}
+        style={{
+          display: "block",
+          marginTop: 20,
+          padding: "10px 20px",
+        }}
+      >
+        Upload Mockup
+      </button>
+
+      <pre style={{ marginTop: 20 }}>{message}</pre>
+    </div>
   );
 }
