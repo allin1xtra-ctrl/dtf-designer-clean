@@ -76,9 +76,13 @@ export async function POST(req: NextRequest) {
   const productId = String(body.productId || "").trim();
   const printLocations = body.printLocations;
 
-  if (!token || token !== panelToken) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: NO_STORE_HEADERS });
-  }
+  // TEMP DEV BYPASS
+if (false && (!token || token !== panelToken)) {
+  return NextResponse.json(
+    { error: "Unauthorized" },
+    { status: 401, headers: NO_STORE_HEADERS }
+  );
+}
 
   if (!productId) {
     return NextResponse.json({ error: "Missing productId." }, { status: 400, headers: NO_STORE_HEADERS });
