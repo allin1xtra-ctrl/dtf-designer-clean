@@ -23,10 +23,17 @@ function cleanEnv(value: unknown) {
 
 function getAdminConfig() {
   const storeDomain = cleanDomain(process.env.SHOPIFY_STORE_DOMAIN || "");
-  const apiVersion = cleanEnv(process.env.SHOPIFY_ADMIN_API_VERSION) || "2024-10";
+
+  const apiVersion =
+    cleanEnv(process.env.SHOPIFY_ADMIN_API_VERSION) || "2024-10";
+
   const panelToken = cleanEnv(process.env.ADMIN_PANEL_TOKEN);
 
-  return { storeDomain, apiVersion, panelToken };
+  return {
+    storeDomain,
+    apiVersion,
+    panelToken,
+  };
 }
 
 type ShopifyProductNode = {
@@ -60,30 +67,59 @@ type ShopifyAdminProductsResponse = {
 
 export async function GET(req: NextRequest) {
   const { storeDomain, apiVersion, panelToken } = getAdminConfig();
+
   const token = String(req.nextUrl.searchParams.get("token") || "").trim();
 
   if (!panelToken) {
     return NextResponse.json(
-      { error: "Missing ADMIN_PANEL_TOKEN configuration." },
-      { status: 500, headers: NO_STORE_HEADERS }
+      {
+        error: "Missing ADMIN_PANEL_TOKEN configuration.",
+      },
+      {
+        status: 500,
+        headers: NO_STORE_HEADERS,
+      }
     );
   }
 
   if (!token || token !== panelToken) {
     return NextResponse.json(
       { error: "Unauthorized" },
-      { status: 401, headers: NO_STORE_HEADERS }
+      {
+        status: 401,
+        headers: NO_STORE_HEADERS,
+      }
     );
   }
 
   if (!storeDomain) {
     return NextResponse.json(
-      { error: "Missing SHOPIFY_STORE_DOMAIN configuration." },
-      { status: 500, headers: NO_STORE_HEADERS }
+      {
+        error: "Missing SHOPIFY_STORE_DOMAIN configuration.",
+      },
+      {
+        status: 500,
+        headers: NO_STORE_HEADERS,
+      }
     );
   }
 
-  const oauthToken = await getShopToken(storeDomain);
+  let oauthToken: string | null = null;
+
+  try {
+    oauthToken = await getShopToken(storeDomain);
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: "Failed to load Shopify OAuth access token.",
+        message: error instanceof Error ? error.message : String(error),
+      },
+      {
+        status: 500,
+        headers: NO_STORE_HEADERS,
+      }
+    );
+  }
 
   if (!oauthToken) {
     return NextResponse.json(
@@ -91,7 +127,10 @@ export async function GET(req: NextRequest) {
         error: "Missing Shopify OAuth access token for shop.",
         installUrl: `/api/auth?shop=${encodeURIComponent(storeDomain)}`,
       },
-      { status: 401, headers: NO_STORE_HEADERS }
+      {
+        status: 401,
+        headers: NO_STORE_HEADERS,
+      }
     );
   }
 
@@ -133,7 +172,9 @@ export async function GET(req: NextRequest) {
         },
         body: JSON.stringify({
           query,
-          variables: { first: 100 },
+          variables: {
+            first: 100,
+          },
         }),
       }
     );
@@ -147,7 +188,10 @@ export async function GET(req: NextRequest) {
           shopifyStatus: response.status,
           shopifyResponseBody: responseBody || null,
         },
-        { status: 502, headers: NO_STORE_HEADERS }
+        {
+          status: 502,
+          headers: NO_STORE_HEADERS,
+        }
       );
     }
 
@@ -155,8 +199,14 @@ export async function GET(req: NextRequest) {
 
     if (json.errors?.length) {
       return NextResponse.json(
-        { error: "Shopify Admin GraphQL returned errors.", details: json.errors },
-        { status: 502, headers: NO_STORE_HEADERS }
+        {
+          error: "Shopify Admin GraphQL returned errors.",
+          details: json.errors,
+        },
+        {
+          status: 502,
+          headers: NO_STORE_HEADERS,
+        }
       );
     }
 
@@ -182,14 +232,23 @@ export async function GET(req: NextRequest) {
         : null,
     }));
 
-    return NextResponse.json({ products }, { headers: NO_STORE_HEADERS });
+    return NextResponse.json(
+      { products },
+      { headers: NO_STORE_HEADERS }
+    );
   } catch (error) {
     return NextResponse.json(
       {
         error: "Failed to fetch products from Shopify Admin API.",
-        message: error instanceof Error ? error.message : String(error),
+        message:
+          error instanceof Error
+            ? error.message
+            : String(error),
       },
-      { status: 500, headers: NO_STORE_HEADERS }
+      {
+        status: 500,
+        headers: NO_STORE_HEADERS,
+      }
     );
   }
 }
