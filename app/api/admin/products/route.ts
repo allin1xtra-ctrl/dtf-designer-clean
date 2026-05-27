@@ -104,7 +104,22 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const oauthToken = await getShopToken(storeDomain);
+  let oauthToken: string | null = null;
+
+  try {
+    oauthToken = await getShopToken(storeDomain);
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: "Failed to load Shopify OAuth access token.",
+        message: error instanceof Error ? error.message : String(error),
+      },
+      {
+        status: 500,
+        headers: NO_STORE_HEADERS,
+      }
+    );
+  }
 
   if (!oauthToken) {
     return NextResponse.json(
