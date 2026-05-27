@@ -69,7 +69,12 @@ type ShopifyAdminProductsResponse = {
 export async function GET(req: NextRequest) {
   const { storeDomain, apiVersion, adminAccessToken, panelToken } = getAdminConfig();
 
-  const token = String(req.nextUrl.searchParams.get("token") || "").trim();
+  const token = String(
+    req.headers.get("x-admin-token")
+      || req.headers.get("authorization")?.replace("Bearer ", "")
+      || req.nextUrl.searchParams.get("token")
+      || ""
+  ).trim();
 
   if (!panelToken) {
     return NextResponse.json(
