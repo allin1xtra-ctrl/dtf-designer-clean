@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getShopToken } from "@/app/lib/shopify-oauth-store";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -23,12 +24,10 @@ function cleanEnv(value: unknown) {
 function getAdminConfig() {
   const storeDomain = cleanDomain(process.env.SHOPIFY_STORE_DOMAIN || "");
   const apiVersion = cleanEnv(process.env.SHOPIFY_ADMIN_API_VERSION) || "2024-10";
-  const apiPassword = cleanEnv(process.env.SHOPIFY_ADMIN_API_PASSWORD);
   const panelToken = cleanEnv(process.env.ADMIN_PANEL_TOKEN);
 
-  return { storeDomain, apiVersion, apiPassword, panelToken };
+  return { storeDomain, apiVersion, panelToken };
 }
-
 
 type ShopifyProductNode = {
   id: string;
@@ -60,7 +59,7 @@ type ShopifyAdminProductsResponse = {
 };
 
 export async function GET(req: NextRequest) {
-  const { storeDomain, apiVersion, apiPassword, panelToken } = getAdminConfig();
+  const { storeDomain, apiVersion, panelToken } = getAdminConfig();
   const token = String(req.nextUrl.searchParams.get("token") || "").trim();
 
   if (!panelToken) {
@@ -70,9 +69,28 @@ export async function GET(req: NextRequest) {
     );
   }
 
-   if (!token || token !== panelToken) {
+  if (!token || token !== panelToken) {
     return NextResponse.json(
       { error: "Unauthorized" },
+      { status: 401, headers: NO_STORE_HEADERS }
+    );
+  }
+
+  if (!storeDomain) {
+    return NextResponse.json(
+      { error: "Missing SHOPIFY_STORE_DOMAIN configuration." },
+      { status: 500, headers: NO_STORE_HEADERS }
+    );
+  }
+
+  const oauthToken = await getShopToken(storeDomain);
+
+  if (!oauthToken) {
+    return NextResponse.json(
+      {
+        error: "Missing Shopify OAuth access token for shop.",
+        installUrl: `/api/auth?shop=${encodeURIComponent(storeDomain)}`,
+      },
       { status: 401, headers: NO_STORE_HEADERS }
     );
   }
@@ -104,18 +122,21 @@ export async function GET(req: NextRequest) {
   `;
 
   try {
-    const response = await fetch(`https://${storeDomain}/admin/api/${apiVersion}/graphql.json`, {
-      method: "POST",
-      cache: "no-store",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": apiPassword,
-      },
-      body: JSON.stringify({
-        query,
-        variables: { first: 100 },
-      }),
-    });
+    const response = await fetch(
+      `https://${storeDomain}/admin/api/${apiVersion}/graphql.json`,
+      {
+        method: "POST",
+        cache: "no-store",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Shopify-Access-Token": oauthToken,
+        },
+        body: JSON.stringify({
+          query,
+          variables: { first: 100 },
+        }),
+      }
+    );
 
     if (!response.ok) {
       const responseBody = await response.text().catch(() => "");
