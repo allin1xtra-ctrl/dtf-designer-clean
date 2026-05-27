@@ -243,6 +243,7 @@ function AdminMockupManagerContent() {
   const tokenFromUrl = searchParams?.get("token") || "";
   const [adminToken, setAdminToken] = useState("");
   const [adminTokenInput, setAdminTokenInput] = useState("");
+  const [isAdminTokenSaved, setIsAdminTokenSaved] = useState(false);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
@@ -274,6 +275,7 @@ function AdminMockupManagerContent() {
 
     setAdminTokenInput(nextToken);
     setAdminToken(nextToken);
+    setIsAdminTokenSaved(Boolean(storedToken && nextToken === storedToken));
   }, [tokenFromUrl]);
 
   useEffect(() => {
@@ -284,7 +286,7 @@ function AdminMockupManagerContent() {
       setSelectedProductId("");
       setIsLoadingProducts(false);
       setIsUnauthorized(false);
-      setProductsError("Unable to load products: admin token required");
+      setProductsError("Admin token required. Enter ADMIN_PANEL_TOKEN to load products.");
       return;
     }
 
@@ -347,11 +349,26 @@ function AdminMockupManagerContent() {
     if (typeof window !== "undefined") {
       if (nextToken) {
         window.localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, nextToken);
+        setIsAdminTokenSaved(true);
       } else {
         window.localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+        setIsAdminTokenSaved(false);
       }
     }
     setAdminToken(nextToken);
+  }
+
+  function clearSavedAdminToken() {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+    }
+    setAdminToken("");
+    setAdminTokenInput("");
+    setIsAdminTokenSaved(false);
+    setProducts([]);
+    setSelectedProductId("");
+    setProductsError("Admin token required. Enter ADMIN_PANEL_TOKEN to load products.");
+    setIsUnauthorized(false);
   }
 
   useEffect(() => {
@@ -451,6 +468,9 @@ function AdminMockupManagerContent() {
             <label htmlFor="admin-token-input" className="mb-2 block text-sm text-gray-300">
               Admin Token
             </label>
+            <p className="mb-3 text-xs text-gray-400">
+              Enter your ADMIN_PANEL_TOKEN from Vercel to load Shopify products.
+            </p>
             <div className="flex gap-2">
               <input
                 id="admin-token-input"
@@ -471,9 +491,21 @@ function AdminMockupManagerContent() {
                 onClick={applyAdminToken}
                 className="rounded bg-white px-3 py-2 text-sm font-semibold text-black hover:bg-gray-200"
               >
-                Load
+                Load Products
               </button>
             </div>
+            {isAdminTokenSaved ? (
+              <div className="mt-3 flex items-center justify-between gap-3 rounded border border-[#2b2b2b] bg-[#171717] px-3 py-2">
+                <p className="text-xs text-green-300">Admin token saved in this browser.</p>
+                <button
+                  type="button"
+                  onClick={clearSavedAdminToken}
+                  className="shrink-0 text-xs font-semibold text-gray-300 underline-offset-2 hover:text-white hover:underline"
+                >
+                  Clear saved token
+                </button>
+              </div>
+            ) : null}
             {isUnauthorized ? (
               <p className="mt-2 text-xs text-red-300">Unauthorized. Enter a valid admin token.</p>
             ) : null}
