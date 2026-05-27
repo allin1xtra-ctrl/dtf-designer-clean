@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getShopToken } from "@/app/lib/shopify-oauth-store";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -23,17 +24,11 @@ function cleanEnv(value: unknown) {
 function getAdminConfig() {
   const storeDomain = cleanDomain(process.env.SHOPIFY_STORE_DOMAIN || "");
   const apiVersion = cleanEnv(process.env.SHOPIFY_ADMIN_API_VERSION) || "2024-10";
-  const apiKey = cleanEnv(process.env.SHOPIFY_ADMIN_API_KEY);
-  const apiPassword = cleanEnv(process.env.SHOPIFY_ADMIN_API_PASSWORD);
   const panelToken = cleanEnv(process.env.ADMIN_PANEL_TOKEN);
 
-  return { storeDomain, apiVersion, apiKey, apiPassword, panelToken };
+  return { storeDomain, apiVersion, panelToken };
 }
 
-function getAuthHeader(apiKey: string, apiPassword: string) {
-  const token = Buffer.from(`${apiKey}:${apiPassword}`).toString("base64");
-  return `Basic ${token}`;
-}
 
 type ShopifyProductNode = {
   id: string;
@@ -65,7 +60,7 @@ type ShopifyAdminProductsResponse = {
 };
 
 export async function GET(req: NextRequest) {
-  const { storeDomain, apiVersion, apiKey, apiPassword, panelToken } = getAdminConfig();
+  const { storeDomain, apiVersion, panelToken } = getAdminConfig();
   const token = String(req.nextUrl.searchParams.get("token") || "").trim();
 
   if (!panelToken) {
@@ -75,13 +70,24 @@ export async function GET(req: NextRequest) {
     );
   }
 
- // TEMP DEV BYPASS
-if (false && (!token || token !== panelToken)) {
-  return NextResponse.json(
-    { error: "Unauthorized" },
-    { status: 401, headers: NO_STORE_HEADERS }
-  );
-}
+   if (!token || token !== panelToken) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401, headers: NO_STORE_HEADERS }
+    );
+  }
+
+
+  const oauthToken = await getShopToken(storeDomain);
+  if (!oauthToken) {
+    return NextResponse.json(
+      {
+        error: "Missing Shopify OAuth access token for shop.",
+        installUrl: `/api/auth?shop=${encodeURIComponent(storeDomain || "yourdtfplug.myshopify.com")}`,
+      },
+      { status: 401, headers: NO_STORE_HEADERS }
+    );
+  }
 
   const query = `
     query AdminMockupProducts($first: Int!) {
@@ -115,7 +121,7 @@ if (false && (!token || token !== panelToken)) {
       cache: "no-store",
       headers: {
         "Content-Type": "application/json",
-        Authorization: getAuthHeader(apiKey, apiPassword),
+        "X-Shopify-Access-Token": oauthToken,
       },
       body: JSON.stringify({
         query,
@@ -123,14 +129,20 @@ if (false && (!token || token !== panelToken)) {
       }),
     });
 
-    const json = (await response.json().catch(() => ({}))) as ShopifyAdminProductsResponse;
-
     if (!response.ok) {
+      const responseBody = await response.text().catch(() => "");
+
       return NextResponse.json(
-        { error: "Shopify Admin API request failed.", details: json.errors || json },
+        {
+          error: "Shopify Admin API request failed.",
+          shopifyStatus: response.status,
+          shopifyResponseBody: responseBody || null,
+        },
         { status: 502, headers: NO_STORE_HEADERS }
       );
     }
+
+    const json = (await response.json().catch(() => ({}))) as ShopifyAdminProductsResponse;
 
     if (json.errors?.length) {
       return NextResponse.json(
