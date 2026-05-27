@@ -23,16 +23,10 @@ function cleanEnv(value: unknown) {
 function getAdminConfig() {
   const storeDomain = cleanDomain(process.env.SHOPIFY_STORE_DOMAIN || "");
   const apiVersion = cleanEnv(process.env.SHOPIFY_ADMIN_API_VERSION) || "2024-10";
-  const apiKey = cleanEnv(process.env.SHOPIFY_ADMIN_API_KEY);
-  const apiPassword = cleanEnv(process.env.SHOPIFY_ADMIN_API_PASSWORD);
+  const adminApiAccessToken = cleanEnv(process.env.ADMIN_API_ACCESS_TOKEN);
   const panelToken = cleanEnv(process.env.ADMIN_PANEL_TOKEN);
 
-  return { storeDomain, apiVersion, apiKey, apiPassword, panelToken };
-}
-
-function getAuthHeader(apiKey: string, apiPassword: string) {
-  const token = Buffer.from(`${apiKey}:${apiPassword}`).toString("base64");
-  return `Basic ${token}`;
+  return { storeDomain, apiVersion, adminApiAccessToken, panelToken };
 }
 
 type ShopifyProductNode = {
@@ -65,7 +59,7 @@ type ShopifyAdminProductsResponse = {
 };
 
 export async function GET(req: NextRequest) {
-  const { storeDomain, apiVersion, apiKey, apiPassword, panelToken } = getAdminConfig();
+  const { storeDomain, apiVersion, adminApiAccessToken, panelToken } = getAdminConfig();
   const token = String(req.nextUrl.searchParams.get("token") || "").trim();
 
   if (!panelToken) {
@@ -75,13 +69,19 @@ export async function GET(req: NextRequest) {
     );
   }
 
- // TEMP DEV BYPASS
-if (false && (!token || token !== panelToken)) {
-  return NextResponse.json(
-    { error: "Unauthorized" },
-    { status: 401, headers: NO_STORE_HEADERS }
-  );
-}
+  if (!token || token !== panelToken) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401, headers: NO_STORE_HEADERS }
+    );
+  }
+
+  if (!adminApiAccessToken) {
+    return NextResponse.json(
+      { error: "Missing ADMIN_API_ACCESS_TOKEN configuration." },
+      { status: 500, headers: NO_STORE_HEADERS }
+    );
+  }
 
   const query = `
     query AdminMockupProducts($first: Int!) {
@@ -115,7 +115,7 @@ if (false && (!token || token !== panelToken)) {
       cache: "no-store",
       headers: {
         "Content-Type": "application/json",
-        Authorization: getAuthHeader(apiKey, apiPassword),
+        "X-Shopify-Access-Token": adminApiAccessToken,
       },
       body: JSON.stringify({
         query,
