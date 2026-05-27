@@ -10,18 +10,64 @@ function cleanDomain(domain) {
   return cleanEnv(domain).replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase();
 }
 
+function getDebugPayload({ code, hmac, shop, state, cookieState, queryKeys }) {
+  return {
+    hasCode: Boolean(code),
+    hasHmac: Boolean(hmac),
+    hasShop: Boolean(shop),
+    hasState: Boolean(state),
+    storedStateExists: Boolean(cookieState),
+    shop,
+    queryKeys,
+  };
+}
+
 export async function GET(request) {
   const url = new URL(request.url);
-  const shop = cleanDomain(url.searchParams.get("shop"));
+  const debugMode = cleanEnv(url.searchParams.get("debug")) === "1";
+
+  const shopFromQuery = cleanDomain(url.searchParams.get("shop"));
   const code = cleanEnv(url.searchParams.get("code"));
   const hmac = cleanEnv(url.searchParams.get("hmac"));
   const state = cleanEnv(url.searchParams.get("state"));
 
   const cookieState = cleanEnv(request.cookies.get("shopify_oauth_state")?.value);
   const cookieShop = cleanDomain(request.cookies.get("shopify_oauth_shop")?.value);
+  const shop = shopFromQuery || cookieShop;
 
-  if (!shop || !code || !hmac || !state || state !== cookieState || shop !== cookieShop) {
-    return NextResponse.json({ error: "Invalid OAuth callback parameters." }, { status: 400 });
+  const queryKeys = [...url.searchParams.keys()].sort();
+
+  const stateValid = Boolean(state) && (!cookieState || state === cookieState);
+  const callbackValid = Boolean(shop && code && hmac && stateValid);
+
+  if (debugMode || !callbackValid) {
+    const debugPayload = getDebugPayload({
+      code,
+      hmac,
+      shop,
+      state,
+      cookieState,
+      queryKeys,
+    });
+
+    if (!callbackValid) {
+      return NextResponse.json(
+        {
+          error: "Invalid OAuth callback parameters.",
+          ...debugPayload,
+        },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        ok: true,
+        route: "/api/auth/callback",
+        ...debugPayload,
+      },
+      { status: 200 }
+    );
   }
 
   const apiSecret = cleanEnv(process.env.SHOPIFY_API_SECRET);
@@ -37,6 +83,7 @@ export async function GET(request) {
 
   const params = new URLSearchParams(url.search);
   params.delete("hmac");
+  params.delete("debug");
   params.sort();
   const message = params.toString();
   const digest = crypto.createHmac("sha256", apiSecret).update(message).digest("hex");
