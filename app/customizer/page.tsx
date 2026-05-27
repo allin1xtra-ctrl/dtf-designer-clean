@@ -235,13 +235,12 @@ const PRODUCT_PRINT_LOCATION_OVERRIDES: Record<string, Partial<Record<string, Pa
   },
 };
 const VIEW_NAMES: ViewName[] = ["front", "back", "leftSleeve", "rightSleeve", "neck"];
-const DEFAULT_MOCKUP_URL = "/dtf-customizer-after.png";
 const DEFAULT_MOCKUP_LOCATIONS: Record<ViewName, PrintLocationData> = {
-  front: { mockupUrl: DEFAULT_MOCKUP_URL, designArea: DEFAULT_DESIGN_AREA },
-  back: { mockupUrl: DEFAULT_MOCKUP_URL, designArea: DEFAULT_DESIGN_AREA },
-  leftSleeve: { mockupUrl: DEFAULT_MOCKUP_URL, designArea: DEFAULT_DESIGN_AREA },
-  rightSleeve: { mockupUrl: DEFAULT_MOCKUP_URL, designArea: DEFAULT_DESIGN_AREA },
-  neck: { mockupUrl: DEFAULT_MOCKUP_URL, designArea: DEFAULT_DESIGN_AREA },
+  front: { mockupUrl: createMockupPendingDataUrl("Front"), designArea: DEFAULT_DESIGN_AREA },
+  back: { mockupUrl: createMockupPendingDataUrl("Back"), designArea: DEFAULT_DESIGN_AREA },
+  leftSleeve: { mockupUrl: createMockupPendingDataUrl("Left sleeve"), designArea: DEFAULT_DESIGN_AREA },
+  rightSleeve: { mockupUrl: createMockupPendingDataUrl("Right sleeve"), designArea: DEFAULT_DESIGN_AREA },
+  neck: { mockupUrl: createMockupPendingDataUrl("Neck label"), designArea: DEFAULT_DESIGN_AREA },
 };
 
 function createEmptyViews(): Record<ViewName, CanvasSnapshot | null> {
@@ -303,6 +302,18 @@ function createBlankMockupDataUrl(label: string) {
     <rect width="100%" height="100%" fill="#f3f3f3"/>
     <rect x="${BLANK_MOCKUP_FRAME.x}" y="${BLANK_MOCKUP_FRAME.y}" width="${BLANK_MOCKUP_FRAME.width}" height="${BLANK_MOCKUP_FRAME.height}" rx="${BLANK_MOCKUP_FRAME.radius}" fill="none" stroke="#d4d4d8" stroke-width="8" stroke-dasharray="20 14"/>
     <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="#71717a" font-family="Arial, sans-serif" font-size="34">${safeLabel} blank mockup</text>
+  </svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+function createMockupPendingDataUrl(label: string) {
+  const safeLabel = escapeSvgText(label);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${BLANK_MOCKUP_SVG_WIDTH}" height="${BLANK_MOCKUP_SVG_HEIGHT}" viewBox="0 0 ${BLANK_MOCKUP_SVG_WIDTH} ${BLANK_MOCKUP_SVG_HEIGHT}">
+    <rect width="100%" height="100%" fill="#f6f7f9"/>
+    <rect x="${BLANK_MOCKUP_FRAME.x}" y="${BLANK_MOCKUP_FRAME.y}" width="${BLANK_MOCKUP_FRAME.width}" height="${BLANK_MOCKUP_FRAME.height}" rx="${BLANK_MOCKUP_FRAME.radius}" fill="#ffffff" stroke="#cbd5e1" stroke-width="8" stroke-dasharray="22 16"/>
+    <text x="50%" y="45%" text-anchor="middle" fill="#334155" font-family="Arial, sans-serif" font-size="42" font-weight="700">Mockup image pending</text>
+    <text x="50%" y="52%" text-anchor="middle" fill="#64748b" font-family="Arial, sans-serif" font-size="30">Upload product mockup in admin</text>
+    <text x="50%" y="59%" text-anchor="middle" fill="#94a3b8" font-family="Arial, sans-serif" font-size="24">${safeLabel} view</text>
   </svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
