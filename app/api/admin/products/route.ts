@@ -37,6 +37,28 @@ function getAdminConfig() {
   };
 }
 
+function getSafeDiagnostics({
+  storeDomain,
+  adminAccessToken,
+  shopifyStatus,
+  shopifyStatusText,
+  errorType,
+}: {
+  storeDomain: string;
+  adminAccessToken: string;
+  shopifyStatus?: number;
+  shopifyStatusText?: string;
+  errorType: string;
+}) {
+  return {
+    shopifyAdminAccessTokenExists: Boolean(adminAccessToken),
+    shopDomain: storeDomain || null,
+    shopifyStatus: shopifyStatus ?? null,
+    shopifyStatusText: shopifyStatusText || null,
+    errorType,
+  };
+}
+
 type ShopifyProductNode = {
   id: string;
   title: string;
@@ -102,6 +124,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         error: "Missing SHOPIFY_STORE_DOMAIN configuration.",
+        diagnostics: getSafeDiagnostics({
+          storeDomain,
+          adminAccessToken,
+          errorType: "missing_shop_domain",
+        }),
       },
       {
         status: 500,
@@ -114,6 +141,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         error: "SHOPIFY_ADMIN_ACCESS_TOKEN is not configured",
+        diagnostics: getSafeDiagnostics({
+          storeDomain,
+          adminAccessToken,
+          errorType: "missing_shopify_admin_access_token",
+        }),
       },
       {
         status: 500,
@@ -172,6 +204,14 @@ export async function GET(req: NextRequest) {
         {
           error: "Shopify Admin API request failed.",
           shopifyStatus: response.status,
+          shopifyStatusText: response.statusText,
+          diagnostics: getSafeDiagnostics({
+            storeDomain,
+            adminAccessToken,
+            shopifyStatus: response.status,
+            shopifyStatusText: response.statusText,
+            errorType: "shopify_admin_api_http_error",
+          }),
         },
         {
           status: 502,
@@ -187,6 +227,13 @@ export async function GET(req: NextRequest) {
         {
           error: "Shopify Admin GraphQL returned errors.",
           details: json.errors,
+          diagnostics: getSafeDiagnostics({
+            storeDomain,
+            adminAccessToken,
+            shopifyStatus: response.status,
+            shopifyStatusText: response.statusText,
+            errorType: "shopify_admin_graphql_error",
+          }),
         },
         {
           status: 502,
@@ -225,10 +272,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         error: "Failed to fetch products from Shopify Admin API.",
-        message:
-          error instanceof Error
-            ? error.message
-            : String(error),
+        diagnostics: getSafeDiagnostics({
+          storeDomain,
+          adminAccessToken,
+          errorType:
+            error instanceof Error
+              ? error.name || "Error"
+              : typeof error,
+        }),
       },
       {
         status: 500,
