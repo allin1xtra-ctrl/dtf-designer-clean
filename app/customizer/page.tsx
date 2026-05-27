@@ -184,6 +184,7 @@ type AiActionResponse = {
   ok?: boolean;
   error?: string;
   note?: string;
+  requestId?: string;
   imageDataUrl?: string;
   dataUrl?: string;
   imageUrl?: string;
@@ -862,6 +863,11 @@ function sanitizeAiDebugDetails(details: Record<string, unknown>) {
   return sanitizeAiDebugValue(details) as Record<string, unknown>;
 }
 
+function formatAiErrorMessage(result: AiActionResponse, fallback: string) {
+  const message = result.error || fallback;
+  return result.requestId ? `${message} Request ID: ${result.requestId}` : message;
+}
+
 export default function CustomizerPage() {
   const canvasElRef = useRef<HTMLCanvasElement | null>(null);
   const fabricCanvasRef = useRef<Canvas | null>(null);
@@ -1356,7 +1362,7 @@ export default function CustomizerPage() {
         const fallbackError = actionName === "Remove Background"
           ? "Background removal failed. Please try another image or upload a transparent PNG."
           : `${actionName} failed.`;
-        setAiStatus(result.error || fallbackError);
+        setAiStatus(formatAiErrorMessage(result, fallbackError));
         return;
       }
 
@@ -1460,7 +1466,9 @@ export default function CustomizerPage() {
       });
 
       if (!response.ok || result.ok === false) {
-        setAiStatus(result.error || "AI design generation failed. Please try a different prompt.");
+        setAiStatus(
+          formatAiErrorMessage(result, "AI design generation failed. Please try a different prompt.")
+        );
         return;
       }
 
