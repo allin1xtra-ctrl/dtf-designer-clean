@@ -29,7 +29,6 @@ function getAdminConfig() {
   return { storeDomain, apiVersion, panelToken };
 }
 
-
 type ShopifyProductNode = {
   id: string;
   title: string;
@@ -70,20 +69,27 @@ export async function GET(req: NextRequest) {
     );
   }
 
-   if (!token || token !== panelToken) {
+  if (!token || token !== panelToken) {
     return NextResponse.json(
       { error: "Unauthorized" },
       { status: 401, headers: NO_STORE_HEADERS }
     );
   }
 
+  if (!storeDomain) {
+    return NextResponse.json(
+      { error: "Missing SHOPIFY_STORE_DOMAIN configuration." },
+      { status: 500, headers: NO_STORE_HEADERS }
+    );
+  }
 
   const oauthToken = await getShopToken(storeDomain);
+
   if (!oauthToken) {
     return NextResponse.json(
       {
         error: "Missing Shopify OAuth access token for shop.",
-        installUrl: `/api/auth?shop=${encodeURIComponent(storeDomain || "yourdtfplug.myshopify.com")}`,
+        installUrl: `/api/auth?shop=${encodeURIComponent(storeDomain)}`,
       },
       { status: 401, headers: NO_STORE_HEADERS }
     );
@@ -116,18 +122,21 @@ export async function GET(req: NextRequest) {
   `;
 
   try {
-    const response = await fetch(`https://${storeDomain}/admin/api/${apiVersion}/graphql.json`, {
-      method: "POST",
-      cache: "no-store",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": oauthToken,
-      },
-      body: JSON.stringify({
-        query,
-        variables: { first: 100 },
-      }),
-    });
+    const response = await fetch(
+      `https://${storeDomain}/admin/api/${apiVersion}/graphql.json`,
+      {
+        method: "POST",
+        cache: "no-store",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Shopify-Access-Token": oauthToken,
+        },
+        body: JSON.stringify({
+          query,
+          variables: { first: 100 },
+        }),
+      }
+    );
 
     if (!response.ok) {
       const responseBody = await response.text().catch(() => "");
