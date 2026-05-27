@@ -2606,7 +2606,7 @@ export default function CustomizerPage() {
           </p>
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-2 text-sm">
+        <div className="mt-5 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
           <button type="button" onClick={addText} className="rounded bg-[#1f1f1f] px-3 py-2 text-left hover:bg-[#333]">Add Text</button>
           <button type="button" onClick={duplicateSelected} className="rounded bg-[#1f1f1f] px-3 py-2 text-left hover:bg-[#333]">Duplicate</button>
           <button type="button" onClick={centerSelected} className="rounded bg-[#1f1f1f] px-3 py-2 text-left hover:bg-[#333]">Center</button>
@@ -2617,10 +2617,10 @@ export default function CustomizerPage() {
           <button type="button" onClick={rotateSelected} className="rounded bg-[#1f1f1f] px-3 py-2 text-left hover:bg-[#333]">Rotate</button>
           <button type="button" onClick={bringForward} className="rounded bg-[#1f1f1f] px-3 py-2 text-left hover:bg-[#333]">Bring Forward</button>
           <button type="button" onClick={sendBackward} className="rounded bg-[#1f1f1f] px-3 py-2 text-left hover:bg-[#333]">Send Backward</button>
-          <button type="button" onClick={removeArtwork} className="col-span-2 rounded bg-[#2a1111] px-3 py-2 text-left hover:bg-[#3b1616]">Remove Artwork</button>
+          <button type="button" onClick={removeArtwork} className="rounded bg-[#2a1111] px-3 py-2 text-left hover:bg-[#3b1616] sm:col-span-2">Remove Artwork</button>
         </div>
 
-        <div className="sticky bottom-0 z-30 mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4 shadow-[0_-6px_16px_rgba(0,0,0,0.45)] md:static md:shadow-none">
+        <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">Text & Font Customization</h2>
           <p className="mb-3 text-xs text-gray-400">Selected object: {selectedObjectType}</p>
 
