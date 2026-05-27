@@ -16,12 +16,69 @@ type RemoveBackgroundBody = {
   imageDataUrl?: string;
 };
 
+type OpenAIErrorInfo = {
+  status?: number;
+  code?: string;
+  type?: string;
+};
+
+function toOpenAIErrorInfo(error: unknown): OpenAIErrorInfo {
+  const candidate = (error || {}) as {
+    status?: number;
+    code?: string;
+    type?: string;
+    error?: {
+      code?: string;
+      type?: string;
+    };
+  };
+
+  return {
+    status: candidate.status,
+    code: candidate.code || candidate.error?.code,
+    type: candidate.type || candidate.error?.type,
+  };
+}
+
+function toFrontendSafeErrorMessage(error: OpenAIErrorInfo) {
+  if (error.status === 401) {
+    return "OpenAI API key is invalid or expired.";
+  }
+
+  if (error.status === 403) {
+    return "OpenAI image model access is not enabled for this account.";
+  }
+
+  if (error.status === 404 || error.code === "model_not_found") {
+    return "Configured AI image model is not available.";
+  }
+
+  if (error.status === 429) {
+    return "OpenAI rate limit or billing limit reached.";
+  }
+
+  if (typeof error.status === "number" && error.status >= 500) {
+    return "Background removal service is temporarily unavailable.";
+  }
+
+  return "Unable to remove background right now. Please try another image.";
+}
+
 export async function POST(request: Request) {
+  const openaiKeyExists = Boolean(process.env.OPENAI_API_KEY);
+  console.info("Remove background route called", {
+    openaiKeyExists,
+  });
+
   if (!process.env.OPENAI_API_KEY) {
     return errorJson(AI_CONFIG_ERROR, 503);
   }
 
   const body = await readJsonBody<RemoveBackgroundBody>(request);
+  console.info("Remove background request payload", {
+    imageProvided: typeof body.imageDataUrl === "string" && body.imageDataUrl.length > 0,
+  });
+
   const parsed = parseImageDataUrl(body.imageDataUrl);
 
   if ("error" in parsed) {
@@ -50,7 +107,10 @@ export async function POST(request: Request) {
 
     const imageBase64 = response.data?.[0]?.b64_json;
     if (!imageBase64) {
-      console.error("Remove background did not return image data", { response });
+      console.error("Remove background did not return image data", {
+        openaiStatus: 200,
+        imageReturned: false,
+      });
       return errorJson("Unable to remove background right now. Please try again.");
     }
 
@@ -59,7 +119,13 @@ export async function POST(request: Request) {
       note: "Background removed.",
     });
   } catch (error) {
-    console.error("Remove background route failed:", error);
-    return errorJson("Unable to remove background right now. Please try again.");
+    const openaiError = toOpenAIErrorInfo(error);
+    console.error("Remove background route failed", {
+      openaiStatus: openaiError.status,
+      openaiCode: openaiError.code,
+      openaiType: openaiError.type,
+      errorType: error instanceof Error ? error.name : typeof error,
+    });
+    return errorJson(toFrontendSafeErrorMessage(openaiError), openaiError.status || 500);
   }
 }
