@@ -235,6 +235,14 @@ const PRODUCT_PRINT_LOCATION_OVERRIDES: Record<string, Partial<Record<string, Pa
   },
 };
 const VIEW_NAMES: ViewName[] = ["front", "back", "leftSleeve", "rightSleeve", "neck"];
+const DEFAULT_MOCKUP_URL = "/dtf-customizer-after.png";
+const DEFAULT_MOCKUP_LOCATIONS: Record<ViewName, PrintLocationData> = {
+  front: { mockupUrl: DEFAULT_MOCKUP_URL, designArea: DEFAULT_DESIGN_AREA },
+  back: { mockupUrl: DEFAULT_MOCKUP_URL, designArea: DEFAULT_DESIGN_AREA },
+  leftSleeve: { mockupUrl: DEFAULT_MOCKUP_URL, designArea: DEFAULT_DESIGN_AREA },
+  rightSleeve: { mockupUrl: DEFAULT_MOCKUP_URL, designArea: DEFAULT_DESIGN_AREA },
+  neck: { mockupUrl: DEFAULT_MOCKUP_URL, designArea: DEFAULT_DESIGN_AREA },
+};
 
 function createEmptyViews(): Record<ViewName, CanvasSnapshot | null> {
   return {
@@ -615,9 +623,12 @@ function getPrintLocationDataForView(
   }
 
   const fallbackKey = keys[0] || view;
+  const fallbackLocation = DEFAULT_MOCKUP_LOCATIONS[view] || {};
+  const handleOverride = handleOverrides?.[fallbackKey] || {};
+
   return {
     activeLocation: fallbackKey,
-    activeLocationData: handleOverrides?.[fallbackKey] ? { ...handleOverrides[fallbackKey] } : {},
+    activeLocationData: { ...fallbackLocation, ...handleOverride },
   };
 }
 
@@ -670,6 +681,9 @@ function resolveMockupUrl(
   const normalizedHandle = productHandle.trim().toLowerCase();
   const productFallback = normalizedHandle ? PRODUCT_BLANK_MOCKUPS[normalizedHandle]?.[view] : undefined;
   if (productFallback) return productFallback;
+
+  const defaultFallback = DEFAULT_MOCKUP_LOCATIONS[view]?.mockupUrl;
+  if (defaultFallback) return defaultFallback;
 
   return GENERIC_BLANK_MOCKUPS[view] || "";
 }
