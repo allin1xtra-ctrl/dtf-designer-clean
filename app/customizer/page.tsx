@@ -185,6 +185,9 @@ type AiActionResponse = {
   error?: string;
   note?: string;
   requestId?: string;
+  diagnostics?: {
+    safeErrorCategory?: string;
+  };
   imageDataUrl?: string;
   dataUrl?: string;
   imageUrl?: string;
@@ -865,7 +868,11 @@ function sanitizeAiDebugDetails(details: Record<string, unknown>) {
 
 function formatAiErrorMessage(result: AiActionResponse, fallback: string) {
   const message = result.error || fallback;
-  return result.requestId ? `${message} Request ID: ${result.requestId}` : message;
+  const category = result.diagnostics?.safeErrorCategory;
+  const categoryText = category && category !== "success" ? ` Category: ${category}.` : "";
+  return result.requestId
+    ? `${message}${categoryText} Request ID: ${result.requestId}`
+    : `${message}${categoryText}`;
 }
 
 export default function CustomizerPage() {
