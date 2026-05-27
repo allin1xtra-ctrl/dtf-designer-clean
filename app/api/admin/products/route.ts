@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getShopToken } from "@/app/lib/shopify-oauth-store";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -27,11 +26,13 @@ function getAdminConfig() {
   const apiVersion =
     cleanEnv(process.env.SHOPIFY_ADMIN_API_VERSION) || "2024-10";
 
+  const adminAccessToken = cleanEnv(process.env.SHOPIFY_ADMIN_ACCESS_TOKEN);
   const panelToken = cleanEnv(process.env.ADMIN_PANEL_TOKEN);
 
   return {
     storeDomain,
     apiVersion,
+    adminAccessToken,
     panelToken,
   };
 }
@@ -66,7 +67,7 @@ type ShopifyAdminProductsResponse = {
 };
 
 export async function GET(req: NextRequest) {
-  const { storeDomain, apiVersion, panelToken } = getAdminConfig();
+  const { storeDomain, apiVersion, adminAccessToken, panelToken } = getAdminConfig();
 
   const token = String(req.nextUrl.searchParams.get("token") || "").trim();
 
@@ -104,31 +105,13 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  let oauthToken: string | null = null;
-
-  try {
-    oauthToken = await getShopToken(storeDomain);
-  } catch (error) {
+  if (!adminAccessToken) {
     return NextResponse.json(
       {
-        error: "Failed to load Shopify OAuth access token.",
-        message: error instanceof Error ? error.message : String(error),
+        error: "SHOPIFY_ADMIN_ACCESS_TOKEN is not configured",
       },
       {
         status: 500,
-        headers: NO_STORE_HEADERS,
-      }
-    );
-  }
-
-  if (!oauthToken) {
-    return NextResponse.json(
-      {
-        error: "Missing Shopify OAuth access token for shop.",
-        installUrl: `/api/auth?shop=${encodeURIComponent(storeDomain)}`,
-      },
-      {
-        status: 401,
         headers: NO_STORE_HEADERS,
       }
     );
@@ -168,7 +151,7 @@ export async function GET(req: NextRequest) {
         cache: "no-store",
         headers: {
           "Content-Type": "application/json",
-          "X-Shopify-Access-Token": oauthToken,
+          "X-Shopify-Access-Token": adminAccessToken,
         },
         body: JSON.stringify({
           query,
@@ -180,13 +163,10 @@ export async function GET(req: NextRequest) {
     );
 
     if (!response.ok) {
-      const responseBody = await response.text().catch(() => "");
-
       return NextResponse.json(
         {
           error: "Shopify Admin API request failed.",
           shopifyStatus: response.status,
-          shopifyResponseBody: responseBody || null,
         },
         {
           status: 502,

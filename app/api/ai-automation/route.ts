@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
+  const automationToken = process.env.APP_AUTOMATION_TOKEN;
+
+  if (!automationToken) {
+    return NextResponse.json({ error: "APP_AUTOMATION_TOKEN is not configured" }, { status: 500 });
+  }
+
   try {
     const body = await req.json();
     const context = body?.context || {};

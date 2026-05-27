@@ -5,20 +5,15 @@ const cleanDomain = (value: unknown) =>
   cleanEnv(value).replace(/^https?:\/\//, "").replace(/\/$/, "");
 
 const SHOPIFY_STORE_DOMAIN = cleanDomain(process.env.SHOPIFY_STORE_DOMAIN);
-const SHOPIFY_ADMIN_API_KEY = cleanEnv(process.env.SHOPIFY_ADMIN_API_KEY);
-const SHOPIFY_ADMIN_API_PASSWORD = cleanEnv(process.env.SHOPIFY_ADMIN_API_PASSWORD);
-const SHOPIFY_ADMIN_API_VERSION = cleanEnv(process.env.SHOPIFY_ADMIN_API_VERSION) || "2023-01";
-
-const getAuthHeader = () => {
-  const token = Buffer.from(`${SHOPIFY_ADMIN_API_KEY}:${SHOPIFY_ADMIN_API_PASSWORD}`).toString("base64");
-  return `Basic ${token}`;
-};
+const SHOPIFY_ADMIN_ACCESS_TOKEN = cleanEnv(process.env.SHOPIFY_ADMIN_ACCESS_TOKEN);
+const SHOPIFY_ADMIN_API_VERSION = cleanEnv(process.env.SHOPIFY_ADMIN_API_VERSION) || "2024-10";
+const ADMIN_PANEL_TOKEN = cleanEnv(process.env.ADMIN_PANEL_TOKEN);
 
 const shopifyFetch = async (endpoint: string, options: any = {}) => {
   const url = `https://${SHOPIFY_STORE_DOMAIN}/admin/api/${SHOPIFY_ADMIN_API_VERSION}${endpoint}`;
   const headers = {
     "Content-Type": "application/json",
-    Authorization: getAuthHeader(),
+    "X-Shopify-Access-Token": SHOPIFY_ADMIN_ACCESS_TOKEN,
     ...options.headers,
   };
   const res = await fetch(url, { ...options, headers });
@@ -26,6 +21,25 @@ const shopifyFetch = async (endpoint: string, options: any = {}) => {
 };
 
 export async function POST(req: NextRequest) {
+  const adminToken = req.headers.get("x-admin-token")
+    || req.headers.get("authorization")?.replace("Bearer ", "");
+
+  if (!ADMIN_PANEL_TOKEN) {
+    return NextResponse.json({ error: "Missing ADMIN_PANEL_TOKEN configuration." }, { status: 500 });
+  }
+
+  if (adminToken !== ADMIN_PANEL_TOKEN) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!SHOPIFY_STORE_DOMAIN) {
+    return NextResponse.json({ error: "Missing Shopify Admin API configuration." }, { status: 500 });
+  }
+
+  if (!SHOPIFY_ADMIN_ACCESS_TOKEN) {
+    return NextResponse.json({ error: "SHOPIFY_ADMIN_ACCESS_TOKEN is not configured" }, { status: 500 });
+  }
+
   const { action, payload } = await req.json();
 
   // List products

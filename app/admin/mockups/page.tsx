@@ -223,7 +223,7 @@ function getSafeImageUrl(value: string) {
 
 function AdminMockupManagerContent() {
   const searchParams = useSearchParams();
-  const token = "dev-mode";
+  const token = searchParams?.get("token") || "";
 
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
