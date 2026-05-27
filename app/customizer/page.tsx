@@ -823,6 +823,45 @@ function distanceFromPrintableArea(bounds: { left: number; top: number; width: n
   return Math.max(overflowLeft, overflowTop, overflowRight, overflowBottom);
 }
 
+function sanitizeAiDebugValue(value: unknown): unknown {
+  if (typeof value === "string") {
+    if (value.startsWith("data:image/")) {
+      return "[image data url redacted]";
+    }
+    if (value.length > 240) {
+      return `${value.slice(0, 240)}...`;
+    }
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(sanitizeAiDebugValue);
+  }
+
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>).map(([key, entryValue]) => {
+      const normalizedKey = key.toLowerCase();
+      if (
+        normalizedKey.includes("imagedataurl")
+        || normalizedKey.includes("dataurl")
+        || normalizedKey.includes("imageurl")
+        || normalizedKey.includes("base64")
+      ) {
+        return [key, typeof entryValue === "string" ? "[image value redacted]" : sanitizeAiDebugValue(entryValue)];
+      }
+      return [key, sanitizeAiDebugValue(entryValue)];
+    });
+
+    return Object.fromEntries(entries);
+  }
+
+  return value;
+}
+
+function sanitizeAiDebugDetails(details: Record<string, unknown>) {
+  return sanitizeAiDebugValue(details) as Record<string, unknown>;
+}
+
 export default function CustomizerPage() {
   const canvasElRef = useRef<HTMLCanvasElement | null>(null);
   const fabricCanvasRef = useRef<Canvas | null>(null);
@@ -1023,10 +1062,9 @@ export default function CustomizerPage() {
     if (!shouldDebugAiLogRef.current) return;
     const activeObject = getCanvas()?.getActiveObject();
     console.log("[AI DEBUG]", {
-      selectedObject: activeObject,
       selectedObjectType: getObjectType(activeObject) || "none",
       aiActionRequested: action,
-      ...details,
+      ...sanitizeAiDebugDetails(details),
     });
   };
 
@@ -2052,7 +2090,6 @@ export default function CustomizerPage() {
       if (shouldDebugAiLogRef.current) {
         const activeObject = canvas.getActiveObject();
         console.log("[AI DEBUG]", {
-          selectedObject: activeObject,
           selectedObjectType: getObjectType(activeObject) || "none",
         });
       }

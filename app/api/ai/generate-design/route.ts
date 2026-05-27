@@ -9,6 +9,7 @@ import {
 } from "../_utils";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 type GenerateDesignBody = {
   prompt?: string;
@@ -106,28 +107,38 @@ function shouldRetryWithFallback(
 function buildImageGenerateParams(model: string, prompt: string): ImageGenerateParamsNonStreaming {
   const cleanModel = model.trim();
   const normalizedModel = cleanModel.toLowerCase();
-  const baseParams: ImageGenerateParamsNonStreaming = {
-    model: cleanModel,
-    prompt: createEnhancedPrompt(prompt),
-    size: "1024x1024",
-    stream: false,
-  };
+  const enhancedPrompt = createEnhancedPrompt(prompt);
 
   if (normalizedModel.startsWith("dall-e")) {
     const quality = normalizedModel === DALL_E_3_MODEL ? "hd" : undefined;
 
     return {
-      ...baseParams,
+      model: cleanModel,
+      prompt: enhancedPrompt,
+      size: "1024x1024",
       response_format: "b64_json",
       ...(quality ? { quality } : {}),
     };
   }
 
+  const baseParams: ImageGenerateParamsNonStreaming = {
+    model: cleanModel,
+    prompt: enhancedPrompt,
+    size: "1024x1024",
+    stream: false,
+    output_format: "png",
+    quality: "high",
+  };
+
+  if (normalizedModel.startsWith("gpt-image-2")) {
+    return {
+      ...baseParams,
+    };
+  }
+
   return {
     ...baseParams,
-    output_format: "png",
     background: "transparent",
-    quality: "high",
   };
 }
 
