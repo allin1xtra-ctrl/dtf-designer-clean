@@ -1282,7 +1282,7 @@ export default function CustomizerPage() {
     }
 
     if (!isImageObject(activeObject)) {
-      setAiStatus("Select an image first.");
+      setAiStatus("Select an uploaded image before removing background.");
       return;
     }
 
@@ -1339,7 +1339,9 @@ export default function CustomizerPage() {
 
       setAiStatus(result.note || `${actionName} finished.`);
     } catch (error) {
-      console.error(`${actionName} failed:`, error);
+      console.error(`${actionName} failed:`, {
+        errorType: error instanceof Error ? error.name : typeof error,
+      });
       setAiStatus(
         actionName === "Remove Background"
           ? "Background removal failed. Please try another image or upload a transparent PNG."
@@ -1380,7 +1382,7 @@ export default function CustomizerPage() {
     const prompt = designIdeaPrompt.trim();
 
     if (!prompt) {
-      setAiStatus("Describe your design idea first.");
+      setAiStatus("Enter a prompt before generating artwork.");
       return;
     }
 
@@ -1420,30 +1422,7 @@ export default function CustomizerPage() {
       });
 
       if (!response.ok || result.ok === false) {
-        const canvas = getCanvas();
-        if (canvas) {
-          const fallbackText = new Textbox(prompt.slice(0, 80), {
-            left: printableAreaRef.current.left + 12,
-            top: printableAreaRef.current.top + 12,
-            fill: textControls.textColor,
-            stroke: textControls.outlineColor,
-            strokeWidth: textControls.outlineWidth,
-            fontSize: Math.max(18, Math.min(44, textControls.fontSize)),
-            fontFamily: textControls.fontFamily,
-            width: Math.max(140, printableAreaRef.current.width - 24),
-          });
-          canvas.add(fallbackText);
-          canvas.setActiveObject(fallbackText);
-          fallbackText.setCoords();
-          canvas.requestRenderAll();
-          syncSelectedObject();
-          requestDraftSave({ resume: true });
-          setAiStatus("AI service unavailable. Added prompt text to canvas as a fallback.");
-        } else {
-          setAiStatus(
-            result.error || "AI design generation is not configured. Add OPENAI_API_KEY in Vercel."
-          );
-        }
+        setAiStatus(result.error || "AI design generation failed. Please try a different prompt.");
         return;
       }
 
@@ -1467,29 +1446,10 @@ export default function CustomizerPage() {
         setAiSuggestions(result.suggestions);
       }
     } catch (error) {
-      console.error("AI design generation failed:", error);
-      const canvas = getCanvas();
-      if (canvas) {
-        const fallbackText = new Textbox(prompt.slice(0, 80), {
-          left: printableAreaRef.current.left + 12,
-          top: printableAreaRef.current.top + 12,
-          fill: textControls.textColor,
-          stroke: textControls.outlineColor,
-          strokeWidth: textControls.outlineWidth,
-          fontSize: Math.max(18, Math.min(44, textControls.fontSize)),
-          fontFamily: textControls.fontFamily,
-          width: Math.max(140, printableAreaRef.current.width - 24),
-        });
-        canvas.add(fallbackText);
-        canvas.setActiveObject(fallbackText);
-        fallbackText.setCoords();
-        canvas.requestRenderAll();
-        syncSelectedObject();
-        requestDraftSave({ resume: true });
-        setAiStatus("AI request failed. Added prompt text to canvas as a fallback.");
-      } else {
-        setAiStatus("AI design generation failed. Please try a different prompt.");
-      }
+      console.error("AI design generation failed:", {
+        errorType: error instanceof Error ? error.name : typeof error,
+      });
+      setAiStatus("AI design generation failed. Please try a different prompt.");
     }
   };
 
