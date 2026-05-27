@@ -23,16 +23,10 @@ function cleanEnv(value: unknown) {
 function getAdminConfig() {
   const storeDomain = cleanDomain(process.env.SHOPIFY_STORE_DOMAIN || "");
   const apiVersion = cleanEnv(process.env.SHOPIFY_ADMIN_API_VERSION) || "2024-10";
-  const apiKey = cleanEnv(process.env.SHOPIFY_ADMIN_API_KEY);
-  const apiPassword = cleanEnv(process.env.SHOPIFY_ADMIN_API_PASSWORD);
+  const adminAccessToken = cleanEnv(process.env.SHOPIFY_ADMIN_ACCESS_TOKEN);
   const panelToken = cleanEnv(process.env.ADMIN_PANEL_TOKEN);
 
-  return { storeDomain, apiVersion, apiKey, apiPassword, panelToken };
-}
-
-function getAuthHeader(apiKey: string, apiPassword: string) {
-  const token = Buffer.from(`${apiKey}:${apiPassword}`).toString("base64");
-  return `Basic ${token}`;
+  return { storeDomain, apiVersion, adminAccessToken, panelToken };
 }
 
 type MetafieldsSetResponse = {
@@ -54,7 +48,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 export async function POST(req: NextRequest) {
-  const { storeDomain, apiVersion, apiKey, apiPassword, panelToken } = getAdminConfig();
+  const { storeDomain, apiVersion, adminAccessToken, panelToken } = getAdminConfig();
 
   if (!panelToken) {
     return NextResponse.json(
@@ -76,13 +70,12 @@ export async function POST(req: NextRequest) {
   const productId = String(body.productId || "").trim();
   const printLocations = body.printLocations;
 
-  // TEMP DEV BYPASS
-if (false && (!token || token !== panelToken)) {
-  return NextResponse.json(
-    { error: "Unauthorized" },
-    { status: 401, headers: NO_STORE_HEADERS }
-  );
-}
+  if (!token || token !== panelToken) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401, headers: NO_STORE_HEADERS }
+    );
+  }
 
   if (!productId) {
     return NextResponse.json({ error: "Missing productId." }, { status: 400, headers: NO_STORE_HEADERS });
@@ -95,9 +88,16 @@ if (false && (!token || token !== panelToken)) {
     );
   }
 
-  if (!storeDomain || !apiKey || !apiPassword) {
+  if (!storeDomain) {
     return NextResponse.json(
       { error: "Missing Shopify Admin API configuration." },
+      { status: 500, headers: NO_STORE_HEADERS }
+    );
+  }
+
+  if (!adminAccessToken) {
+    return NextResponse.json(
+      { error: "SHOPIFY_ADMIN_ACCESS_TOKEN is not configured" },
       { status: 500, headers: NO_STORE_HEADERS }
     );
   }
@@ -127,7 +127,7 @@ if (false && (!token || token !== panelToken)) {
       cache: "no-store",
       headers: {
         "Content-Type": "application/json",
-        Authorization: getAuthHeader(apiKey, apiPassword),
+        "X-Shopify-Access-Token": adminAccessToken,
       },
       body: JSON.stringify({
         query: mutation,
