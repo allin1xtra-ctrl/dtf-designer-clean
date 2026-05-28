@@ -2985,8 +2985,7 @@ export default function CustomizerPage() {
 
           .customizer-mobile-shell {
             display: grid;
-            grid-template-columns: minmax(0, 1fr);
-            grid-template-rows: minmax(360px, 58dvh) minmax(0, 42dvh);
+            grid-template-columns: clamp(150px, 38vw, 260px) minmax(0, 1fr);
             width: 100%;
             min-width: 0;
             height: 100dvh;
@@ -2995,13 +2994,18 @@ export default function CustomizerPage() {
           }
 
           .customizer-mobile-shell > aside {
-            order: 2;
-            border-right: 0;
-            border-top: 1px solid #222;
+            height: 100dvh;
+            min-width: 0;
+            overflow-x: hidden;
+            overflow-y: auto;
+            border-right: 1px solid #222;
+            border-top: 0;
           }
 
           .customizer-mobile-shell > main {
-            order: 1;
+            height: 100dvh;
+            min-width: 0;
+            overflow: hidden;
           }
 
           .canvas-container,
