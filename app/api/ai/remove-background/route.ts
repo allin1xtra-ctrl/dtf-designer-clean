@@ -40,6 +40,7 @@ type RemoveBackgroundDiagnostics = {
   openaiKeyExists: boolean;
   attemptedModel: string;
   safeErrorCategory: string;
+  errorType: string | null;
 };
 
 function toOpenAIErrorInfo(error: unknown): OpenAIErrorInfo {
@@ -78,6 +79,7 @@ function createDiagnostics(
     openaiKeyExists: false,
     attemptedModel: REMOVE_BACKGROUND_MODEL,
     safeErrorCategory: "started",
+    errorType: null,
     ...overrides,
   };
 }
@@ -136,7 +138,16 @@ function getOpenAIErrorCategory(error: OpenAIErrorInfo) {
   if (error.status === 404 || error.code === "model_not_found") return "openai_model_unavailable";
   if (error.status === 429) return "openai_rate_limit_or_billing";
   if (typeof error.status === "number" && error.status >= 500) return "openai_service_unavailable";
+  if (!error.status && !error.code && !error.type) return "openai_request_failed_no_response";
   return "openai_unknown_error";
+}
+
+function getOpenAIErrorMessage(error: OpenAIErrorInfo) {
+  if (!error.status && !error.code && !error.type) {
+    return "OpenAI request failed before a response was received.";
+  }
+
+  return toFrontendSafeErrorMessage(error);
 }
 
 function supportsTransparentBackground(model: string) {
@@ -229,8 +240,10 @@ export async function POST(request: Request) {
     );
   }
 
+  let pngInput: Buffer;
+
   try {
-    const pngInput = await sharp(parsed.buffer, { animated: false })
+    pngInput = await sharp(parsed.buffer, { animated: false })
       .rotate()
       .resize({
         width: MAX_REMOVE_BACKGROUND_EDGE,
@@ -241,26 +254,60 @@ export async function POST(request: Request) {
       .ensureAlpha()
       .png()
       .toBuffer();
-
+  } catch (error) {
     diagnostics = {
       ...diagnostics,
-      processedPngByteSize: pngInput.length,
+      safeErrorCategory: "server_image_processing_error",
+      errorType: error instanceof Error ? error.name : typeof error,
     };
 
-    if (pngInput.length > MAX_OPENAI_IMAGE_BYTES) {
-      diagnostics = { ...diagnostics, safeErrorCategory: "processed_image_too_large" };
-      console.warn("Remove background processed PNG too large", diagnostics);
-      return removeBackgroundErrorJson(
-        requestId,
-        "Processed image is too large for background removal. Upload a smaller image.",
-        413,
-        diagnostics
-      );
-    }
+    console.error("Remove background image preprocessing failed", diagnostics);
+    return removeBackgroundErrorJson(
+      requestId,
+      "Image could not be processed before background removal. Try a PNG, JPG, or WebP image.",
+      422,
+      diagnostics
+    );
+  }
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const imageFile = await toFile(pngInput, "source.png", { type: "image/png" });
+  diagnostics = {
+    ...diagnostics,
+    processedPngByteSize: pngInput.length,
+  };
 
+  if (pngInput.length > MAX_OPENAI_IMAGE_BYTES) {
+    diagnostics = { ...diagnostics, safeErrorCategory: "processed_image_too_large" };
+    console.warn("Remove background processed PNG too large", diagnostics);
+    return removeBackgroundErrorJson(
+      requestId,
+      "Processed image is too large for background removal. Upload a smaller image.",
+      413,
+      diagnostics
+    );
+  }
+
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  let imageFile: Awaited<ReturnType<typeof toFile>>;
+
+  try {
+    imageFile = await toFile(pngInput, "source.png", { type: "image/png" });
+  } catch (error) {
+    diagnostics = {
+      ...diagnostics,
+      safeErrorCategory: "server_file_preparation_error",
+      errorType: error instanceof Error ? error.name : typeof error,
+    };
+
+    console.error("Remove background file preparation failed", diagnostics);
+    return removeBackgroundErrorJson(
+      requestId,
+      "Image could not be prepared for background removal. Please try another image.",
+      500,
+      diagnostics
+    );
+  }
+
+  try {
     const response = await openai.images.edit(buildRemoveBackgroundParams(imageFile));
 
     const imageBase64 = response.data?.[0]?.b64_json;
@@ -296,15 +343,13 @@ export async function POST(request: Request) {
       openaiCode: openaiError.code || null,
       openaiType: openaiError.type || null,
       safeErrorCategory,
+      errorType: error instanceof Error ? error.name : typeof error,
     };
 
-    console.error("Remove background route failed", {
-      ...diagnostics,
-      errorType: error instanceof Error ? error.name : typeof error,
-    });
+    console.error("Remove background OpenAI request failed", diagnostics);
     return removeBackgroundErrorJson(
       requestId,
-      toFrontendSafeErrorMessage(openaiError),
+      getOpenAIErrorMessage(openaiError),
       openaiError.status || 500,
       diagnostics
     );
