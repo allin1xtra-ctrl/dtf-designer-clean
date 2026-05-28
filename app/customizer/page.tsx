@@ -5,8 +5,8 @@ import { Canvas, FabricImage, Path, Shadow, Textbox } from "fabric";
 import { normalizeVariantId } from "../lib/shopify";
 
 const FALLBACK_VARIANT_ID = "47766570074286";
-const CANVAS_DEFAULT_WIDTH = 500;
-const CANVAS_DEFAULT_HEIGHT = 600;
+const CANVAS_DEFAULT_WIDTH = 620;
+const CANVAS_DEFAULT_HEIGHT = 744;
 
 type ViewName = "front" | "back" | "leftSleeve" | "rightSleeve" | "neck";
 type CurveMode = "none" | "arcUp" | "arcDown" | "wave";
@@ -20,6 +20,9 @@ type TextControlsState = {
   shadow: boolean;
   glow: boolean;
   letterSpacing: number;
+  lineHeight: number;
+  textAlign: "left" | "center" | "right";
+  opacity: number;
   bold: boolean;
   italic: boolean;
   uppercase: boolean;
@@ -32,6 +35,16 @@ type FontOption = {
   value: string;
 };
 
+type LayerItem = {
+  id: string;
+  index: number;
+  label: string;
+  type: string;
+  locked: boolean;
+  visible: boolean;
+  active: boolean;
+};
+
 const DEFAULT_TEXT_CONTROLS: TextControlsState = {
   fontFamily: "Arial",
   fontSize: 32,
@@ -41,6 +54,9 @@ const DEFAULT_TEXT_CONTROLS: TextControlsState = {
   shadow: false,
   glow: false,
   letterSpacing: 0,
+  lineHeight: 1.16,
+  textAlign: "center",
+  opacity: 1,
   bold: false,
   italic: false,
   uppercase: false,
@@ -53,6 +69,7 @@ const FONT_OPTIONS: FontOption[] = [
   { label: "Helvetica", value: "Helvetica" },
   { label: "Times New Roman", value: "\"Times New Roman\"" },
   { label: "Georgia", value: "Georgia" },
+  { label: "Playfair Display", value: "\"Playfair Display\"" },
   { label: "Verdana", value: "Verdana" },
   { label: "Tahoma", value: "Tahoma" },
   { label: "Trebuchet MS", value: "\"Trebuchet MS\"" },
@@ -73,6 +90,7 @@ const FONT_OPTIONS: FontOption[] = [
   { label: "Black Ops One", value: "\"Black Ops One\"" },
   { label: "Racing Sans One", value: "\"Racing Sans One\"" },
   { label: "Graduate", value: "Graduate" },
+  { label: "Cinzel", value: "Cinzel" },
   { label: "Varsity Style", value: "Graduate, \"Times New Roman\", serif" },
   { label: "Russo One", value: "\"Russo One\"" },
   { label: "Archivo Black", value: "\"Archivo Black\"" },
@@ -84,6 +102,39 @@ const FONT_OPTIONS: FontOption[] = [
   { label: "Nunito", value: "Nunito" },
   { label: "Work Sans", value: "\"Work Sans\"" },
 ];
+
+const GOOGLE_FONT_FAMILIES = new Set([
+  "Anton",
+  "Bebas Neue",
+  "Oswald",
+  "Montserrat",
+  "Poppins",
+  "League Spartan",
+  "Playfair Display",
+  "Pacifico",
+  "Lobster",
+  "Great Vibes",
+  "Dancing Script",
+  "Bangers",
+  "Permanent Marker",
+  "Black Ops One",
+  "Racing Sans One",
+  "Graduate",
+  "Cinzel",
+  "Russo One",
+  "Archivo Black",
+  "Inter",
+  "Roboto",
+  "Open Sans",
+  "Lato",
+  "Raleway",
+  "Nunito",
+  "Work Sans",
+]);
+
+const fontLoadCache = new Map<string, Promise<void>>();
+const SNAP_TO_CENTER_THRESHOLD = 8;
+const LOW_RESOLUTION_UPLOAD_EDGE = 900;
 
 const VIEW_LABELS: Record<ViewName, string> = {
   front: "Front",
@@ -206,8 +257,8 @@ const BLANK_MOCKUP_SVG_WIDTH = 1000;
 const BLANK_MOCKUP_SVG_HEIGHT = 1200;
 // Expanded to leave a roughly 12% side margin and 6% top margin so fallback blank garments read larger in the preview.
 const BLANK_MOCKUP_FRAME = { x: 120, y: 70, width: 760, height: 1060, radius: 24 };
-const MOCKUP_FIT_RATIO = 0.9;
-const MOCKUP_FIT_RATIO_SMALL_SCREEN = 0.92;
+const MOCKUP_FIT_RATIO = 0.96;
+const MOCKUP_FIT_RATIO_SMALL_SCREEN = 0.98;
 const PREVIEW_PADDING = 8;
 const MIN_PREVIEW_SCALE = 0.01;
 const MIN_MOBILE_PREVIEW_SCALE = 0.32;
@@ -289,6 +340,95 @@ function normalizeDraftViews(value: unknown): Record<ViewName, CanvasSnapshot | 
   }
 
   return normalized;
+}
+
+function getPrimaryFontFamily(value: string) {
+  return String(value || "")
+    .split(",")[0]
+    .replace(/["']/g, "")
+    .trim();
+}
+
+function getGoogleFontHref(fontFamily: string) {
+  const primaryFamily = getPrimaryFontFamily(fontFamily);
+  if (!GOOGLE_FONT_FAMILIES.has(primaryFamily)) return "";
+  const encodedFamily = primaryFamily.replace(/\s+/g, "+");
+  return `https://fonts.googleapis.com/css2?family=${encodedFamily}:wght@400;500;600;700;800;900&display=swap`;
+}
+
+function ensureGoogleFontStylesheet(fontFamily: string) {
+  if (typeof document === "undefined") return;
+
+  const href = getGoogleFontHref(fontFamily);
+  if (!href) return;
+
+  const primaryFamily = getPrimaryFontFamily(fontFamily);
+  const id = `dtf-font-${primaryFamily.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+  if (document.getElementById(id)) return;
+
+  const link = document.createElement("link");
+  link.id = id;
+  link.rel = "stylesheet";
+  link.href = href;
+  document.head.appendChild(link);
+}
+
+function ensureFontLoaded(fontFamily: string) {
+  const cleanFontFamily = String(fontFamily || "").trim();
+  if (!cleanFontFamily || typeof document === "undefined") {
+    return Promise.resolve();
+  }
+
+  const cached = fontLoadCache.get(cleanFontFamily);
+  if (cached) return cached;
+
+  const promise = (async () => {
+    ensureGoogleFontStylesheet(cleanFontFamily);
+
+    if (!document.fonts?.load) return;
+
+    try {
+      await Promise.all([
+        document.fonts.load(`400 32px ${cleanFontFamily}`),
+        document.fonts.load(`700 32px ${cleanFontFamily}`),
+      ]);
+      await document.fonts.ready;
+    } catch (error) {
+      console.warn("Font failed to load before canvas render:", {
+        fontFamily: getPrimaryFontFamily(cleanFontFamily),
+        errorType: error instanceof Error ? error.name : typeof error,
+      });
+    }
+  })();
+
+  fontLoadCache.set(cleanFontFamily, promise);
+  return promise;
+}
+
+function collectFontFamiliesFromSnapshot(snapshot: CanvasSnapshot | null) {
+  const fonts = new Set<string>();
+
+  const visit = (value: unknown) => {
+    if (!value || typeof value !== "object") return;
+
+    const candidate = value as { fontFamily?: unknown; objects?: unknown };
+    if (typeof candidate.fontFamily === "string" && candidate.fontFamily.trim()) {
+      fonts.add(candidate.fontFamily);
+    }
+
+    if (Array.isArray(candidate.objects)) {
+      candidate.objects.forEach(visit);
+    }
+  };
+
+  visit(snapshot);
+  return Array.from(fonts);
+}
+
+async function ensureSnapshotFontsLoaded(snapshot: CanvasSnapshot | null) {
+  const fonts = collectFontFamiliesFromSnapshot(snapshot);
+  if (!fonts.length) return;
+  await Promise.all(fonts.map((font) => ensureFontLoaded(font)));
 }
 
 function escapeSvgText(value: string) {
@@ -899,8 +1039,11 @@ export default function CustomizerPage() {
   const [shouldDebugAiLog, setShouldDebugAiLog] = useState(false);
   const [selectedObjectType, setSelectedObjectType] = useState("none");
   const [selectedLocked, setSelectedLocked] = useState(false);
+  const [layers, setLayers] = useState<LayerItem[]>([]);
   const [boundaryWarning, setBoundaryWarning] = useState("");
+  const [imageQualityWarning, setImageQualityWarning] = useState("");
   const [aiStatus, setAiStatus] = useState("");
+  const [activeAiAction, setActiveAiAction] = useState("");
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [designIdeaPrompt, setDesignIdeaPrompt] = useState("");
   const [draftStatus, setDraftStatus] = useState("");
@@ -942,7 +1085,10 @@ export default function CustomizerPage() {
     const canvas = canvasOverride ?? getCanvas();
     const targetView = viewOverride ?? currentView;
     if (!canvas) return null;
-    const snapshot = canvas.toJSON();
+    const snapshot = (canvas as unknown as { toJSON: (propertiesToInclude?: string[]) => CanvasSnapshot }).toJSON([
+      "name",
+      "__curveMode",
+    ]);
     viewsRef.current[targetView] = snapshot;
     return snapshot;
   };
@@ -1081,6 +1227,174 @@ export default function CustomizerPage() {
     });
   };
 
+  const updateLayers = () => {
+    const canvas = getCanvas();
+    if (!canvas) {
+      setLayers([]);
+      return;
+    }
+
+    const activeObject = canvas.getActiveObject();
+    const nextLayers = canvas
+      .getObjects()
+      .map((object, index) => {
+        const objectType = getObjectType(object) || "object";
+        const objectName =
+          typeof (object as { name?: unknown }).name === "string"
+            ? String((object as { name?: unknown }).name).trim()
+            : "";
+        const textPreview = isTextObject(object)
+          ? String(object.text || "").replace(/\s+/g, " ").trim()
+          : "";
+        const label = objectName || (textPreview
+          ? `Text: ${textPreview.slice(0, 24)}`
+          : objectType === "image"
+            ? `Artwork ${index + 1}`
+            : `${objectType} ${index + 1}`);
+
+        return {
+          id: `${objectType}-${index}`,
+          index,
+          label,
+          type: objectType,
+          locked: isLockedObject(object),
+          visible: (object as { visible?: boolean }).visible !== false,
+          active: object === activeObject,
+        };
+      })
+      .reverse();
+
+    setLayers(nextLayers);
+  };
+
+  const withLayerObject = (
+    index: number,
+    callback: (object: Parameters<Canvas["centerObject"]>[0]) => void
+  ) => {
+    const canvas = getCanvas();
+    const object = canvas?.getObjects()[index];
+    if (!canvas || !object) return;
+
+    callback(object);
+    object.setCoords();
+    canvas.requestRenderAll();
+    updateLayers();
+    requestDraftSave({ resume: true });
+  };
+
+  const renameLayer = (index: number) => {
+    const canvas = getCanvas();
+    const object = canvas?.getObjects()[index];
+    if (!canvas || !object || typeof window === "undefined") return;
+
+    const currentName = String((object as { name?: unknown }).name || "");
+    const nextName = window.prompt("Layer name", currentName);
+    if (nextName === null) return;
+
+    (object as { name?: string }).name = nextName.trim();
+    updateLayers();
+    requestDraftSave({ resume: true });
+  };
+
+  const toggleLayerVisibility = (index: number) => {
+    withLayerObject(index, (object) => {
+      const mutable = object as { visible?: boolean };
+      mutable.visible = mutable.visible === false;
+    });
+  };
+
+  const toggleLayerLock = (index: number) => {
+    withLayerObject(index, (object) => {
+      const current = isLockedObject(object);
+      const target = !current;
+      const mutable = object as {
+        lockMovementX?: boolean;
+        lockMovementY?: boolean;
+        lockScalingX?: boolean;
+        lockScalingY?: boolean;
+        lockRotation?: boolean;
+        selectable?: boolean;
+      };
+      mutable.lockMovementX = target;
+      mutable.lockMovementY = target;
+      mutable.lockScalingX = target;
+      mutable.lockScalingY = target;
+      mutable.lockRotation = target;
+      mutable.selectable = true;
+    });
+  };
+
+  const duplicateLayer = async (index: number) => {
+    const canvas = getCanvas();
+    const object = canvas?.getObjects()[index];
+    if (!canvas || !object) return;
+
+    const clone = await object.clone();
+    clone.set({ left: (object.left || 0) + 20, top: (object.top || 0) + 20 });
+    canvas.add(clone);
+    canvas.setActiveObject(clone);
+    clone.setCoords();
+    canvas.requestRenderAll();
+    syncSelectedObject();
+    requestDraftSave({ resume: true });
+  };
+
+  const bringLayerForward = (index: number) => {
+    const canvas = getCanvas();
+    const object = canvas?.getObjects()[index];
+    if (!canvas || !object) return;
+    canvas.setActiveObject(object);
+    canvas.bringObjectForward(object);
+    canvas.requestRenderAll();
+    syncSelectedObject();
+    requestDraftSave({ resume: true });
+  };
+
+  const sendLayerBackward = (index: number) => {
+    const canvas = getCanvas();
+    const object = canvas?.getObjects()[index];
+    if (!canvas || !object) return;
+    canvas.setActiveObject(object);
+    canvas.sendObjectBackwards(object);
+    canvas.requestRenderAll();
+    syncSelectedObject();
+    requestDraftSave({ resume: true });
+  };
+
+  const deleteLayer = (index: number) => {
+    const canvas = getCanvas();
+    const object = canvas?.getObjects()[index];
+    if (!canvas || !object) return;
+    const objectType = getObjectType(object);
+
+    canvas.remove(object);
+    canvas.discardActiveObject();
+
+    if (objectType === "image") {
+      const hasRemainingImageObjects = canvas
+        .getObjects()
+        .some((candidate) => getObjectType(candidate) === "image");
+
+      if (!hasRemainingImageObjects) {
+        uploadedArtworkByViewRef.current[currentView] = "";
+      }
+    }
+
+    canvas.requestRenderAll();
+    syncSelectedObject();
+    requestDraftSave({ resume: true });
+  };
+
+  const selectLayer = (index: number) => {
+    const canvas = getCanvas();
+    const object = canvas?.getObjects()[index];
+    if (!canvas || !object) return;
+
+    canvas.setActiveObject(object);
+    canvas.requestRenderAll();
+    syncSelectedObject();
+  };
+
   const syncTextControlsFromObject = (textObject: Textbox) => {
     const shadowValue = textObject.shadow;
     const hasGlow = shadowValue instanceof Shadow && shadowValue.blur >= 12 && shadowValue.offsetX === 0 && shadowValue.offsetY === 0;
@@ -1095,6 +1409,12 @@ export default function CustomizerPage() {
       outlineColor: (textObject.stroke as string) || "#000000",
       outlineWidth: Number(textObject.strokeWidth) || 0,
       letterSpacing: Number(textObject.charSpacing) || 0,
+      lineHeight: Number(textObject.lineHeight) || 1.16,
+      textAlign:
+        textObject.textAlign === "left" || textObject.textAlign === "right"
+          ? textObject.textAlign
+          : "center",
+      opacity: Number(textObject.opacity) || 1,
       bold: textObject.fontWeight === "bold" || Number(textObject.fontWeight) >= 700,
       italic: textObject.fontStyle === "italic",
       uppercase:
@@ -1141,6 +1461,7 @@ export default function CustomizerPage() {
     }
 
     updateBoundaryWarning();
+    updateLayers();
   };
 
   const saveCurrentView = () => {
@@ -1160,6 +1481,7 @@ export default function CustomizerPage() {
     setCurrentView(view);
     setAiSuggestions([]);
     setBoundaryWarning("");
+    setImageQualityWarning("");
 
     if (isSmallPrintLocation(view)) {
       setTransferSize(getSafeTransferSizeForView(view));
@@ -1167,6 +1489,7 @@ export default function CustomizerPage() {
 
     const saved = viewsRef.current[view];
     if (saved?.objects?.length) {
+      await ensureSnapshotFontsLoaded(saved);
       await canvas.loadFromJSON(saved);
     }
 
@@ -1174,6 +1497,7 @@ export default function CustomizerPage() {
     const savedArtworkUrl = uploadedArtworkByViewRef.current[view];
     setCartStatus(savedArtworkUrl ? `Using saved Cloudinary artwork for ${VIEW_LABELS[view]}.` : "");
     syncSelectedObject();
+    setImageQualityWarning("");
     requestDraftSave({ resume: true });
   };
 
@@ -1235,12 +1559,26 @@ export default function CustomizerPage() {
         stroke: next.outlineColor,
         strokeWidth: next.outlineWidth,
         charSpacing: next.letterSpacing,
+        lineHeight: next.lineHeight,
+        textAlign: next.textAlign,
+        opacity: next.opacity,
         fontWeight: next.bold ? "bold" : "normal",
         fontStyle: next.italic ? "italic" : "normal",
         shadow: nextShadow,
       });
 
       applyTextCurve(textObject, next.curveMode, next.bendCurve);
+    });
+
+    void ensureFontLoaded(next.fontFamily).then(() => {
+      const canvas = getCanvas();
+      const activeObject = canvas?.getActiveObject();
+      if (!canvas || !isTextObject(activeObject)) return;
+      if (activeObject.fontFamily !== next.fontFamily) return;
+      activeObject.dirty = true;
+      activeObject.setCoords();
+      canvas.requestRenderAll();
+      requestDraftSave({ resume: true });
     });
   };
 
@@ -1338,6 +1676,7 @@ export default function CustomizerPage() {
     }
 
     try {
+      setActiveAiAction(actionName);
       setAiStatus(`${actionName}...`);
       const imageDataUrl = activeObject.toDataURL({ format: "png", multiplier: 1 });
 
@@ -1398,6 +1737,8 @@ export default function CustomizerPage() {
           ? "Background removal failed. Please try another image or upload a transparent PNG."
           : `${actionName} failed.`
       );
+    } finally {
+      setActiveAiAction("");
     }
   };
 
@@ -1438,6 +1779,7 @@ export default function CustomizerPage() {
     }
 
     try {
+      setActiveAiAction("Generate Idea");
       setAiStatus("Generating design idea...");
       const response = await fetch("/api/ai/generate-idea", {
         method: "POST",
@@ -1503,6 +1845,8 @@ export default function CustomizerPage() {
         errorType: error instanceof Error ? error.name : typeof error,
       });
       setAiStatus("AI design generation failed. Please try a different prompt.");
+    } finally {
+      setActiveAiAction("");
     }
   };
 
@@ -1978,6 +2322,45 @@ export default function CustomizerPage() {
     suspendAutosaveRef.current = true;
   }, [draftStorageKey]);
 
+  const snapObjectToPrintableCenter = (object: unknown) => {
+    if (!object || typeof object !== "object") return false;
+    const target = object as {
+      left?: number;
+      top?: number;
+      getCenterPoint?: () => { x: number; y: number };
+      getScaledWidth?: () => number;
+      getScaledHeight?: () => number;
+      set?: (patch: Partial<{ left: number; top: number }>) => void;
+      setCoords?: () => void;
+    };
+
+    if (!target.getCenterPoint || !target.getScaledWidth || !target.getScaledHeight || !target.set) {
+      return false;
+    }
+
+    const area = printableAreaRef.current;
+    const center = target.getCenterPoint();
+    const areaCenterX = area.left + area.width / 2;
+    const areaCenterY = area.top + area.height / 2;
+    const nextPosition: Partial<{ left: number; top: number }> = {};
+
+    if (Math.abs(center.x - areaCenterX) <= SNAP_TO_CENTER_THRESHOLD) {
+      nextPosition.left = areaCenterX - target.getScaledWidth() / 2;
+    }
+
+    if (Math.abs(center.y - areaCenterY) <= SNAP_TO_CENTER_THRESHOLD) {
+      nextPosition.top = areaCenterY - target.getScaledHeight() / 2;
+    }
+
+    if (typeof nextPosition.left !== "number" && typeof nextPosition.top !== "number") {
+      return false;
+    }
+
+    target.set(nextPosition);
+    target.setCoords?.();
+    return true;
+  };
+
   useEffect(() => {
     if (!isReady || !draftStorageKey || !availableViews.length) return;
     if (!fabricCanvasRef.current) return;
@@ -2052,6 +2435,7 @@ export default function CustomizerPage() {
 
         if (restoredActiveCanvas?.objects?.length) {
           try {
+            await ensureSnapshotFontsLoaded(restoredActiveCanvas);
             await canvas.loadFromJSON(restoredActiveCanvas);
           } catch (error) {
             console.error("Failed to load saved design draft canvas JSON:", error);
@@ -2112,10 +2496,19 @@ export default function CustomizerPage() {
 
     const handleObjectChange = () => {
       updateBoundaryWarning();
+      updateLayers();
       requestDraftSave({ resume: true });
     };
 
+    const handleObjectMoving = (event: { target?: unknown }) => {
+      if (event.target && snapObjectToPrintableCenter(event.target)) {
+        canvas.requestRenderAll();
+      }
+      handleObjectChange();
+    };
+
     const handleObjectAddedOrRemoved = () => {
+      updateLayers();
       requestDraftSave();
     };
 
@@ -2127,7 +2520,7 @@ export default function CustomizerPage() {
     canvas.on("selection:updated", handleSelection);
     canvas.on("selection:cleared", handleSelection);
     canvas.on("object:added", handleObjectAddedOrRemoved);
-    canvas.on("object:moving", handleObjectChange);
+    canvas.on("object:moving", handleObjectMoving);
     canvas.on("object:scaling", handleObjectChange);
     canvas.on("object:modified", handleObjectChange);
     canvas.on("object:removed", handleObjectAddedOrRemoved);
@@ -2140,7 +2533,7 @@ export default function CustomizerPage() {
       canvas.off("selection:updated", handleSelection);
       canvas.off("selection:cleared", handleSelection);
       canvas.off("object:added", handleObjectAddedOrRemoved);
-      canvas.off("object:moving", handleObjectChange);
+      canvas.off("object:moving", handleObjectMoving);
       canvas.off("object:scaling", handleObjectChange);
       canvas.off("object:modified", handleObjectChange);
       canvas.off("object:removed", handleObjectAddedOrRemoved);
@@ -2171,6 +2564,14 @@ export default function CustomizerPage() {
         const coverScale = Math.max(areaWidth / baseWidth, areaHeight / baseHeight);
         img.scale(coverScale);
 
+        if (Math.min(baseWidth, baseHeight) < LOW_RESOLUTION_UPLOAD_EDGE) {
+          setImageQualityWarning(
+            "Uploaded artwork is low resolution. Use a larger transparent PNG for sharper DTF output."
+          );
+        } else {
+          setImageQualityWarning("");
+        }
+
         img.set({
           left: areaLeft + (areaWidth - img.getScaledWidth()) / 2,
           top: areaTop + (areaHeight - img.getScaledHeight()) / 2,
@@ -2178,7 +2579,7 @@ export default function CustomizerPage() {
 
         canvas.add(img);
         canvas.setActiveObject(img);
-        canvas.renderAll();
+        canvas.requestRenderAll();
         syncSelectedObject();
         requestDraftSave({ resume: true });
       } catch (error) {
@@ -2190,9 +2591,11 @@ export default function CustomizerPage() {
     event.target.value = "";
   };
 
-  const addText = () => {
+  const addText = async () => {
     const canvas = getCanvas();
     if (!canvas) return;
+
+    await ensureFontLoaded(textControls.fontFamily);
 
     const text = new Textbox("Your Design", {
       left: 100,
@@ -2202,13 +2605,17 @@ export default function CustomizerPage() {
       strokeWidth: textControls.outlineWidth,
       fontSize: textControls.fontSize,
       fontFamily: textControls.fontFamily,
+      lineHeight: textControls.lineHeight,
+      textAlign: textControls.textAlign,
+      opacity: textControls.opacity,
       width: 250,
     });
 
     canvas.add(text);
     canvas.setActiveObject(text);
-    canvas.renderAll();
+    canvas.requestRenderAll();
     syncSelectedObject();
+    setImageQualityWarning("");
     requestDraftSave({ resume: true });
   };
 
@@ -2224,6 +2631,7 @@ export default function CustomizerPage() {
     activeObject.setCoords();
     canvas.requestRenderAll();
     syncSelectedObject();
+    setImageQualityWarning("");
     requestDraftSave({ resume: true });
   };
 
@@ -2298,9 +2706,17 @@ export default function CustomizerPage() {
 
   const centerSelected = () => {
     withActiveObject((obj) => {
-      const canvas = getCanvas();
-      if (!canvas) return;
-      canvas.centerObject(obj);
+      const mutable = obj as {
+        getScaledWidth?: () => number;
+        getScaledHeight?: () => number;
+        set?: (patch: Partial<{ left: number; top: number }>) => void;
+      };
+      if (!mutable.getScaledWidth || !mutable.getScaledHeight || !mutable.set) return;
+      const area = printableAreaRef.current;
+      mutable.set({
+        left: area.left + (area.width - mutable.getScaledWidth()) / 2,
+        top: area.top + (area.height - mutable.getScaledHeight()) / 2,
+      });
     });
   };
 
@@ -2357,6 +2773,7 @@ export default function CustomizerPage() {
     if (!canvas || !activeObject) return;
     canvas.bringObjectForward(activeObject);
     canvas.requestRenderAll();
+    updateLayers();
     requestDraftSave({ resume: true });
   };
 
@@ -2366,6 +2783,7 @@ export default function CustomizerPage() {
     if (!canvas || !activeObject) return;
     canvas.sendObjectBackwards(activeObject);
     canvas.requestRenderAll();
+    updateLayers();
     requestDraftSave({ resume: true });
   };
 
@@ -2567,12 +2985,23 @@ export default function CustomizerPage() {
 
           .customizer-mobile-shell {
             display: grid;
-            grid-template-columns: minmax(170px, 40vw) minmax(170px, 1fr);
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-rows: minmax(360px, 58dvh) minmax(0, 42dvh);
             width: 100%;
             min-width: 0;
             height: 100dvh;
             max-height: 100dvh;
             overflow: hidden;
+          }
+
+          .customizer-mobile-shell > aside {
+            order: 2;
+            border-right: 0;
+            border-top: 1px solid #222;
+          }
+
+          .customizer-mobile-shell > main {
+            order: 1;
           }
 
           .canvas-container,
@@ -2623,6 +3052,7 @@ export default function CustomizerPage() {
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">Upload Artwork</h2>
           <input id="artwork-upload-input" name="artworkUpload" ref={fileInputRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
           <button type="button" onClick={() => fileInputRef.current?.click()} className="block w-full cursor-pointer rounded bg-[#1f1f1f] p-2 text-sm text-white hover:bg-[#333]">Upload Artwork</button>
+          {imageQualityWarning ? <p className="mt-2 text-xs text-yellow-300">{imageQualityWarning}</p> : null}
         </div>
 
         <div className="mt-3 rounded border border-[#2b2b2b] bg-[#171717] p-3">
@@ -2655,6 +3085,47 @@ export default function CustomizerPage() {
           <button type="button" onClick={bringForward} className="rounded bg-[#1f1f1f] px-3 py-2 text-left hover:bg-[#333]">Bring Forward</button>
           <button type="button" onClick={sendBackward} className="rounded bg-[#1f1f1f] px-3 py-2 text-left hover:bg-[#333]">Send Backward</button>
           <button type="button" onClick={removeArtwork} className="rounded bg-[#2a1111] px-3 py-2 text-left hover:bg-[#3b1616] sm:col-span-2">Remove Artwork</button>
+        </div>
+
+        <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-300">Layers</h2>
+            <span className="text-xs text-gray-500">{layers.length} objects</span>
+          </div>
+          {layers.length ? (
+            <div className="space-y-2">
+              {layers.map((layer) => (
+                <div
+                  key={layer.id}
+                  className={`rounded border px-2 py-2 text-xs ${
+                    layer.active
+                      ? "border-white bg-[#242424]"
+                      : "border-[#2b2b2b] bg-[#111]"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => selectLayer(layer.index)}
+                    className="block w-full truncate text-left font-medium text-white"
+                    title={layer.label}
+                  >
+                    {layer.visible ? "" : "Hidden: "}{layer.label}
+                  </button>
+                  <div className="mt-2 grid grid-cols-4 gap-1">
+                    <button type="button" onClick={() => renameLayer(layer.index)} className="rounded bg-[#1f1f1f] px-2 py-1 hover:bg-[#333]">Name</button>
+                    <button type="button" onClick={() => toggleLayerVisibility(layer.index)} className="rounded bg-[#1f1f1f] px-2 py-1 hover:bg-[#333]">{layer.visible ? "Hide" : "Show"}</button>
+                    <button type="button" onClick={() => toggleLayerLock(layer.index)} className="rounded bg-[#1f1f1f] px-2 py-1 hover:bg-[#333]">{layer.locked ? "Unlock" : "Lock"}</button>
+                    <button type="button" onClick={() => duplicateLayer(layer.index)} className="rounded bg-[#1f1f1f] px-2 py-1 hover:bg-[#333]">Copy</button>
+                    <button type="button" onClick={() => bringLayerForward(layer.index)} className="rounded bg-[#1f1f1f] px-2 py-1 hover:bg-[#333]">Up</button>
+                    <button type="button" onClick={() => sendLayerBackward(layer.index)} className="rounded bg-[#1f1f1f] px-2 py-1 hover:bg-[#333]">Down</button>
+                    <button type="button" onClick={() => deleteLayer(layer.index)} className="col-span-2 rounded bg-[#2a1111] px-2 py-1 hover:bg-[#3b1616]">Delete</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400">Add text or artwork to build layers.</p>
+          )}
         </div>
 
         <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
@@ -2692,6 +3163,18 @@ export default function CustomizerPage() {
           <label htmlFor="letter-spacing-range" className="mb-1 block text-xs text-gray-300">Letter Spacing</label>
           <input id="letter-spacing-range" name="letterSpacing" type="range" min={-200} max={800} step={10} value={textControls.letterSpacing} onChange={(e) => updateTextControls({ letterSpacing: Number(e.target.value) })} className="mb-3 w-full" />
 
+          <label htmlFor="line-height-range" className="mb-1 block text-xs text-gray-300">Line Height</label>
+          <input id="line-height-range" name="lineHeight" type="range" min={0.8} max={2.2} step={0.02} value={textControls.lineHeight} onChange={(e) => updateTextControls({ lineHeight: Number(e.target.value) || 1.16 })} className="mb-3 w-full" />
+
+          <label htmlFor="text-opacity-range" className="mb-1 block text-xs text-gray-300">Opacity</label>
+          <input id="text-opacity-range" name="textOpacity" type="range" min={0.1} max={1} step={0.05} value={textControls.opacity} onChange={(e) => updateTextControls({ opacity: Number(e.target.value) || 1 })} className="mb-3 w-full" />
+
+          <div className="mb-2 grid grid-cols-3 gap-2 text-xs">
+            <button type="button" onClick={() => updateTextControls({ textAlign: "left" })} className={`rounded px-2 py-2 ${textControls.textAlign === "left" ? "bg-white text-black" : "bg-[#1f1f1f]"}`}>Left</button>
+            <button type="button" onClick={() => updateTextControls({ textAlign: "center" })} className={`rounded px-2 py-2 ${textControls.textAlign === "center" ? "bg-white text-black" : "bg-[#1f1f1f]"}`}>Center</button>
+            <button type="button" onClick={() => updateTextControls({ textAlign: "right" })} className={`rounded px-2 py-2 ${textControls.textAlign === "right" ? "bg-white text-black" : "bg-[#1f1f1f]"}`}>Right</button>
+          </div>
+
           <div className="mb-2 grid grid-cols-3 gap-2 text-xs">
             <button type="button" onClick={() => updateTextControls({ bold: !textControls.bold })} className={`rounded px-2 py-2 ${textControls.bold ? "bg-white text-black" : "bg-[#1f1f1f]"}`}>Bold</button>
             <button type="button" onClick={() => updateTextControls({ italic: !textControls.italic })} className={`rounded px-2 py-2 ${textControls.italic ? "bg-white text-black" : "bg-[#1f1f1f]"}`}>Italic</button>
@@ -2720,14 +3203,30 @@ export default function CustomizerPage() {
         <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">AI Design Tools</h2>
           <div className="grid grid-cols-2 gap-2 text-xs">
-            <button type="button" onClick={() => runAiRouteAction("/api/ai/remove-background", "Remove Background")} className="rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333]" title="Remove any background from selected artwork">Remove Background</button>
+            <button
+              type="button"
+              onClick={() => runAiRouteAction("/api/ai/remove-background", "Remove Background")}
+              disabled={Boolean(activeAiAction)}
+              className="rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333] disabled:cursor-not-allowed disabled:opacity-60"
+              title="Remove any background from selected artwork"
+            >
+              {activeAiAction === "Remove Background" ? "Removing..." : "Remove Background"}
+            </button>
           </div>
 
           <div className="mt-3 rounded border border-[#2b2b2b] bg-[#111] p-3">
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-300">Design Idea</h3>
             <label htmlFor="design-idea-input" className="sr-only">Design idea prompt</label>
             <input id="design-idea-input" name="designIdeaPrompt" type="text" value={designIdeaPrompt} onChange={(e) => setDesignIdeaPrompt(e.target.value)} placeholder="Describe your design style and key elements" className="mb-2 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm" />
-            <button type="button" onClick={generateDesignIdea} className="w-full rounded bg-[#1f1f1f] px-2 py-2 text-left text-xs hover:bg-[#333]" title="AI Generate Design Idea">Generate Idea</button>
+            <button
+              type="button"
+              onClick={generateDesignIdea}
+              disabled={Boolean(activeAiAction)}
+              className="w-full rounded bg-[#1f1f1f] px-2 py-2 text-left text-xs hover:bg-[#333] disabled:cursor-not-allowed disabled:opacity-60"
+              title="AI Generate Design Idea"
+            >
+              {activeAiAction === "Generate Idea" ? "Generating..." : "Generate Idea"}
+            </button>
           </div>
 
           {aiStatus ? <p className="mt-3 text-xs text-gray-300">{aiStatus}</p> : null}
@@ -2782,6 +3281,7 @@ export default function CustomizerPage() {
             ) : null}
 
             {boundaryWarning ? <p className="mt-2 text-xs text-yellow-300">⚠ {boundaryWarning}</p> : null}
+            {imageQualityWarning ? <p className="mt-2 text-xs text-yellow-300">{imageQualityWarning}</p> : null}
           </div>
         ) : null}
 
