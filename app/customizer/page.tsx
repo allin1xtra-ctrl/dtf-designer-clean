@@ -1143,10 +1143,9 @@ export default function CustomizerPage() {
   const getCanvas = () => fabricCanvasRef.current;
   const normalizedProductHandle = productHandle.trim();
   const normalizedVariantId = normalizeVariantId(variantId) || variantId;
-  const draftStorageKey =
-    normalizedProductHandle && normalizedVariantId
-      ? `${DRAFT_STORAGE_KEY_PREFIX}:${normalizedProductHandle}:${normalizedVariantId}`
-      : "";
+  const draftStorageKey = `${DRAFT_STORAGE_KEY_PREFIX}:${normalizedProductHandle || "standalone"}:${
+    normalizedVariantId || "default"
+  }`;
 
   const cancelDraftAutosave = () => {
     if (draftAutosaveTimerRef.current === null) return;
@@ -2607,6 +2606,71 @@ export default function CustomizerPage() {
   }, [shouldDebugAiLog]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const root = document.documentElement;
+    const body = document.body;
+    const previousRoot = {
+      height: root.style.height,
+      maxHeight: root.style.maxHeight,
+      overflow: root.style.overflow,
+      overscrollBehavior: root.style.overscrollBehavior,
+    };
+    const previousBody = {
+      height: body.style.height,
+      maxHeight: body.style.maxHeight,
+      overflow: body.style.overflow,
+      overscrollBehavior: body.style.overscrollBehavior,
+      position: body.style.position,
+      inset: body.style.inset,
+      width: body.style.width,
+    };
+
+    const restore = () => {
+      root.style.height = previousRoot.height;
+      root.style.maxHeight = previousRoot.maxHeight;
+      root.style.overflow = previousRoot.overflow;
+      root.style.overscrollBehavior = previousRoot.overscrollBehavior;
+      body.style.height = previousBody.height;
+      body.style.maxHeight = previousBody.maxHeight;
+      body.style.overflow = previousBody.overflow;
+      body.style.overscrollBehavior = previousBody.overscrollBehavior;
+      body.style.position = previousBody.position;
+      body.style.inset = previousBody.inset;
+      body.style.width = previousBody.width;
+    };
+
+    const applyMobileScrollLock = () => {
+      if (window.innerWidth > 768) {
+        restore();
+        return;
+      }
+
+      root.style.height = "100dvh";
+      root.style.maxHeight = "100dvh";
+      root.style.overflow = "hidden";
+      root.style.overscrollBehavior = "none";
+      body.style.height = "100dvh";
+      body.style.maxHeight = "100dvh";
+      body.style.overflow = "hidden";
+      body.style.overscrollBehavior = "none";
+      body.style.position = "fixed";
+      body.style.inset = "0";
+      body.style.width = "100%";
+    };
+
+    applyMobileScrollLock();
+    window.addEventListener("resize", applyMobileScrollLock);
+    window.addEventListener("orientationchange", applyMobileScrollLock);
+
+    return () => {
+      window.removeEventListener("resize", applyMobileScrollLock);
+      window.removeEventListener("orientationchange", applyMobileScrollLock);
+      restore();
+    };
+  }, []);
+
+  useEffect(() => {
     return () => {
       if (typeof window === "undefined") return;
       cancelDraftAutosave();
@@ -2661,7 +2725,7 @@ export default function CustomizerPage() {
   };
 
   useEffect(() => {
-    if (!isReady || !draftStorageKey || !availableViews.length) return;
+    if (!isReady || !draftStorageKey) return;
     if (!fabricCanvasRef.current) return;
     if (restoredDraftKeyRef.current === draftStorageKey) return;
 
@@ -2673,7 +2737,11 @@ export default function CustomizerPage() {
 
       try {
         const rawDraft = window.localStorage.getItem(draftStorageKey);
-        if (!rawDraft) return;
+        if (!rawDraft) {
+          suspendAutosaveRef.current = false;
+          resetHistoryForCurrentCanvas();
+          return;
+        }
 
         const parsedDraft = JSON.parse(rawDraft) as Partial<DraftPayload>;
         const draftProductHandle =
@@ -2709,9 +2777,10 @@ export default function CustomizerPage() {
             restoredArtworkByView[view] = typeof candidate === "string" ? candidate : "";
           }
         }
-        const restoredView = availableViews.includes(parsedDraft.currentView)
+        const draftAvailableViews = availableViews.length ? availableViews : VIEW_NAMES;
+        const restoredView = draftAvailableViews.includes(parsedDraft.currentView)
           ? parsedDraft.currentView
-          : availableViews[0];
+          : draftAvailableViews[0];
         const restoredActiveCanvas =
           restoredView === parsedDraft.currentView
             ? normalizeDraftSnapshot(parsedDraft.activeCanvas) || restoredViews[restoredView]
