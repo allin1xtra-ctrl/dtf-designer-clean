@@ -45,6 +45,31 @@ type LayerItem = {
   active: boolean;
 };
 
+type SheetSize = {
+  width: number;
+  height: number;
+  source: string;
+};
+
+type SelectedDesignMetrics = {
+  widthIn: number;
+  heightIn: number;
+  widthPx: number;
+  heightPx: number;
+  left: number;
+  top: number;
+  widthCanvas: number;
+  heightCanvas: number;
+  exceedsBounds: boolean;
+} | null;
+
+type CropControlsState = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 const DEFAULT_TEXT_CONTROLS: TextControlsState = {
   fontFamily: "Arial",
   fontSize: 32,
@@ -135,6 +160,7 @@ const GOOGLE_FONT_FAMILIES = new Set([
 const fontLoadCache = new Map<string, Promise<void>>();
 const SNAP_TO_CENTER_THRESHOLD = 8;
 const LOW_RESOLUTION_UPLOAD_EDGE = 900;
+const MAX_HISTORY_STATES = 60;
 
 const VIEW_LABELS: Record<ViewName, string> = {
   front: "Front",
@@ -253,6 +279,7 @@ const TRANSFER_SIZE_PRESETS = ["3x3", "4x5", "5x5", "8x8", "8x10", "10x10", "11x
 const DRAFT_STORAGE_VERSION = 1;
 const DRAFT_STORAGE_KEY_PREFIX = "dtf-designer-draft";
 const DRAFT_AUTOSAVE_DEBOUNCE_MS = 800;
+const PRINT_DPI = 300;
 const BLANK_MOCKUP_SVG_WIDTH = 1000;
 const BLANK_MOCKUP_SVG_HEIGHT = 1200;
 // Expanded to leave a roughly 12% side margin and 6% top margin so fallback blank garments read larger in the preview.
@@ -729,6 +756,42 @@ function parseTransferSize(value: string) {
   };
 }
 
+function parseSizeLabel(value: string) {
+  return parseTransferSize(value.replace(/[×]/g, "x"));
+}
+
+function formatInches(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return "0";
+  return Number(value.toFixed(value >= 10 ? 1 : 2)).toString();
+}
+
+function formatPixels(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return "0";
+  return Math.round(value).toLocaleString();
+}
+
+function inchesToPrintPixels(value: number) {
+  return Math.max(0, Math.round(value * PRINT_DPI));
+}
+
+function getImageElementSize(imageObject: FabricImage) {
+  const element = (
+    imageObject as unknown as {
+      getElement?: () => {
+        naturalWidth?: number;
+        naturalHeight?: number;
+        width?: number;
+        height?: number;
+      };
+    }
+  ).getElement?.();
+
+  return {
+    width: Number(element?.naturalWidth || element?.width || imageObject.width || 1),
+    height: Number(element?.naturalHeight || element?.height || imageObject.height || 1),
+  };
+}
+
 function getSafeTransferSizeForView(view: ViewName) {
   if (view === "leftSleeve" || view === "rightSleeve") return "4x5";
   if (view === "neck") return "3x3";
@@ -1042,6 +1105,15 @@ export default function CustomizerPage() {
   const [layers, setLayers] = useState<LayerItem[]>([]);
   const [boundaryWarning, setBoundaryWarning] = useState("");
   const [imageQualityWarning, setImageQualityWarning] = useState("");
+  const [selectedDesignMetrics, setSelectedDesignMetrics] = useState<SelectedDesignMetrics>(null);
+  const [cropControls, setCropControls] = useState<CropControlsState>({
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+  });
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
   const [aiStatus, setAiStatus] = useState("");
   const [activeAiAction, setActiveAiAction] = useState("");
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
@@ -1060,6 +1132,10 @@ export default function CustomizerPage() {
   const isRestoringDraftRef = useRef(false);
   const isClearingDraftRef = useRef(false);
   const suspendAutosaveRef = useRef(true);
+  const historyPastRef = useRef<CanvasSnapshot[]>([]);
+  const historyFutureRef = useRef<CanvasSnapshot[]>([]);
+  const isApplyingHistoryRef = useRef(false);
+  const historyTimerRef = useRef<number | null>(null);
 
   const viewsRef = useRef<Record<ViewName, CanvasSnapshot | null>>(createEmptyViews());
   const uploadedArtworkByViewRef = useRef<Record<ViewName, string>>(createEmptyUploadedArtworkByView());
@@ -1088,6 +1164,8 @@ export default function CustomizerPage() {
     const snapshot = (canvas as unknown as { toJSON: (propertiesToInclude?: string[]) => CanvasSnapshot }).toJSON([
       "name",
       "__curveMode",
+      "cropX",
+      "cropY",
     ]);
     viewsRef.current[targetView] = snapshot;
     return snapshot;
@@ -1143,6 +1221,98 @@ export default function CustomizerPage() {
         console.error("Failed to autosave design draft:", error);
       }
     }, DRAFT_AUTOSAVE_DEBOUNCE_MS);
+  };
+
+  const updateHistoryAvailability = () => {
+    setCanUndo(historyPastRef.current.length > 1);
+    setCanRedo(historyFutureRef.current.length > 0);
+  };
+
+  const getCanvasSnapshot = (canvasOverride?: Canvas | null): CanvasSnapshot | null => {
+    const canvas = canvasOverride ?? getCanvas();
+    if (!canvas) return null;
+    return (canvas as unknown as { toJSON: (propertiesToInclude?: string[]) => CanvasSnapshot }).toJSON([
+      "name",
+      "__curveMode",
+      "cropX",
+      "cropY",
+    ]);
+  };
+
+  const pushHistorySnapshot = (options?: { clearFuture?: boolean }) => {
+    if (isApplyingHistoryRef.current || isRestoringDraftRef.current) return;
+    const snapshot = getCanvasSnapshot();
+    if (!snapshot) return;
+
+    const serialized = JSON.stringify(snapshot);
+    const previous = historyPastRef.current[historyPastRef.current.length - 1];
+    if (previous && JSON.stringify(previous) === serialized) {
+      updateHistoryAvailability();
+      return;
+    }
+
+    historyPastRef.current = [...historyPastRef.current, snapshot].slice(-MAX_HISTORY_STATES);
+    if (options?.clearFuture !== false) {
+      historyFutureRef.current = [];
+    }
+    updateHistoryAvailability();
+  };
+
+  const scheduleHistorySnapshot = () => {
+    if (typeof window === "undefined") return;
+    if (historyTimerRef.current !== null) {
+      window.clearTimeout(historyTimerRef.current);
+    }
+    historyTimerRef.current = window.setTimeout(() => {
+      historyTimerRef.current = null;
+      pushHistorySnapshot();
+    }, 150);
+  };
+
+  const resetHistoryForCurrentCanvas = () => {
+    const snapshot = getCanvasSnapshot();
+    historyPastRef.current = snapshot ? [snapshot] : [];
+    historyFutureRef.current = [];
+    updateHistoryAvailability();
+  };
+
+  const loadHistorySnapshot = async (snapshot: CanvasSnapshot | null) => {
+    const canvas = getCanvas();
+    if (!canvas || !snapshot) return;
+
+    isApplyingHistoryRef.current = true;
+    canvas.clear();
+    canvas.backgroundColor = "transparent";
+    canvas.discardActiveObject();
+    await ensureSnapshotFontsLoaded(snapshot);
+    await canvas.loadFromJSON(snapshot);
+    canvas.requestRenderAll();
+    captureViewSnapshot(canvas, currentView);
+    syncSelectedObject();
+    requestDraftSave({ resume: true });
+    isApplyingHistoryRef.current = false;
+  };
+
+  const undoCanvasChange = async () => {
+    const previous = historyPastRef.current;
+    if (previous.length <= 1) return;
+
+    const current = previous[previous.length - 1];
+    const target = previous[previous.length - 2];
+    historyPastRef.current = previous.slice(0, -1);
+    historyFutureRef.current = [current, ...historyFutureRef.current].slice(0, MAX_HISTORY_STATES);
+    updateHistoryAvailability();
+    await loadHistorySnapshot(target);
+  };
+
+  const redoCanvasChange = async () => {
+    const [target, ...remainingFuture] = historyFutureRef.current;
+    if (!target) return;
+
+    historyFutureRef.current = remainingFuture;
+    historyPastRef.current = [...historyPastRef.current, target].slice(-MAX_HISTORY_STATES);
+    updateHistoryAvailability();
+    await loadHistorySnapshot(target);
   };
 
   // Intentionally keyed to readiness + product + variant. Other referenced functions are stable enough here,
@@ -1227,6 +1397,76 @@ export default function CustomizerPage() {
     });
   };
 
+  const getPrintableScale = () => {
+    const area = printableAreaRef.current;
+    const sheetWidth = Math.max(activeSheetSize.width, 0.1);
+    const sheetHeight = Math.max(activeSheetSize.height, 0.1);
+
+    return {
+      area,
+      sheetWidth,
+      sheetHeight,
+      canvasPxPerInX: area.width / sheetWidth,
+      canvasPxPerInY: area.height / sheetHeight,
+    };
+  };
+
+  const updateSelectedDesignMetrics = () => {
+    const canvas = getCanvas();
+    const activeObject = canvas?.getActiveObject();
+
+    if (!canvas || !activeObject) {
+      setSelectedDesignMetrics(null);
+      return;
+    }
+
+    const { area, sheetWidth, sheetHeight } = getPrintableScale();
+    const bounds = activeObject.getBoundingRect();
+    const widthIn = (bounds.width / Math.max(area.width, 1)) * sheetWidth;
+    const heightIn = (bounds.height / Math.max(area.height, 1)) * sheetHeight;
+    const exceedsBounds = distanceFromPrintableArea(bounds, area) > 0;
+
+    setSelectedDesignMetrics({
+      widthIn,
+      heightIn,
+      widthPx: inchesToPrintPixels(widthIn),
+      heightPx: inchesToPrintPixels(heightIn),
+      left: bounds.left,
+      top: bounds.top,
+      widthCanvas: bounds.width,
+      heightCanvas: bounds.height,
+      exceedsBounds,
+    });
+  };
+
+  const syncCropControlsFromActiveImage = () => {
+    const activeObject = getCanvas()?.getActiveObject();
+    if (!isImageObject(activeObject)) {
+      setCropControls({ x: 0, y: 0, width: 0, height: 0 });
+      return;
+    }
+
+    const { sheetWidth, sheetHeight, area } = getPrintableScale();
+    const cropCandidate = activeObject as FabricImage & {
+      cropX?: number;
+      cropY?: number;
+    };
+
+    const scaleX = Number(activeObject.scaleX) || 1;
+    const scaleY = Number(activeObject.scaleY) || 1;
+    const cropX = Number(cropCandidate.cropX) || 0;
+    const cropY = Number(cropCandidate.cropY) || 0;
+    const cropWidth = Number(activeObject.width) || 0;
+    const cropHeight = Number(activeObject.height) || 0;
+
+    setCropControls({
+      x: (cropX * scaleX / Math.max(area.width, 1)) * sheetWidth,
+      y: (cropY * scaleY / Math.max(area.height, 1)) * sheetHeight,
+      width: (cropWidth * scaleX / Math.max(area.width, 1)) * sheetWidth,
+      height: (cropHeight * scaleY / Math.max(area.height, 1)) * sheetHeight,
+    });
+  };
+
   const updateLayers = () => {
     const canvas = getCanvas();
     if (!canvas) {
@@ -1279,6 +1519,7 @@ export default function CustomizerPage() {
     object.setCoords();
     canvas.requestRenderAll();
     updateLayers();
+    scheduleHistorySnapshot();
     requestDraftSave({ resume: true });
   };
 
@@ -1461,6 +1702,8 @@ export default function CustomizerPage() {
     }
 
     updateBoundaryWarning();
+    updateSelectedDesignMetrics();
+    syncCropControlsFromActiveImage();
     updateLayers();
   };
 
@@ -1497,6 +1740,7 @@ export default function CustomizerPage() {
     const savedArtworkUrl = uploadedArtworkByViewRef.current[view];
     setCartStatus(savedArtworkUrl ? `Using saved Cloudinary artwork for ${VIEW_LABELS[view]}.` : "");
     syncSelectedObject();
+    resetHistoryForCurrentCanvas();
     setImageQualityWarning("");
     requestDraftSave({ resume: true });
   };
@@ -1569,6 +1813,7 @@ export default function CustomizerPage() {
 
       applyTextCurve(textObject, next.curveMode, next.bendCurve);
     });
+    scheduleHistorySnapshot();
 
     void ensureFontLoaded(next.fontFamily).then(() => {
       const canvas = getCanvas();
@@ -2152,9 +2397,58 @@ export default function CustomizerPage() {
   const maxPrintHeight = normalizePrintLimit(resolvedLocationData?.maxPrintHeight);
   const availableViews = getAvailableViews(printLocations);
   const transferDimensions = parseTransferSize(transferSize);
+  const variantSizeDimensions = parseSizeLabel(selectedSize || "");
   const isSmallLocation = isSmallPrintLocation(currentView);
   const safePrintAreaLabel = getSmallPrintAreaLabel(currentView);
+  const activeSheetSize: SheetSize = (() => {
+    if (shouldShowTransferSizePreview && transferDimensions) {
+      return { width: transferDimensions.width, height: transferDimensions.height, source: "transfer size" };
+    }
+
+    if (maxPrintWidth && maxPrintHeight) {
+      return { width: maxPrintWidth, height: maxPrintHeight, source: "product print area" };
+    }
+
+    if (variantSizeDimensions) {
+      return { width: variantSizeDimensions.width, height: variantSizeDimensions.height, source: "selected variant" };
+    }
+
+    if (isSmallLocation) {
+      const smallDimensions = parseTransferSize(getSafeTransferSizeForView(currentView));
+      if (smallDimensions) {
+        return { width: smallDimensions.width, height: smallDimensions.height, source: "location default" };
+      }
+    }
+
+    return { width: 12, height: 12, source: "default sheet" };
+  })();
   const hasSelectedDesign = selectedObjectType !== "none";
+  const canvasPixelWidth = inchesToPrintPixels(activeSheetSize.width);
+  const canvasPixelHeight = inchesToPrintPixels(activeSheetSize.height);
+  const rulerInchTicksX = useMemo(() => {
+    const max = Math.max(activeSheetSize.width, 0.1);
+    const ticks = [];
+    for (let value = 0; value <= max + 0.001; value += 0.5) {
+      ticks.push({
+        value,
+        left: resolvedPrintAreaBounds.left + (value / max) * resolvedPrintAreaBounds.width,
+        major: Math.abs(value - Math.round(value)) < 0.001,
+      });
+    }
+    return ticks;
+  }, [activeSheetSize.width, resolvedPrintAreaBounds.left, resolvedPrintAreaBounds.width]);
+  const rulerInchTicksY = useMemo(() => {
+    const max = Math.max(activeSheetSize.height, 0.1);
+    const ticks = [];
+    for (let value = 0; value <= max + 0.001; value += 0.5) {
+      ticks.push({
+        value,
+        top: resolvedPrintAreaBounds.top + (value / max) * resolvedPrintAreaBounds.height,
+        major: Math.abs(value - Math.round(value)) < 0.001,
+      });
+    }
+    return ticks;
+  }, [activeSheetSize.height, resolvedPrintAreaBounds.height, resolvedPrintAreaBounds.top]);
 
   const exceedsPrintWidth = Boolean(
     !isSmallLocation &&
@@ -2304,6 +2598,8 @@ export default function CustomizerPage() {
 
   useEffect(() => {
     printableAreaRef.current = resolvedPrintAreaBounds;
+    updateSelectedDesignMetrics();
+    syncCropControlsFromActiveImage();
   }, [resolvedPrintAreaBounds]);
 
   useEffect(() => {
@@ -2314,6 +2610,9 @@ export default function CustomizerPage() {
     return () => {
       if (typeof window === "undefined") return;
       cancelDraftAutosave();
+      if (historyTimerRef.current !== null) {
+        window.clearTimeout(historyTimerRef.current);
+      }
     };
   }, []);
 
@@ -2448,6 +2747,7 @@ export default function CustomizerPage() {
 
         canvas.renderAll();
         syncSelectedObject();
+        resetHistoryForCurrentCanvas();
         suspendAutosaveRef.current = false;
         setDraftStatus("Previous design restored");
         lastSavedDraftRef.current = rawDraft;
@@ -2496,6 +2796,8 @@ export default function CustomizerPage() {
 
     const handleObjectChange = () => {
       updateBoundaryWarning();
+      updateSelectedDesignMetrics();
+      syncCropControlsFromActiveImage();
       updateLayers();
       requestDraftSave({ resume: true });
     };
@@ -2507,12 +2809,22 @@ export default function CustomizerPage() {
       handleObjectChange();
     };
 
+    const handleObjectModified = () => {
+      handleObjectChange();
+      scheduleHistorySnapshot();
+    };
+
     const handleObjectAddedOrRemoved = () => {
       updateLayers();
+      updateSelectedDesignMetrics();
+      syncCropControlsFromActiveImage();
+      scheduleHistorySnapshot();
       requestDraftSave();
     };
 
     const handleDraftTextChange = () => {
+      updateSelectedDesignMetrics();
+      scheduleHistorySnapshot();
       requestDraftSave({ resume: true });
     };
 
@@ -2522,9 +2834,10 @@ export default function CustomizerPage() {
     canvas.on("object:added", handleObjectAddedOrRemoved);
     canvas.on("object:moving", handleObjectMoving);
     canvas.on("object:scaling", handleObjectChange);
-    canvas.on("object:modified", handleObjectChange);
+    canvas.on("object:modified", handleObjectModified);
     canvas.on("object:removed", handleObjectAddedOrRemoved);
     canvas.on("text:changed", handleDraftTextChange);
+    resetHistoryForCurrentCanvas();
 
     setIsReady(true);
 
@@ -2535,7 +2848,7 @@ export default function CustomizerPage() {
       canvas.off("object:added", handleObjectAddedOrRemoved);
       canvas.off("object:moving", handleObjectMoving);
       canvas.off("object:scaling", handleObjectChange);
-      canvas.off("object:modified", handleObjectChange);
+      canvas.off("object:modified", handleObjectModified);
       canvas.off("object:removed", handleObjectAddedOrRemoved);
       canvas.off("text:changed", handleDraftTextChange);
       canvas.dispose();
@@ -2591,6 +2904,73 @@ export default function CustomizerPage() {
     event.target.value = "";
   };
 
+  const updateCropControl = (key: keyof CropControlsState, value: number) => {
+    setCropControls((prev) => ({
+      ...prev,
+      [key]: Math.max(0, Number.isFinite(value) ? value : 0),
+    }));
+  };
+
+  const applyCropToSelectedImage = () => {
+    const canvas = getCanvas();
+    const activeObject = canvas?.getActiveObject();
+    if (!canvas || !isImageObject(activeObject)) {
+      setAiStatus("Select an uploaded image before cropping.");
+      return;
+    }
+
+    const { area, sheetWidth, sheetHeight } = getPrintableScale();
+    const scaleX = Math.max(Math.abs(Number(activeObject.scaleX) || 1), 0.0001);
+    const scaleY = Math.max(Math.abs(Number(activeObject.scaleY) || 1), 0.0001);
+    const sourceSize = getImageElementSize(activeObject);
+
+    const cropXSource = (cropControls.x / Math.max(sheetWidth, 0.1)) * area.width / scaleX;
+    const cropYSource = (cropControls.y / Math.max(sheetHeight, 0.1)) * area.height / scaleY;
+    const cropWidthSource = (cropControls.width / Math.max(sheetWidth, 0.1)) * area.width / scaleX;
+    const cropHeightSource = (cropControls.height / Math.max(sheetHeight, 0.1)) * area.height / scaleY;
+
+    const nextCropX = Math.max(0, Math.min(sourceSize.width - 1, cropXSource));
+    const nextCropY = Math.max(0, Math.min(sourceSize.height - 1, cropYSource));
+    const nextWidth = Math.max(1, Math.min(sourceSize.width - nextCropX, cropWidthSource));
+    const nextHeight = Math.max(1, Math.min(sourceSize.height - nextCropY, cropHeightSource));
+
+    activeObject.set({
+      cropX: nextCropX,
+      cropY: nextCropY,
+      width: nextWidth,
+      height: nextHeight,
+    } as Partial<FabricImage>);
+
+    activeObject.setCoords();
+    canvas.requestRenderAll();
+    syncSelectedObject();
+    scheduleHistorySnapshot();
+    requestDraftSave({ resume: true });
+  };
+
+  const resetCropOnSelectedImage = () => {
+    const canvas = getCanvas();
+    const activeObject = canvas?.getActiveObject();
+    if (!canvas || !isImageObject(activeObject)) {
+      setAiStatus("Select an uploaded image before resetting crop.");
+      return;
+    }
+
+    const sourceSize = getImageElementSize(activeObject);
+    activeObject.set({
+      cropX: 0,
+      cropY: 0,
+      width: sourceSize.width,
+      height: sourceSize.height,
+    } as Partial<FabricImage>);
+
+    activeObject.setCoords();
+    canvas.requestRenderAll();
+    syncSelectedObject();
+    scheduleHistorySnapshot();
+    requestDraftSave({ resume: true });
+  };
+
   const addText = async () => {
     const canvas = getCanvas();
     if (!canvas) return;
@@ -2632,6 +3012,7 @@ export default function CustomizerPage() {
     canvas.requestRenderAll();
     syncSelectedObject();
     setImageQualityWarning("");
+    scheduleHistorySnapshot();
     requestDraftSave({ resume: true });
   };
 
@@ -2774,6 +3155,7 @@ export default function CustomizerPage() {
     canvas.bringObjectForward(activeObject);
     canvas.requestRenderAll();
     updateLayers();
+    scheduleHistorySnapshot();
     requestDraftSave({ resume: true });
   };
 
@@ -2784,6 +3166,7 @@ export default function CustomizerPage() {
     canvas.sendObjectBackwards(activeObject);
     canvas.requestRenderAll();
     updateLayers();
+    scheduleHistorySnapshot();
     requestDraftSave({ resume: true });
   };
 
@@ -2820,6 +3203,7 @@ export default function CustomizerPage() {
     }
 
     syncSelectedObject();
+    resetHistoryForCurrentCanvas();
     setDraftStatus("Saved design cleared");
     isClearingDraftRef.current = false;
   };
@@ -2971,7 +3355,16 @@ export default function CustomizerPage() {
         @media (max-width: 768px) {
           html,
           body {
-            overflow-x: hidden;
+            height: 100dvh;
+            max-height: 100dvh;
+            overflow: hidden;
+            overscroll-behavior: none;
+          }
+
+          body {
+            position: fixed;
+            inset: 0;
+            width: 100%;
           }
 
           .customizer-mobile-shell-wrap {
@@ -3077,7 +3470,48 @@ export default function CustomizerPage() {
           </p>
         </div>
 
+        <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-300">Canvas & Design Info</h2>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded border border-[#2b2b2b] bg-[#111] px-3 py-2">
+              <p className="text-gray-500">Canvas / Sheet</p>
+              <p className="mt-1 font-semibold text-white">{formatInches(activeSheetSize.width)}&quot; × {formatInches(activeSheetSize.height)}&quot;</p>
+              <p className="mt-1 text-[11px] text-gray-500">{activeSheetSize.source}</p>
+            </div>
+            <div className="rounded border border-[#2b2b2b] bg-[#111] px-3 py-2">
+              <p className="text-gray-500">300 DPI Pixels</p>
+              <p className="mt-1 font-semibold text-white">{formatPixels(canvasPixelWidth)} × {formatPixels(canvasPixelHeight)}</p>
+              <p className="mt-1 text-[11px] text-gray-500">print-ready estimate</p>
+            </div>
+            <div className="rounded border border-[#2b2b2b] bg-[#111] px-3 py-2">
+              <p className="text-gray-500">Selected Design</p>
+              <p className="mt-1 font-semibold text-white">
+                {selectedDesignMetrics
+                  ? `${formatInches(selectedDesignMetrics.widthIn)}" × ${formatInches(selectedDesignMetrics.heightIn)}"`
+                  : "No selection"}
+              </p>
+              {selectedDesignMetrics ? (
+                <p className="mt-1 text-[11px] text-gray-500">
+                  {formatPixels(selectedDesignMetrics.widthPx)} × {formatPixels(selectedDesignMetrics.heightPx)} px
+                </p>
+              ) : null}
+            </div>
+            <div className="rounded border border-[#2b2b2b] bg-[#111] px-3 py-2">
+              <p className="text-gray-500">View / Location</p>
+              <p className="mt-1 font-semibold text-white">{VIEW_LABELS[currentView]}</p>
+              <p className="mt-1 text-[11px] text-gray-500">{activeLocation}</p>
+            </div>
+          </div>
+          {selectedDesignMetrics?.exceedsBounds ? (
+            <p className="mt-3 rounded border border-yellow-700 bg-yellow-950 px-3 py-2 text-xs text-yellow-200">
+              Selected design exceeds the printable safe area.
+            </p>
+          ) : null}
+        </div>
+
         <div className="mt-5 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+          <button type="button" onClick={undoCanvasChange} disabled={!canUndo} className="rounded bg-[#1f1f1f] px-3 py-2 text-left hover:bg-[#333] disabled:cursor-not-allowed disabled:opacity-50">Undo</button>
+          <button type="button" onClick={redoCanvasChange} disabled={!canRedo} className="rounded bg-[#1f1f1f] px-3 py-2 text-left hover:bg-[#333] disabled:cursor-not-allowed disabled:opacity-50">Redo</button>
           <button type="button" onClick={addText} className="rounded bg-[#1f1f1f] px-3 py-2 text-left hover:bg-[#333]">Add Text</button>
           <button type="button" onClick={duplicateSelected} className="rounded bg-[#1f1f1f] px-3 py-2 text-left hover:bg-[#333]">Duplicate</button>
           <button type="button" onClick={centerSelected} className="rounded bg-[#1f1f1f] px-3 py-2 text-left hover:bg-[#333]">Center</button>
@@ -3130,6 +3564,37 @@ export default function CustomizerPage() {
           ) : (
             <p className="text-xs text-gray-400">Add text or artwork to build layers.</p>
           )}
+        </div>
+
+        <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-300">Crop / Trim</h2>
+          <p className="mb-3 text-xs text-gray-400">
+            {selectedObjectType === "image"
+              ? "Trim the selected artwork using inch-based crop bounds."
+              : "Select uploaded artwork to crop or reset trim."}
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <label htmlFor="crop-width-input" className="text-xs text-gray-300">
+              W (in)
+              <input id="crop-width-input" name="cropWidth" type="number" min={0} step={0.05} value={Number(cropControls.width.toFixed(2))} onChange={(e) => updateCropControl("width", Number(e.target.value))} disabled={selectedObjectType !== "image"} className="mt-1 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm text-white disabled:opacity-50" />
+            </label>
+            <label htmlFor="crop-height-input" className="text-xs text-gray-300">
+              H (in)
+              <input id="crop-height-input" name="cropHeight" type="number" min={0} step={0.05} value={Number(cropControls.height.toFixed(2))} onChange={(e) => updateCropControl("height", Number(e.target.value))} disabled={selectedObjectType !== "image"} className="mt-1 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm text-white disabled:opacity-50" />
+            </label>
+            <label htmlFor="crop-x-input" className="text-xs text-gray-300">
+              X (in)
+              <input id="crop-x-input" name="cropX" type="number" min={0} step={0.05} value={Number(cropControls.x.toFixed(2))} onChange={(e) => updateCropControl("x", Number(e.target.value))} disabled={selectedObjectType !== "image"} className="mt-1 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm text-white disabled:opacity-50" />
+            </label>
+            <label htmlFor="crop-y-input" className="text-xs text-gray-300">
+              Y (in)
+              <input id="crop-y-input" name="cropY" type="number" min={0} step={0.05} value={Number(cropControls.y.toFixed(2))} onChange={(e) => updateCropControl("y", Number(e.target.value))} disabled={selectedObjectType !== "image"} className="mt-1 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm text-white disabled:opacity-50" />
+            </label>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+            <button type="button" onClick={applyCropToSelectedImage} disabled={selectedObjectType !== "image"} className="rounded bg-white px-3 py-2 font-semibold text-black hover:bg-gray-200 disabled:cursor-not-allowed disabled:bg-gray-500">Apply Crop</button>
+            <button type="button" onClick={resetCropOnSelectedImage} disabled={selectedObjectType !== "image"} className="rounded bg-[#1f1f1f] px-3 py-2 text-left hover:bg-[#333] disabled:cursor-not-allowed disabled:opacity-50">Reset Crop</button>
+          </div>
         </div>
 
         <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
@@ -3357,6 +3822,54 @@ export default function CustomizerPage() {
                 transformOrigin: "center center",
               }}
             >
+              <div
+                className="pointer-events-none absolute z-30 overflow-hidden rounded-sm border border-[#2f3f46] bg-[#111]/90 text-[9px] font-semibold text-cyan-100 shadow-lg"
+                style={{
+                  left: `${resolvedPrintAreaBounds.left}px`,
+                  top: `${Math.max(0, resolvedPrintAreaBounds.top - 20)}px`,
+                  width: `${resolvedPrintAreaBounds.width}px`,
+                  height: "18px",
+                }}
+              >
+                {rulerInchTicksX.map((tick) => (
+                  <div
+                    key={`x-${tick.value}`}
+                    className="absolute bottom-0 border-l border-cyan-200/70"
+                    style={{
+                      left: `${tick.left - resolvedPrintAreaBounds.left}px`,
+                      height: tick.major ? "14px" : "7px",
+                    }}
+                  >
+                    {tick.major ? (
+                      <span className="absolute left-1 top-0 text-[9px] leading-none text-cyan-100">{Math.round(tick.value)}</span>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+              <div
+                className="pointer-events-none absolute z-30 overflow-hidden rounded-sm border border-[#2f3f46] bg-[#111]/90 text-[9px] font-semibold text-cyan-100 shadow-lg"
+                style={{
+                  left: `${Math.max(0, resolvedPrintAreaBounds.left - 22)}px`,
+                  top: `${resolvedPrintAreaBounds.top}px`,
+                  width: "20px",
+                  height: `${resolvedPrintAreaBounds.height}px`,
+                }}
+              >
+                {rulerInchTicksY.map((tick) => (
+                  <div
+                    key={`y-${tick.value}`}
+                    className="absolute right-0 border-t border-cyan-200/70"
+                    style={{
+                      top: `${tick.top - resolvedPrintAreaBounds.top}px`,
+                      width: tick.major ? "16px" : "8px",
+                    }}
+                  >
+                    {tick.major ? (
+                      <span className="absolute right-1 top-0 text-[9px] leading-none text-cyan-100">{Math.round(tick.value)}</span>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={mockupLoadFailed ? GENERIC_BLANK_MOCKUPS[currentView] : resolvedMockupUrl}
@@ -3394,6 +3907,20 @@ export default function CustomizerPage() {
                 }}
               />
               <canvas ref={canvasElRef} className="relative z-10" />
+              {selectedDesignMetrics ? (
+                <div
+                  className="pointer-events-none absolute z-40 rounded-full border border-cyan-300/70 bg-[#0b1114]/95 px-2 py-1 text-[10px] font-semibold text-cyan-100 shadow-xl"
+                  style={{
+                    left: `${Math.min(
+                      CANVAS_DEFAULT_WIDTH - 150,
+                      Math.max(4, selectedDesignMetrics.left + selectedDesignMetrics.widthCanvas / 2 - 70)
+                    )}px`,
+                    top: `${Math.max(4, selectedDesignMetrics.top - 28)}px`,
+                  }}
+                >
+                  {formatInches(selectedDesignMetrics.widthIn)}&quot; x {formatInches(selectedDesignMetrics.heightIn)}&quot;
+                </div>
+              ) : null}
             </div>
           </div>
         </main>
