@@ -158,7 +158,7 @@ const GOOGLE_FONT_FAMILIES = new Set([
 ]);
 
 const fontLoadCache = new Map<string, Promise<void>>();
-const SNAP_TO_CENTER_THRESHOLD = 8;
+const SNAP_TO_CENTER_THRESHOLD = 4;
 const LOW_RESOLUTION_UPLOAD_EDGE = 900;
 const MAX_HISTORY_STATES = 60;
 
@@ -1136,6 +1136,9 @@ export default function CustomizerPage() {
   const historyFutureRef = useRef<CanvasSnapshot[]>([]);
   const isApplyingHistoryRef = useRef(false);
   const historyTimerRef = useRef<number | null>(null);
+  const isCanvasObjectInteractingRef = useRef(false);
+  const pendingPreviewScaleUpdateRef = useRef(false);
+  const updatePreviewScaleRef = useRef<(() => void) | null>(null);
 
   const viewsRef = useRef<Record<ViewName, CanvasSnapshot | null>>(createEmptyViews());
   const uploadedArtworkByViewRef = useRef<Record<ViewName, string>>(createEmptyUploadedArtworkByView());
@@ -1197,6 +1200,7 @@ export default function CustomizerPage() {
     if (!draftStorageKey) return;
     if (restoredDraftKeyRef.current !== draftStorageKey) return;
     if (isRestoringDraftRef.current || isClearingDraftRef.current) return;
+    if (isCanvasObjectInteractingRef.current) return;
 
     if (options?.resume) {
       suspendAutosaveRef.current = false;
@@ -2518,6 +2522,11 @@ export default function CustomizerPage() {
     if (!previewPaneRef.current || typeof ResizeObserver === "undefined") return;
 
     const updateScale = () => {
+      if (isCanvasObjectInteractingRef.current) {
+        pendingPreviewScaleUpdateRef.current = true;
+        return;
+      }
+
       const rect = previewPaneRef.current?.getBoundingClientRect();
       if (!rect) return;
 
@@ -2532,6 +2541,7 @@ export default function CustomizerPage() {
       );
     };
 
+    updatePreviewScaleRef.current = updateScale;
     updateScale();
     const observer = new ResizeObserver(() => updateScale());
     observer.observe(previewPaneRef.current);
@@ -2540,6 +2550,9 @@ export default function CustomizerPage() {
     return () => {
       observer.disconnect();
       window.removeEventListener("resize", updateScale);
+      if (updatePreviewScaleRef.current === updateScale) {
+        updatePreviewScaleRef.current = null;
+      }
     };
   }, []);
 
@@ -2597,6 +2610,7 @@ export default function CustomizerPage() {
 
   useEffect(() => {
     printableAreaRef.current = resolvedPrintAreaBounds;
+    if (isCanvasObjectInteractingRef.current) return;
     updateSelectedDesignMetrics();
     syncCropControlsFromActiveImage();
   }, [resolvedPrintAreaBounds]);
@@ -2863,22 +2877,45 @@ export default function CustomizerPage() {
       }
     };
 
-    const handleObjectChange = () => {
+    const handleObjectTransformStart = () => {
+      isCanvasObjectInteractingRef.current = true;
+      cancelDraftAutosave();
+    };
+
+    const finishObjectTransform = () => {
+      isCanvasObjectInteractingRef.current = false;
+      if (pendingPreviewScaleUpdateRef.current) {
+        pendingPreviewScaleUpdateRef.current = false;
+        updatePreviewScaleRef.current?.();
+      }
+    };
+
+    const handleObjectChange = (options?: { autosave?: boolean }) => {
       updateBoundaryWarning();
       updateSelectedDesignMetrics();
       syncCropControlsFromActiveImage();
       updateLayers();
-      requestDraftSave({ resume: true });
+      if (options?.autosave !== false) {
+        requestDraftSave({ resume: true });
+      }
     };
 
-    const handleObjectMoving = (event: { target?: unknown }) => {
-      if (event.target && snapObjectToPrintableCenter(event.target)) {
+    const handleObjectTransforming = () => {
+      handleObjectTransformStart();
+    };
+
+    const handleCanvasPointerUp = () => {
+      finishObjectTransform();
+    };
+
+    const handleObjectModified = (event: { target?: unknown }) => {
+      finishObjectTransform();
+      const target = event.target as { setCoords?: () => void } | undefined;
+      const snappedToCenter = event.target ? snapObjectToPrintableCenter(event.target) : false;
+      target?.setCoords?.();
+      if (snappedToCenter) {
         canvas.requestRenderAll();
       }
-      handleObjectChange();
-    };
-
-    const handleObjectModified = () => {
       handleObjectChange();
       scheduleHistorySnapshot();
     };
@@ -2901,9 +2938,13 @@ export default function CustomizerPage() {
     canvas.on("selection:updated", handleSelection);
     canvas.on("selection:cleared", handleSelection);
     canvas.on("object:added", handleObjectAddedOrRemoved);
-    canvas.on("object:moving", handleObjectMoving);
-    canvas.on("object:scaling", handleObjectChange);
+    canvas.on("object:moving", handleObjectTransforming);
+    canvas.on("object:scaling", handleObjectTransforming);
+    canvas.on("object:rotating", handleObjectTransforming);
+    canvas.on("object:skewing", handleObjectTransforming);
+    canvas.on("object:resizing", handleObjectTransforming);
     canvas.on("object:modified", handleObjectModified);
+    canvas.on("mouse:up", handleCanvasPointerUp);
     canvas.on("object:removed", handleObjectAddedOrRemoved);
     canvas.on("text:changed", handleDraftTextChange);
     resetHistoryForCurrentCanvas();
@@ -2915,9 +2956,13 @@ export default function CustomizerPage() {
       canvas.off("selection:updated", handleSelection);
       canvas.off("selection:cleared", handleSelection);
       canvas.off("object:added", handleObjectAddedOrRemoved);
-      canvas.off("object:moving", handleObjectMoving);
-      canvas.off("object:scaling", handleObjectChange);
+      canvas.off("object:moving", handleObjectTransforming);
+      canvas.off("object:scaling", handleObjectTransforming);
+      canvas.off("object:rotating", handleObjectTransforming);
+      canvas.off("object:skewing", handleObjectTransforming);
+      canvas.off("object:resizing", handleObjectTransforming);
       canvas.off("object:modified", handleObjectModified);
+      canvas.off("mouse:up", handleCanvasPointerUp);
       canvas.off("object:removed", handleObjectAddedOrRemoved);
       canvas.off("text:changed", handleDraftTextChange);
       canvas.dispose();
