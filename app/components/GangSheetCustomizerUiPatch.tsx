@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 
+const DEFAULT_APPAREL_HANDLE = "custom-t-shirt-upload-customize";
+
 function textIncludes(element: Element | null, value: string) {
   return Boolean(
     element &&
@@ -9,6 +11,11 @@ function textIncludes(element: Element | null, value: string) {
         .toLowerCase()
         .includes(value.toLowerCase())
   );
+}
+
+function isCustomizerPath() {
+  if (typeof window === "undefined") return false;
+  return window.location.pathname.toLowerCase().includes("/customizer");
 }
 
 function isGangSheetContext() {
@@ -26,11 +33,40 @@ function isGangSheetContext() {
   );
 }
 
+function ensureBareCustomizerDefaultsToApparel() {
+  if (!isCustomizerPath() || isGangSheetContext()) return false;
+
+  const url = new URL(window.location.href);
+  const hasProduct = Boolean(url.searchParams.get("product") || url.searchParams.get("handle"));
+  const mode = String(url.searchParams.get("mode") || "").toLowerCase();
+  const alreadyDefaulted = url.searchParams.get("dtfDefaultApparel") === "1";
+
+  if (hasProduct || mode === "transfer" || alreadyDefaulted) return false;
+
+  url.searchParams.set("product", DEFAULT_APPAREL_HANDLE);
+  url.searchParams.set("mode", "apparel");
+  url.searchParams.set("dtfDefaultApparel", "1");
+  window.location.replace(url.toString());
+  return true;
+}
+
 function hideElement(element: Element | null) {
   if (element instanceof HTMLElement) {
     element.hidden = true;
     element.style.display = "none";
   }
+}
+
+function showElement(element: Element | null) {
+  if (element instanceof HTMLElement) {
+    element.hidden = false;
+    element.style.display = "";
+  }
+}
+
+function closestPanel(element: Element | null) {
+  if (!element) return null;
+  return element.closest('[class*="rounded"][class*="border"]') || element.closest("section") || element.closest("div");
 }
 
 function findCurrentViewPanel(aside: Element) {
@@ -50,12 +86,25 @@ function findCurrentViewPanel(aside: Element) {
   return null;
 }
 
-function findPrintSetupPanel(aside: Element) {
+function findTransferSizePreviewPanel(aside: Element) {
+  const candidates = aside.querySelectorAll("section, div");
+
+  for (const candidate of candidates) {
+    const text = String(candidate.textContent || "").toLowerCase();
+    if (text.includes("transfer size preview")) {
+      return closestPanel(candidate);
+    }
+  }
+
+  return null;
+}
+
+function findOrderPanel(aside: Element) {
   const buttons = aside.querySelectorAll("button");
 
   for (const button of buttons) {
     if (textIncludes(button, "Add Custom Design to Cart")) {
-      return button.closest('[class*="rounded"][class*="border"]') || button.parentElement;
+      return closestPanel(button) || button.parentElement;
     }
   }
 
@@ -71,8 +120,7 @@ function findUploadArtworkPanel(aside: Element) {
   const uploadElement = uploadInput || uploadButton;
   if (!uploadElement) return null;
 
-  const panel = uploadElement.closest('[class*="mt-"]') || uploadElement.closest("div");
-  return panel || null;
+  return uploadElement.closest('[class*="mt-"]') || uploadElement.closest("div");
 }
 
 function findAddToCartButton(panel: Element) {
@@ -81,7 +129,7 @@ function findAddToCartButton(panel: Element) {
   );
 }
 
-function renamePrintSetupPanel(panel: Element) {
+function renameGangSheetOrderPanel(panel: Element) {
   const labels = panel.querySelectorAll("p, h2, h3, span");
 
   for (const label of labels) {
@@ -93,7 +141,43 @@ function renamePrintSetupPanel(panel: Element) {
   }
 }
 
-function movePrintSetupPanelToTop(aside: Element, panel: Element) {
+function cleanApparelOrderPanel(panel: Element) {
+  const labels = Array.from(panel.querySelectorAll("p, h2, h3, span, label"));
+
+  for (const label of labels) {
+    const text = String(label.textContent || "").trim().toLowerCase();
+
+    if (text === "checkout panel" || text === "checkout") {
+      hideElement(label);
+    }
+
+    if (text === "size") {
+      hideElement(label);
+      const next = label.nextElementSibling;
+      hideElement(next);
+    }
+  }
+
+  const sizeControls = panel.querySelectorAll('#checkout-size-input, [name="size"]');
+  sizeControls.forEach((control) => hideElement(control));
+
+  const addToCartButton = findAddToCartButton(panel);
+  if (addToCartButton instanceof HTMLElement) {
+    addToCartButton.style.marginTop = "6px";
+  }
+}
+
+function movePanelAfterUpload(aside: Element, panel: Element) {
+  const uploadArtworkPanel = findUploadArtworkPanel(aside);
+  if (!uploadArtworkPanel || uploadArtworkPanel.nextElementSibling === panel) return;
+
+  uploadArtworkPanel.insertAdjacentElement("afterend", panel);
+  if (panel instanceof HTMLElement) {
+    panel.style.marginTop = "12px";
+  }
+}
+
+function moveGangSheetPanelToTop(aside: Element, panel: Element) {
   const intro = aside.querySelector("h1")?.closest("div");
   const anchor = intro && intro.parentElement === aside ? intro.nextSibling : aside.firstChild;
 
@@ -102,16 +186,16 @@ function movePrintSetupPanelToTop(aside: Element, panel: Element) {
   }
 }
 
-function moveUploadArtworkIntoPrintSetup(aside: Element, printSetupPanel: Element) {
+function moveUploadArtworkIntoGangSheetPanel(aside: Element, panel: Element) {
   const uploadArtworkPanel = findUploadArtworkPanel(aside);
-  const addToCartButton = findAddToCartButton(printSetupPanel);
+  const addToCartButton = findAddToCartButton(panel);
 
-  if (!uploadArtworkPanel || !addToCartButton || printSetupPanel.contains(uploadArtworkPanel)) return;
+  if (!uploadArtworkPanel || !addToCartButton || panel.contains(uploadArtworkPanel)) return;
 
   uploadArtworkPanel.classList.remove("mt-5", "md:mt-5");
   uploadArtworkPanel.classList.add("mt-3");
 
-  printSetupPanel.insertBefore(uploadArtworkPanel, addToCartButton);
+  panel.insertBefore(uploadArtworkPanel, addToCartButton);
 }
 
 function hideAutosavePanels(aside: Element) {
@@ -125,45 +209,58 @@ function hideAutosavePanels(aside: Element) {
     const isAutosaveStatus =
       text === "design autosaved" ||
       text === "saved design cleared" ||
+      text === "previous design restored" ||
       text === "your design is saved automatically while you work.";
 
     const isClearSavedDesign = text.includes("clear saved design");
 
     if (isAutosaveStatus || isClearSavedDesign) {
-      const panel = candidate.closest('[class*="rounded"][class*="border"]') || candidate;
-      hideElement(panel);
+      hideElement(closestPanel(candidate) || candidate);
     }
   }
 }
 
-function patchGangSheetCustomizer() {
-  if (!isGangSheetContext()) return false;
+function patchCustomizerSidebar() {
+  if (!isCustomizerPath()) return false;
 
   const aside = document.querySelector(".customizer-mobile-shell aside, aside");
   if (!aside) return false;
 
-  const printSetupPanel = findPrintSetupPanel(aside);
-  if (!printSetupPanel) return false;
-
-  renamePrintSetupPanel(printSetupPanel);
-  movePrintSetupPanelToTop(aside, printSetupPanel);
-  moveUploadArtworkIntoPrintSetup(aside, printSetupPanel);
+  const orderPanel = findOrderPanel(aside);
   hideAutosavePanels(aside);
 
-  hideElement(findCurrentViewPanel(aside));
+  if (isGangSheetContext()) {
+    hideElement(findCurrentViewPanel(aside));
 
-  printSetupPanel.setAttribute("data-dtf-print-setup-panel", "true");
+    if (!orderPanel) return false;
+    renameGangSheetOrderPanel(orderPanel);
+    moveGangSheetPanelToTop(aside, orderPanel);
+    moveUploadArtworkIntoGangSheetPanel(aside, orderPanel);
+    orderPanel.setAttribute("data-dtf-print-setup-panel", "true");
+    showElement(orderPanel);
+    return true;
+  }
+
+  hideElement(findTransferSizePreviewPanel(aside));
+
+  if (!orderPanel) return false;
+  cleanApparelOrderPanel(orderPanel);
+  movePanelAfterUpload(aside, orderPanel);
+  orderPanel.setAttribute("data-dtf-apparel-order-panel", "true");
+  showElement(orderPanel);
   return true;
 }
 
 export default function GangSheetCustomizerUiPatch() {
   useEffect(() => {
+    if (ensureBareCustomizerDefaultsToApparel()) return;
+
     let attempts = 0;
-    const maxAttempts = 40;
+    const maxAttempts = 50;
 
     const timer = window.setInterval(() => {
       attempts += 1;
-      const patched = patchGangSheetCustomizer();
+      const patched = patchCustomizerSidebar();
 
       if (patched || attempts >= maxAttempts) {
         window.clearInterval(timer);
@@ -171,7 +268,7 @@ export default function GangSheetCustomizerUiPatch() {
     }, 250);
 
     const observer = new MutationObserver(() => {
-      patchGangSheetCustomizer();
+      patchCustomizerSidebar();
     });
 
     if (document.body) {
@@ -180,7 +277,7 @@ export default function GangSheetCustomizerUiPatch() {
 
     const observerTimeout = window.setTimeout(() => {
       observer.disconnect();
-    }, 10000);
+    }, 12000);
 
     return () => {
       window.clearInterval(timer);
