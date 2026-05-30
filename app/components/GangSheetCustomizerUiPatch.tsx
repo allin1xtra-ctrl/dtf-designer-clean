@@ -11,6 +11,16 @@ function textIncludes(element: Element | null, value: string) {
   );
 }
 
+function isCustomizerContext() {
+  if (typeof window === "undefined") return false;
+
+  const source = [window.location.href, window.location.search, document.referrer]
+    .join(" ")
+    .toLowerCase();
+
+  return source.includes("/customizer") || source.includes("dtf-designer");
+}
+
 function isGangSheetContext() {
   if (typeof window === "undefined") return false;
 
@@ -71,14 +81,26 @@ function findUploadArtworkPanel(aside: Element) {
   const uploadElement = uploadInput || uploadButton;
   if (!uploadElement) return null;
 
-  const panel = uploadElement.closest('[class*="mt-"]') || uploadElement.closest("div");
-  return panel || null;
+  return uploadElement.closest('[class*="mt-"]') || uploadElement.closest("div");
 }
 
 function findAddToCartButton(panel: Element) {
   return Array.from(panel.querySelectorAll("button")).find((button) =>
     textIncludes(button, "Add Custom Design to Cart")
   );
+}
+
+function findPanelByText(aside: Element, textValue: string) {
+  const candidates = aside.querySelectorAll("section, div");
+
+  for (const candidate of candidates) {
+    const text = String(candidate.textContent || "").toLowerCase();
+    if (text.includes(textValue.toLowerCase())) {
+      return candidate.closest('[class*="rounded"][class*="border"]') || candidate;
+    }
+  }
+
+  return null;
 }
 
 function renamePrintSetupPanel(panel: Element) {
@@ -93,12 +115,50 @@ function renamePrintSetupPanel(panel: Element) {
   }
 }
 
+function hideCheckoutLabelsAndCustomSize(panel: Element) {
+  const labels = Array.from(panel.querySelectorAll("p, h2, h3, span, label"));
+
+  for (const label of labels) {
+    const text = String(label.textContent || "").trim().toLowerCase();
+
+    if (text === "checkout panel" || text === "checkout") {
+      hideElement(label);
+    }
+
+    if (text === "size") {
+      hideElement(label);
+      const nextElement = label.nextElementSibling;
+      if (
+        nextElement instanceof HTMLSelectElement ||
+        nextElement instanceof HTMLInputElement ||
+        nextElement?.tagName.toLowerCase() === "select" ||
+        nextElement?.tagName.toLowerCase() === "input"
+      ) {
+        hideElement(nextElement);
+      }
+    }
+  }
+
+  const sizeControls = panel.querySelectorAll('#checkout-size-input, [name="size"]');
+  sizeControls.forEach((control) => hideElement(control));
+}
+
 function movePrintSetupPanelToTop(aside: Element, panel: Element) {
   const intro = aside.querySelector("h1")?.closest("div");
   const anchor = intro && intro.parentElement === aside ? intro.nextSibling : aside.firstChild;
 
   if (panel.previousSibling !== intro) {
     aside.insertBefore(panel, anchor);
+  }
+}
+
+function movePanelAfterUpload(aside: Element, panel: Element) {
+  const uploadArtworkPanel = findUploadArtworkPanel(aside);
+  if (!uploadArtworkPanel) return;
+
+  uploadArtworkPanel.insertAdjacentElement("afterend", panel);
+  if (panel instanceof HTMLElement) {
+    panel.style.marginTop = "12px";
   }
 }
 
@@ -136,21 +196,67 @@ function hideAutosavePanels(aside: Element) {
   }
 }
 
-function patchGangSheetCustomizer() {
-  if (!isGangSheetContext()) return false;
+function hideTransferSizePreview(aside: Element) {
+  hideElement(findPanelByText(aside, "Transfer Size Preview"));
+}
+
+function patchRulerPlacement() {
+  const rulerCandidates = document.querySelectorAll<HTMLElement>(
+    '.pointer-events-none.absolute.z-30[class*="text-cyan-100"]'
+  );
+
+  rulerCandidates.forEach((ruler) => {
+    const width = parseFloat(ruler.style.width || "0");
+    const height = parseFloat(ruler.style.height || "0");
+
+    const isHorizontalRuler = height > 0 && height <= 22 && width > 40;
+    const isVerticalRuler = width > 0 && width <= 24 && height > 40;
+
+    if (isHorizontalRuler) {
+      const currentTop = parseFloat(ruler.style.top || "0");
+      const baseTop = Number(ruler.dataset.dtfBaseTop || currentTop);
+      ruler.dataset.dtfBaseTop = String(baseTop);
+      ruler.style.top = `${baseTop + 20}px`;
+    }
+
+    if (isVerticalRuler) {
+      const currentLeft = parseFloat(ruler.style.left || "0");
+      const baseLeft = Number(ruler.dataset.dtfBaseLeft || currentLeft);
+      ruler.dataset.dtfBaseLeft = String(baseLeft);
+      ruler.style.left = `${baseLeft + 22}px`;
+    }
+  });
+}
+
+function patchCustomizerUi() {
+  if (!isCustomizerContext()) return false;
 
   const aside = document.querySelector(".customizer-mobile-shell aside, aside");
-  if (!aside) return false;
+  if (!aside) {
+    patchRulerPlacement();
+    return false;
+  }
 
   const printSetupPanel = findPrintSetupPanel(aside);
+
+  hideAutosavePanels(aside);
+  hideTransferSizePreview(aside);
+  patchRulerPlacement();
+
+  if (isGangSheetContext()) {
+    hideElement(findCurrentViewPanel(aside));
+  }
+
   if (!printSetupPanel) return false;
 
-  renamePrintSetupPanel(printSetupPanel);
-  movePrintSetupPanelToTop(aside, printSetupPanel);
-  moveUploadArtworkIntoPrintSetup(aside, printSetupPanel);
-  hideAutosavePanels(aside);
-
-  hideElement(findCurrentViewPanel(aside));
+  if (isGangSheetContext()) {
+    renamePrintSetupPanel(printSetupPanel);
+    movePrintSetupPanelToTop(aside, printSetupPanel);
+    moveUploadArtworkIntoPrintSetup(aside, printSetupPanel);
+  } else {
+    hideCheckoutLabelsAndCustomSize(printSetupPanel);
+    movePanelAfterUpload(aside, printSetupPanel);
+  }
 
   printSetupPanel.setAttribute("data-dtf-print-setup-panel", "true");
   return true;
@@ -159,28 +265,32 @@ function patchGangSheetCustomizer() {
 export default function GangSheetCustomizerUiPatch() {
   useEffect(() => {
     let attempts = 0;
-    const maxAttempts = 40;
+    const maxAttempts = 60;
 
     const timer = window.setInterval(() => {
       attempts += 1;
-      const patched = patchGangSheetCustomizer();
+      const patched = patchCustomizerUi();
 
-      if (patched || attempts >= maxAttempts) {
+      if (patched && attempts >= 4) {
+        window.clearInterval(timer);
+      }
+
+      if (attempts >= maxAttempts) {
         window.clearInterval(timer);
       }
     }, 250);
 
     const observer = new MutationObserver(() => {
-      patchGangSheetCustomizer();
+      patchCustomizerUi();
     });
 
     if (document.body) {
-      observer.observe(document.body, { childList: true, subtree: true });
+      observer.observe(document.body, { childList: true, subtree: true, attributes: true });
     }
 
     const observerTimeout = window.setTimeout(() => {
       observer.disconnect();
-    }, 10000);
+    }, 15000);
 
     return () => {
       window.clearInterval(timer);
