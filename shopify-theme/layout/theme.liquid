@@ -19,6 +19,7 @@
   <link rel="icon" type="image/png" href="{{ 'favicon.png' | asset_url }}">
   {{ content_for_header }}
   <link rel="stylesheet" href="{{ 'theme.css' | asset_url }}">
+
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -41,7 +42,6 @@
       }
     }
   </script>
-
 </head>
 
 <body>
@@ -51,7 +51,6 @@
   </div>
 
   <!-- Sticky Header -->
-
   <header style="position:sticky;top:0;z-index:1000;background:#18181b;padding:1rem 0 0.5rem 0;box-shadow:0 2px 12px #00fff733;">
     <div style="max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;">
       <a href="/" style="font-size:1.5rem;font-weight:900;color:#00fff7;text-decoration:none;">{{ shop.name }}</a>
@@ -68,10 +67,8 @@
     </div>
   </header>
 
-
   <!-- Accessibility: Skip to main content link -->
   <a href="#main-content" style="position:absolute;left:-999px;top:auto;width:1px;height:1px;overflow:hidden;background:#fff200;color:#18181b;z-index:10000;">Skip to main content</a>
-
 
   <main id="main-content">
     {{ content_for_layout }}
@@ -91,33 +88,159 @@
     </div>
   </footer>
 
-
   {{ content_for_footer }}
 
-  <!-- DTF Designer Pro: postMessage cart bridge (handles DTF_ADD_TO_CART from /pages/customizer iframe) -->
+  <!-- DTF Designer Pro: Shopify cart + iframe postMessage bridge -->
   <script>
-  (function () {
-    var DESIGNER_ORIGIN = 'https://dtf-designer-clean.vercel.app';
+    (function () {
+      'use strict';
 
-    window.addEventListener('message', async function (event) {
-      if (event.origin !== DESIGNER_ORIGIN) return;
+      var IFRAME_SELECTOR = '#dtf-customizer-iframe, iframe[src*="dtf-designer"], iframe[src*="vercel.app"], iframe[src*="/customizer"]';
+      var MAX_IFRAME_HEIGHT = 2400;
+      var MIN_IFRAME_HEIGHT = 420;
+      var isAddingToCart = false;
 
-      var message = event.data || {};
-      if (message.type !== 'DTF_ADD_TO_CART') return;
+      function isAllowedDesignerOrigin(origin) {
+        if (!origin || origin === 'null') return false;
 
-      var data = message.data || {};
-      var variantId = Number(data.id);
-      var quantity  = Number(data.quantity || 1);
-      var properties = data.properties || {};
+        try {
+          var url = new URL(origin);
+          var host = url.hostname;
 
-      if (!variantId) {
-        console.error('DTF cart bridge: missing variant ID', data);
-        alert('Missing product variant. Please choose a product and try again.');
-        return;
+          if (host === window.location.hostname) return true;
+          if (host === 'yourdtfplug.com' || host === 'www.yourdtfplug.com') return true;
+          if (host === 'localhost' || host === '127.0.0.1') return true;
+          if (host === 'dtf-designer-clean.vercel.app') return true;
+          if (host === 'dtf-designer-pro.vercel.app') return true;
+          if (host.indexOf('dtf-designer') !== -1 && host.slice(-11) === '.vercel.app') return true;
+
+          return false;
+        } catch (error) {
+          return false;
+        }
       }
 
-      try {
-        var response = await fetch('/cart/add.js', {
+      function normalizeVariantId(value) {
+        var raw = String(value || '').trim();
+
+        if (!raw) return '';
+
+        if (raw.indexOf('gid://shopify/ProductVariant/') === 0) {
+          return raw.split('/').pop();
+        }
+
+        return raw.replace(/[^0-9]/g, '');
+      }
+
+      function isDataUrl(value) {
+        return typeof value === 'string' && value.trim().toLowerCase().indexOf('data:') === 0;
+      }
+
+      function cleanCartProperties(properties) {
+        var cleaned = {};
+
+        if (!properties || typeof properties !== 'object') {
+          return cleaned;
+        }
+
+        Object.keys(properties).forEach(function (key) {
+          var value = properties[key];
+
+          if (value === null || value === undefined || value === '') return;
+
+          if (isDataUrl(value)) {
+            console.warn('[DTF cart bridge] Blocked data URL cart property:', key);
+            return;
+          }
+
+          cleaned[key] = value;
+        });
+
+        return cleaned;
+      }
+
+      function normalizePayload(message) {
+        if (message && message.data && typeof message.data === 'object') {
+          return message.data;
+        }
+
+        return message || {};
+      }
+
+      function buildCartItems(payload) {
+        var sharedQuantity = Math.max(1, Number(payload.quantity || 1));
+        var sharedProperties = cleanCartProperties(payload.properties || {});
+
+        if (Array.isArray(payload.items) && payload.items.length) {
+          return payload.items
+            .map(function (item) {
+              var id = normalizeVariantId(item.id || item.variantId || item.variant_id);
+
+              if (!id) return null;
+
+              return {
+                id: Number(id),
+                quantity: Math.max(1, Number(item.quantity || sharedQuantity)),
+                properties: cleanCartProperties(item.properties || sharedProperties)
+              };
+            })
+            .filter(Boolean);
+        }
+
+        var variantId = normalizeVariantId(payload.id || payload.variantId || payload.variant_id);
+
+        if (!variantId) return [];
+
+        return [
+          {
+            id: Number(variantId),
+            quantity: sharedQuantity,
+            properties: sharedProperties
+          }
+        ];
+      }
+
+      function getCartRedirect(payload) {
+        var redirect = payload.redirect || payload.redirectUrl || payload.redirect_url;
+
+        if (typeof redirect === 'string' && redirect.charAt(0) === '/') {
+          return redirect;
+        }
+
+        if (payload.checkout === true || payload.redirectToCheckout === true) {
+          return '/checkout';
+        }
+
+        return '/cart';
+      }
+
+      function setIframeHeight(rawHeight) {
+        var numberHeight = Number(rawHeight);
+
+        if (!Number.isFinite(numberHeight) || numberHeight <= 0) return;
+
+        var height = Math.max(MIN_IFRAME_HEIGHT, Math.min(Math.ceil(numberHeight), MAX_IFRAME_HEIGHT));
+        var iframe = document.querySelector(IFRAME_SELECTOR);
+
+        if (!iframe) return;
+
+        iframe.style.height = height + 'px';
+        iframe.style.minHeight = height + 'px';
+      }
+
+      function addItemsToCart(payload) {
+        var items = buildCartItems(payload);
+
+        if (!items.length) {
+          console.error('[DTF cart bridge] Missing Shopify variant ID in payload:', payload);
+          alert('Missing product variant. Please choose a product and try again.');
+          return;
+        }
+
+        if (isAddingToCart) return;
+        isAddingToCart = true;
+
+        fetch('/cart/add.js', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -125,26 +248,48 @@
             'X-Requested-With': 'XMLHttpRequest'
           },
           credentials: 'same-origin',
-          body: JSON.stringify({ id: variantId, quantity: quantity, properties: properties })
-        });
+          body: JSON.stringify({ items: items })
+        })
+          .then(function (response) {
+            return response.json()
+              .catch(function () {
+                return {};
+              })
+              .then(function (body) {
+                if (!response.ok) {
+                  throw new Error(body.description || body.message || 'Shopify rejected add-to-cart');
+                }
 
-        var result = await response.json();
+                return body;
+              });
+          })
+          .then(function () {
+            window.location.href = getCartRedirect(payload);
+          })
+          .catch(function (error) {
+            isAddingToCart = false;
+            console.error('[DTF cart bridge] Add to cart failed:', error);
+            alert('Could not add your custom item to cart. Please try again.');
+          });
+      }
 
-        if (!response.ok) {
-          console.error('DTF cart bridge: Shopify rejected add-to-cart', result);
-          alert('Could not add to cart: ' + (result.description || result.message || 'unknown error'));
+      window.addEventListener('message', function (event) {
+        if (!isAllowedDesignerOrigin(event.origin)) return;
+
+        var message = event.data || {};
+
+        if (!message || typeof message !== 'object') return;
+
+        if (message.type === 'DTF_IFRAME_HEIGHT') {
+          setIframeHeight(message.height);
           return;
         }
 
-        window.location.href = '/cart';
-
-      } catch (err) {
-        console.error('DTF cart bridge: fetch failed', err);
-        alert('Something went wrong adding your custom item to cart. Please try again.');
-      }
-    });
-  })();
+        if (message.type === 'DTF_ADD_TO_CART') {
+          addItemsToCart(normalizePayload(message));
+        }
+      });
+    })();
   </script>
-
 </body>
 </html>
