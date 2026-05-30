@@ -26,6 +26,13 @@ function isGangSheetContext() {
   );
 }
 
+function hideElement(element: Element | null) {
+  if (element instanceof HTMLElement) {
+    element.hidden = true;
+    element.style.display = "none";
+  }
+}
+
 function findCurrentViewPanel(aside: Element) {
   const candidates = aside.querySelectorAll("section, div");
 
@@ -55,17 +62,32 @@ function findPrintSetupPanel(aside: Element) {
   return null;
 }
 
+function findUploadArtworkPanel(aside: Element) {
+  const uploadInput = aside.querySelector('#artwork-upload-input, input[name="artworkUpload"]');
+  const uploadButton = Array.from(aside.querySelectorAll("button")).find((button) =>
+    textIncludes(button, "Upload Artwork")
+  );
+
+  const uploadElement = uploadInput || uploadButton;
+  if (!uploadElement) return null;
+
+  const panel = uploadElement.closest('[class*="mt-"]') || uploadElement.closest("div");
+  return panel || null;
+}
+
+function findAddToCartButton(panel: Element) {
+  return Array.from(panel.querySelectorAll("button")).find((button) =>
+    textIncludes(button, "Add Custom Design to Cart")
+  );
+}
+
 function renamePrintSetupPanel(panel: Element) {
   const labels = panel.querySelectorAll("p, h2, h3, span");
 
   for (const label of labels) {
     const text = String(label.textContent || "").trim().toLowerCase();
 
-    if (text === "checkout panel") {
-      label.textContent = "Print Setup";
-    }
-
-    if (text === "checkout") {
+    if (text === "checkout panel" || text === "checkout") {
       label.textContent = "Print Setup";
     }
   }
@@ -80,6 +102,40 @@ function movePrintSetupPanelToTop(aside: Element, panel: Element) {
   }
 }
 
+function moveUploadArtworkIntoPrintSetup(aside: Element, printSetupPanel: Element) {
+  const uploadArtworkPanel = findUploadArtworkPanel(aside);
+  const addToCartButton = findAddToCartButton(printSetupPanel);
+
+  if (!uploadArtworkPanel || !addToCartButton || printSetupPanel.contains(uploadArtworkPanel)) return;
+
+  uploadArtworkPanel.classList.remove("mt-5", "md:mt-5");
+  uploadArtworkPanel.classList.add("mt-3");
+
+  printSetupPanel.insertBefore(uploadArtworkPanel, addToCartButton);
+}
+
+function hideAutosavePanels(aside: Element) {
+  const candidates = aside.querySelectorAll("div, p, button");
+
+  for (const candidate of candidates) {
+    const text = String(candidate.textContent || "").trim().toLowerCase();
+
+    if (!text) continue;
+
+    const isAutosaveStatus =
+      text === "design autosaved" ||
+      text === "saved design cleared" ||
+      text === "your design is saved automatically while you work.";
+
+    const isClearSavedDesign = text.includes("clear saved design");
+
+    if (isAutosaveStatus || isClearSavedDesign) {
+      const panel = candidate.closest('[class*="rounded"][class*="border"]') || candidate;
+      hideElement(panel);
+    }
+  }
+}
+
 function patchGangSheetCustomizer() {
   if (!isGangSheetContext()) return false;
 
@@ -91,12 +147,10 @@ function patchGangSheetCustomizer() {
 
   renamePrintSetupPanel(printSetupPanel);
   movePrintSetupPanelToTop(aside, printSetupPanel);
+  moveUploadArtworkIntoPrintSetup(aside, printSetupPanel);
+  hideAutosavePanels(aside);
 
-  const currentViewPanel = findCurrentViewPanel(aside);
-  if (currentViewPanel instanceof HTMLElement) {
-    currentViewPanel.hidden = true;
-    currentViewPanel.style.display = "none";
-  }
+  hideElement(findCurrentViewPanel(aside));
 
   printSetupPanel.setAttribute("data-dtf-print-setup-panel", "true");
   return true;
@@ -105,7 +159,7 @@ function patchGangSheetCustomizer() {
 export default function GangSheetCustomizerUiPatch() {
   useEffect(() => {
     let attempts = 0;
-    const maxAttempts = 30;
+    const maxAttempts = 40;
 
     const timer = window.setInterval(() => {
       attempts += 1;
@@ -126,7 +180,7 @@ export default function GangSheetCustomizerUiPatch() {
 
     const observerTimeout = window.setTimeout(() => {
       observer.disconnect();
-    }, 8000);
+    }, 10000);
 
     return () => {
       window.clearInterval(timer);
