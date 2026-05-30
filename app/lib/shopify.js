@@ -10,7 +10,7 @@ const SHOPIFY_STOREFRONT_ACCESS_TOKEN = cleanEnv(
     process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN
 );
 const SHOPIFY_ADMIN_ACCESS_TOKEN = cleanEnv(
-  process.env.SHOPIFY_ADMIN_ACCESS_TOKEN || process.env.SHOPIFY_ACCESS_TOKEN
+  process.env.SHOPIFY_ADMIN_ACCESS_TOKEN
 );
 const SHOPIFY_API_VERSION = cleanEnv(process.env.SHOPIFY_ADMIN_API_VERSION) || "2024-10";
 
@@ -91,7 +91,7 @@ export async function shopifyStorefrontFetch(query, variables = {}) {
 export async function shopifyAdminFetch(endpoint, options = {}) {
   const domain = getShopifyDomain();
   if (!domain || !SHOPIFY_ADMIN_ACCESS_TOKEN) {
-    throw new Error("Missing Shopify Admin API environment variables.");
+    throw new Error("SHOPIFY_ADMIN_ACCESS_TOKEN is not configured");
   }
   const response = await fetch(
     `https://${domain}/admin/api/${SHOPIFY_API_VERSION}${endpoint}`,

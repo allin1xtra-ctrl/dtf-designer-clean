@@ -502,6 +502,10 @@ app.post('/ai-chat', async (req, res) => {
 });
 
 app.post('/ai-automation', (req, res) => {
+  if (!process.env.APP_AUTOMATION_TOKEN) {
+    return res.status(500).json({ error: 'APP_AUTOMATION_TOKEN is not configured' });
+  }
+
   try {
     const context = req.body?.context || {};
     const plan = buildAutomationPlan(context);

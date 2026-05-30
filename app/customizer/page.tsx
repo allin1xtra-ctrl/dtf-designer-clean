@@ -5,8 +5,8 @@ import { Canvas, FabricImage, Path, Shadow, Textbox } from "fabric";
 import { normalizeVariantId } from "../lib/shopify";
 
 const FALLBACK_VARIANT_ID = "47766570074286";
-const CANVAS_DEFAULT_WIDTH = 500;
-const CANVAS_DEFAULT_HEIGHT = 600;
+const CANVAS_DEFAULT_WIDTH = 620;
+const CANVAS_DEFAULT_HEIGHT = 744;
 
 type ViewName = "front" | "back" | "leftSleeve" | "rightSleeve" | "neck";
 type CurveMode = "none" | "arcUp" | "arcDown" | "wave";
@@ -20,6 +20,9 @@ type TextControlsState = {
   shadow: boolean;
   glow: boolean;
   letterSpacing: number;
+  lineHeight: number;
+  textAlign: "left" | "center" | "right";
+  opacity: number;
   bold: boolean;
   italic: boolean;
   uppercase: boolean;
@@ -32,6 +35,41 @@ type FontOption = {
   value: string;
 };
 
+type LayerItem = {
+  id: string;
+  index: number;
+  label: string;
+  type: string;
+  locked: boolean;
+  visible: boolean;
+  active: boolean;
+};
+
+type SheetSize = {
+  width: number;
+  height: number;
+  source: string;
+};
+
+type SelectedDesignMetrics = {
+  widthIn: number;
+  heightIn: number;
+  widthPx: number;
+  heightPx: number;
+  left: number;
+  top: number;
+  widthCanvas: number;
+  heightCanvas: number;
+  exceedsBounds: boolean;
+} | null;
+
+type CropControlsState = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 const DEFAULT_TEXT_CONTROLS: TextControlsState = {
   fontFamily: "Arial",
   fontSize: 32,
@@ -41,6 +79,9 @@ const DEFAULT_TEXT_CONTROLS: TextControlsState = {
   shadow: false,
   glow: false,
   letterSpacing: 0,
+  lineHeight: 1.16,
+  textAlign: "center",
+  opacity: 1,
   bold: false,
   italic: false,
   uppercase: false,
@@ -53,6 +94,7 @@ const FONT_OPTIONS: FontOption[] = [
   { label: "Helvetica", value: "Helvetica" },
   { label: "Times New Roman", value: "\"Times New Roman\"" },
   { label: "Georgia", value: "Georgia" },
+  { label: "Playfair Display", value: "\"Playfair Display\"" },
   { label: "Verdana", value: "Verdana" },
   { label: "Tahoma", value: "Tahoma" },
   { label: "Trebuchet MS", value: "\"Trebuchet MS\"" },
@@ -73,6 +115,7 @@ const FONT_OPTIONS: FontOption[] = [
   { label: "Black Ops One", value: "\"Black Ops One\"" },
   { label: "Racing Sans One", value: "\"Racing Sans One\"" },
   { label: "Graduate", value: "Graduate" },
+  { label: "Cinzel", value: "Cinzel" },
   { label: "Varsity Style", value: "Graduate, \"Times New Roman\", serif" },
   { label: "Russo One", value: "\"Russo One\"" },
   { label: "Archivo Black", value: "\"Archivo Black\"" },
@@ -84,6 +127,40 @@ const FONT_OPTIONS: FontOption[] = [
   { label: "Nunito", value: "Nunito" },
   { label: "Work Sans", value: "\"Work Sans\"" },
 ];
+
+const GOOGLE_FONT_FAMILIES = new Set([
+  "Anton",
+  "Bebas Neue",
+  "Oswald",
+  "Montserrat",
+  "Poppins",
+  "League Spartan",
+  "Playfair Display",
+  "Pacifico",
+  "Lobster",
+  "Great Vibes",
+  "Dancing Script",
+  "Bangers",
+  "Permanent Marker",
+  "Black Ops One",
+  "Racing Sans One",
+  "Graduate",
+  "Cinzel",
+  "Russo One",
+  "Archivo Black",
+  "Inter",
+  "Roboto",
+  "Open Sans",
+  "Lato",
+  "Raleway",
+  "Nunito",
+  "Work Sans",
+]);
+
+const fontLoadCache = new Map<string, Promise<void>>();
+const SNAP_TO_CENTER_THRESHOLD = 8;
+const LOW_RESOLUTION_UPLOAD_EDGE = 900;
+const MAX_HISTORY_STATES = 60;
 
 const VIEW_LABELS: Record<ViewName, string> = {
   front: "Front",
@@ -184,6 +261,10 @@ type AiActionResponse = {
   ok?: boolean;
   error?: string;
   note?: string;
+  requestId?: string;
+  diagnostics?: {
+    safeErrorCategory?: string;
+  };
   imageDataUrl?: string;
   dataUrl?: string;
   imageUrl?: string;
@@ -198,12 +279,13 @@ const TRANSFER_SIZE_PRESETS = ["3x3", "4x5", "5x5", "8x8", "8x10", "10x10", "11x
 const DRAFT_STORAGE_VERSION = 1;
 const DRAFT_STORAGE_KEY_PREFIX = "dtf-designer-draft";
 const DRAFT_AUTOSAVE_DEBOUNCE_MS = 800;
+const PRINT_DPI = 300;
 const BLANK_MOCKUP_SVG_WIDTH = 1000;
 const BLANK_MOCKUP_SVG_HEIGHT = 1200;
 // Expanded to leave a roughly 12% side margin and 6% top margin so fallback blank garments read larger in the preview.
 const BLANK_MOCKUP_FRAME = { x: 120, y: 70, width: 760, height: 1060, radius: 24 };
-const MOCKUP_FIT_RATIO = 0.9;
-const MOCKUP_FIT_RATIO_SMALL_SCREEN = 0.92;
+const MOCKUP_FIT_RATIO = 0.96;
+const MOCKUP_FIT_RATIO_SMALL_SCREEN = 0.98;
 const PREVIEW_PADDING = 8;
 const MIN_PREVIEW_SCALE = 0.01;
 const MIN_MOBILE_PREVIEW_SCALE = 0.32;
@@ -235,6 +317,13 @@ const PRODUCT_PRINT_LOCATION_OVERRIDES: Record<string, Partial<Record<string, Pa
   },
 };
 const VIEW_NAMES: ViewName[] = ["front", "back", "leftSleeve", "rightSleeve", "neck"];
+const DEFAULT_MOCKUP_LOCATIONS: Record<ViewName, PrintLocationData> = {
+  front: { mockupUrl: createMockupPendingDataUrl("Front"), designArea: DEFAULT_DESIGN_AREA },
+  back: { mockupUrl: createMockupPendingDataUrl("Back"), designArea: DEFAULT_DESIGN_AREA },
+  leftSleeve: { mockupUrl: createMockupPendingDataUrl("Left sleeve"), designArea: DEFAULT_DESIGN_AREA },
+  rightSleeve: { mockupUrl: createMockupPendingDataUrl("Right sleeve"), designArea: DEFAULT_DESIGN_AREA },
+  neck: { mockupUrl: createMockupPendingDataUrl("Neck label"), designArea: DEFAULT_DESIGN_AREA },
+};
 
 function createEmptyViews(): Record<ViewName, CanvasSnapshot | null> {
   return {
@@ -280,6 +369,95 @@ function normalizeDraftViews(value: unknown): Record<ViewName, CanvasSnapshot | 
   return normalized;
 }
 
+function getPrimaryFontFamily(value: string) {
+  return String(value || "")
+    .split(",")[0]
+    .replace(/["']/g, "")
+    .trim();
+}
+
+function getGoogleFontHref(fontFamily: string) {
+  const primaryFamily = getPrimaryFontFamily(fontFamily);
+  if (!GOOGLE_FONT_FAMILIES.has(primaryFamily)) return "";
+  const encodedFamily = primaryFamily.replace(/\s+/g, "+");
+  return `https://fonts.googleapis.com/css2?family=${encodedFamily}:wght@400;500;600;700;800;900&display=swap`;
+}
+
+function ensureGoogleFontStylesheet(fontFamily: string) {
+  if (typeof document === "undefined") return;
+
+  const href = getGoogleFontHref(fontFamily);
+  if (!href) return;
+
+  const primaryFamily = getPrimaryFontFamily(fontFamily);
+  const id = `dtf-font-${primaryFamily.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+  if (document.getElementById(id)) return;
+
+  const link = document.createElement("link");
+  link.id = id;
+  link.rel = "stylesheet";
+  link.href = href;
+  document.head.appendChild(link);
+}
+
+function ensureFontLoaded(fontFamily: string) {
+  const cleanFontFamily = String(fontFamily || "").trim();
+  if (!cleanFontFamily || typeof document === "undefined") {
+    return Promise.resolve();
+  }
+
+  const cached = fontLoadCache.get(cleanFontFamily);
+  if (cached) return cached;
+
+  const promise = (async () => {
+    ensureGoogleFontStylesheet(cleanFontFamily);
+
+    if (!document.fonts?.load) return;
+
+    try {
+      await Promise.all([
+        document.fonts.load(`400 32px ${cleanFontFamily}`),
+        document.fonts.load(`700 32px ${cleanFontFamily}`),
+      ]);
+      await document.fonts.ready;
+    } catch (error) {
+      console.warn("Font failed to load before canvas render:", {
+        fontFamily: getPrimaryFontFamily(cleanFontFamily),
+        errorType: error instanceof Error ? error.name : typeof error,
+      });
+    }
+  })();
+
+  fontLoadCache.set(cleanFontFamily, promise);
+  return promise;
+}
+
+function collectFontFamiliesFromSnapshot(snapshot: CanvasSnapshot | null) {
+  const fonts = new Set<string>();
+
+  const visit = (value: unknown) => {
+    if (!value || typeof value !== "object") return;
+
+    const candidate = value as { fontFamily?: unknown; objects?: unknown };
+    if (typeof candidate.fontFamily === "string" && candidate.fontFamily.trim()) {
+      fonts.add(candidate.fontFamily);
+    }
+
+    if (Array.isArray(candidate.objects)) {
+      candidate.objects.forEach(visit);
+    }
+  };
+
+  visit(snapshot);
+  return Array.from(fonts);
+}
+
+async function ensureSnapshotFontsLoaded(snapshot: CanvasSnapshot | null) {
+  const fonts = collectFontFamiliesFromSnapshot(snapshot);
+  if (!fonts.length) return;
+  await Promise.all(fonts.map((font) => ensureFontLoaded(font)));
+}
+
 function escapeSvgText(value: string) {
   return value
     .replace(/&/g, "&amp;")
@@ -295,6 +473,18 @@ function createBlankMockupDataUrl(label: string) {
     <rect width="100%" height="100%" fill="#f3f3f3"/>
     <rect x="${BLANK_MOCKUP_FRAME.x}" y="${BLANK_MOCKUP_FRAME.y}" width="${BLANK_MOCKUP_FRAME.width}" height="${BLANK_MOCKUP_FRAME.height}" rx="${BLANK_MOCKUP_FRAME.radius}" fill="none" stroke="#d4d4d8" stroke-width="8" stroke-dasharray="20 14"/>
     <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="#71717a" font-family="Arial, sans-serif" font-size="34">${safeLabel} blank mockup</text>
+  </svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+function createMockupPendingDataUrl(label: string) {
+  const safeLabel = escapeSvgText(label);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${BLANK_MOCKUP_SVG_WIDTH}" height="${BLANK_MOCKUP_SVG_HEIGHT}" viewBox="0 0 ${BLANK_MOCKUP_SVG_WIDTH} ${BLANK_MOCKUP_SVG_HEIGHT}">
+    <rect width="100%" height="100%" fill="#f6f7f9"/>
+    <rect x="${BLANK_MOCKUP_FRAME.x}" y="${BLANK_MOCKUP_FRAME.y}" width="${BLANK_MOCKUP_FRAME.width}" height="${BLANK_MOCKUP_FRAME.height}" rx="${BLANK_MOCKUP_FRAME.radius}" fill="#ffffff" stroke="#cbd5e1" stroke-width="8" stroke-dasharray="22 16"/>
+    <text x="50%" y="45%" text-anchor="middle" fill="#334155" font-family="Arial, sans-serif" font-size="42" font-weight="700">Mockup image pending</text>
+    <text x="50%" y="52%" text-anchor="middle" fill="#64748b" font-family="Arial, sans-serif" font-size="30">Upload product mockup in admin</text>
+    <text x="50%" y="59%" text-anchor="middle" fill="#94a3b8" font-family="Arial, sans-serif" font-size="24">${safeLabel} view</text>
   </svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
@@ -566,6 +756,42 @@ function parseTransferSize(value: string) {
   };
 }
 
+function parseSizeLabel(value: string) {
+  return parseTransferSize(value.replace(/[×]/g, "x"));
+}
+
+function formatInches(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return "0";
+  return Number(value.toFixed(value >= 10 ? 1 : 2)).toString();
+}
+
+function formatPixels(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return "0";
+  return Math.round(value).toLocaleString();
+}
+
+function inchesToPrintPixels(value: number) {
+  return Math.max(0, Math.round(value * PRINT_DPI));
+}
+
+function getImageElementSize(imageObject: FabricImage) {
+  const element = (
+    imageObject as unknown as {
+      getElement?: () => {
+        naturalWidth?: number;
+        naturalHeight?: number;
+        width?: number;
+        height?: number;
+      };
+    }
+  ).getElement?.();
+
+  return {
+    width: Number(element?.naturalWidth || element?.width || imageObject.width || 1),
+    height: Number(element?.naturalHeight || element?.height || imageObject.height || 1),
+  };
+}
+
 function getSafeTransferSizeForView(view: ViewName) {
   if (view === "leftSleeve" || view === "rightSleeve") return "4x5";
   if (view === "neck") return "3x3";
@@ -615,9 +841,12 @@ function getPrintLocationDataForView(
   }
 
   const fallbackKey = keys[0] || view;
+  const fallbackLocation = DEFAULT_MOCKUP_LOCATIONS[view] || {};
+  const handleOverride = handleOverrides?.[fallbackKey] || {};
+
   return {
     activeLocation: fallbackKey,
-    activeLocationData: handleOverrides?.[fallbackKey] ? { ...handleOverrides[fallbackKey] } : {},
+    activeLocationData: { ...fallbackLocation, ...handleOverride },
   };
 }
 
@@ -670,6 +899,9 @@ function resolveMockupUrl(
   const normalizedHandle = productHandle.trim().toLowerCase();
   const productFallback = normalizedHandle ? PRODUCT_BLANK_MOCKUPS[normalizedHandle]?.[view] : undefined;
   if (productFallback) return productFallback;
+
+  const defaultFallback = DEFAULT_MOCKUP_LOCATIONS[view]?.mockupUrl;
+  if (defaultFallback) return defaultFallback;
 
   return GENERIC_BLANK_MOCKUPS[view] || "";
 }
@@ -798,6 +1030,54 @@ function distanceFromPrintableArea(bounds: { left: number; top: number; width: n
   return Math.max(overflowLeft, overflowTop, overflowRight, overflowBottom);
 }
 
+function sanitizeAiDebugValue(value: unknown): unknown {
+  if (typeof value === "string") {
+    if (value.startsWith("data:image/")) {
+      return "[image data url redacted]";
+    }
+    if (value.length > 240) {
+      return `${value.slice(0, 240)}...`;
+    }
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(sanitizeAiDebugValue);
+  }
+
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>).map(([key, entryValue]) => {
+      const normalizedKey = key.toLowerCase();
+      if (
+        normalizedKey.includes("imagedataurl")
+        || normalizedKey.includes("dataurl")
+        || normalizedKey.includes("imageurl")
+        || normalizedKey.includes("base64")
+      ) {
+        return [key, typeof entryValue === "string" ? "[image value redacted]" : sanitizeAiDebugValue(entryValue)];
+      }
+      return [key, sanitizeAiDebugValue(entryValue)];
+    });
+
+    return Object.fromEntries(entries);
+  }
+
+  return value;
+}
+
+function sanitizeAiDebugDetails(details: Record<string, unknown>) {
+  return sanitizeAiDebugValue(details) as Record<string, unknown>;
+}
+
+function formatAiErrorMessage(result: AiActionResponse, fallback: string) {
+  const message = result.error || fallback;
+  const category = result.diagnostics?.safeErrorCategory;
+  const categoryText = category && category !== "success" ? ` Category: ${category}.` : "";
+  return result.requestId
+    ? `${message}${categoryText} Request ID: ${result.requestId}`
+    : `${message}${categoryText}`;
+}
+
 export default function CustomizerPage() {
   const canvasElRef = useRef<HTMLCanvasElement | null>(null);
   const fabricCanvasRef = useRef<Canvas | null>(null);
@@ -822,8 +1102,20 @@ export default function CustomizerPage() {
   const [shouldDebugAiLog, setShouldDebugAiLog] = useState(false);
   const [selectedObjectType, setSelectedObjectType] = useState("none");
   const [selectedLocked, setSelectedLocked] = useState(false);
+  const [layers, setLayers] = useState<LayerItem[]>([]);
   const [boundaryWarning, setBoundaryWarning] = useState("");
+  const [imageQualityWarning, setImageQualityWarning] = useState("");
+  const [selectedDesignMetrics, setSelectedDesignMetrics] = useState<SelectedDesignMetrics>(null);
+  const [cropControls, setCropControls] = useState<CropControlsState>({
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+  });
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
   const [aiStatus, setAiStatus] = useState("");
+  const [activeAiAction, setActiveAiAction] = useState("");
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [designIdeaPrompt, setDesignIdeaPrompt] = useState("");
   const [draftStatus, setDraftStatus] = useState("");
@@ -840,6 +1132,10 @@ export default function CustomizerPage() {
   const isRestoringDraftRef = useRef(false);
   const isClearingDraftRef = useRef(false);
   const suspendAutosaveRef = useRef(true);
+  const historyPastRef = useRef<CanvasSnapshot[]>([]);
+  const historyFutureRef = useRef<CanvasSnapshot[]>([]);
+  const isApplyingHistoryRef = useRef(false);
+  const historyTimerRef = useRef<number | null>(null);
 
   const viewsRef = useRef<Record<ViewName, CanvasSnapshot | null>>(createEmptyViews());
   const uploadedArtworkByViewRef = useRef<Record<ViewName, string>>(createEmptyUploadedArtworkByView());
@@ -847,10 +1143,9 @@ export default function CustomizerPage() {
   const getCanvas = () => fabricCanvasRef.current;
   const normalizedProductHandle = productHandle.trim();
   const normalizedVariantId = normalizeVariantId(variantId) || variantId;
-  const draftStorageKey =
-    normalizedProductHandle && normalizedVariantId
-      ? `${DRAFT_STORAGE_KEY_PREFIX}:${normalizedProductHandle}:${normalizedVariantId}`
-      : "";
+  const draftStorageKey = `${DRAFT_STORAGE_KEY_PREFIX}:${normalizedProductHandle || "standalone"}:${
+    normalizedVariantId || "default"
+  }`;
 
   const cancelDraftAutosave = () => {
     if (draftAutosaveTimerRef.current === null) return;
@@ -865,7 +1160,12 @@ export default function CustomizerPage() {
     const canvas = canvasOverride ?? getCanvas();
     const targetView = viewOverride ?? currentView;
     if (!canvas) return null;
-    const snapshot = canvas.toJSON();
+    const snapshot = (canvas as unknown as { toJSON: (propertiesToInclude?: string[]) => CanvasSnapshot }).toJSON([
+      "name",
+      "__curveMode",
+      "cropX",
+      "cropY",
+    ]);
     viewsRef.current[targetView] = snapshot;
     return snapshot;
   };
@@ -920,6 +1220,98 @@ export default function CustomizerPage() {
         console.error("Failed to autosave design draft:", error);
       }
     }, DRAFT_AUTOSAVE_DEBOUNCE_MS);
+  };
+
+  const updateHistoryAvailability = () => {
+    setCanUndo(historyPastRef.current.length > 1);
+    setCanRedo(historyFutureRef.current.length > 0);
+  };
+
+  const getCanvasSnapshot = (canvasOverride?: Canvas | null): CanvasSnapshot | null => {
+    const canvas = canvasOverride ?? getCanvas();
+    if (!canvas) return null;
+    return (canvas as unknown as { toJSON: (propertiesToInclude?: string[]) => CanvasSnapshot }).toJSON([
+      "name",
+      "__curveMode",
+      "cropX",
+      "cropY",
+    ]);
+  };
+
+  const pushHistorySnapshot = (options?: { clearFuture?: boolean }) => {
+    if (isApplyingHistoryRef.current || isRestoringDraftRef.current) return;
+    const snapshot = getCanvasSnapshot();
+    if (!snapshot) return;
+
+    const serialized = JSON.stringify(snapshot);
+    const previous = historyPastRef.current[historyPastRef.current.length - 1];
+    if (previous && JSON.stringify(previous) === serialized) {
+      updateHistoryAvailability();
+      return;
+    }
+
+    historyPastRef.current = [...historyPastRef.current, snapshot].slice(-MAX_HISTORY_STATES);
+    if (options?.clearFuture !== false) {
+      historyFutureRef.current = [];
+    }
+    updateHistoryAvailability();
+  };
+
+  const scheduleHistorySnapshot = () => {
+    if (typeof window === "undefined") return;
+    if (historyTimerRef.current !== null) {
+      window.clearTimeout(historyTimerRef.current);
+    }
+    historyTimerRef.current = window.setTimeout(() => {
+      historyTimerRef.current = null;
+      pushHistorySnapshot();
+    }, 150);
+  };
+
+  const resetHistoryForCurrentCanvas = () => {
+    const snapshot = getCanvasSnapshot();
+    historyPastRef.current = snapshot ? [snapshot] : [];
+    historyFutureRef.current = [];
+    updateHistoryAvailability();
+  };
+
+  const loadHistorySnapshot = async (snapshot: CanvasSnapshot | null) => {
+    const canvas = getCanvas();
+    if (!canvas || !snapshot) return;
+
+    isApplyingHistoryRef.current = true;
+    canvas.clear();
+    canvas.backgroundColor = "transparent";
+    canvas.discardActiveObject();
+    await ensureSnapshotFontsLoaded(snapshot);
+    await canvas.loadFromJSON(snapshot);
+    canvas.requestRenderAll();
+    captureViewSnapshot(canvas, currentView);
+    syncSelectedObject();
+    requestDraftSave({ resume: true });
+    isApplyingHistoryRef.current = false;
+  };
+
+  const undoCanvasChange = async () => {
+    const previous = historyPastRef.current;
+    if (previous.length <= 1) return;
+
+    const current = previous[previous.length - 1];
+    const target = previous[previous.length - 2];
+    historyPastRef.current = previous.slice(0, -1);
+    historyFutureRef.current = [current, ...historyFutureRef.current].slice(0, MAX_HISTORY_STATES);
+    updateHistoryAvailability();
+    await loadHistorySnapshot(target);
+  };
+
+  const redoCanvasChange = async () => {
+    const [target, ...remainingFuture] = historyFutureRef.current;
+    if (!target) return;
+
+    historyFutureRef.current = remainingFuture;
+    historyPastRef.current = [...historyPastRef.current, target].slice(-MAX_HISTORY_STATES);
+    updateHistoryAvailability();
+    await loadHistorySnapshot(target);
   };
 
   // Intentionally keyed to readiness + product + variant. Other referenced functions are stable enough here,
@@ -998,11 +1390,249 @@ export default function CustomizerPage() {
     if (!shouldDebugAiLogRef.current) return;
     const activeObject = getCanvas()?.getActiveObject();
     console.log("[AI DEBUG]", {
-      selectedObject: activeObject,
       selectedObjectType: getObjectType(activeObject) || "none",
       aiActionRequested: action,
-      ...details,
+      ...sanitizeAiDebugDetails(details),
     });
+  };
+
+  const getPrintableScale = () => {
+    const area = printableAreaRef.current;
+    const sheetWidth = Math.max(activeSheetSize.width, 0.1);
+    const sheetHeight = Math.max(activeSheetSize.height, 0.1);
+
+    return {
+      area,
+      sheetWidth,
+      sheetHeight,
+      canvasPxPerInX: area.width / sheetWidth,
+      canvasPxPerInY: area.height / sheetHeight,
+    };
+  };
+
+  const updateSelectedDesignMetrics = () => {
+    const canvas = getCanvas();
+    const activeObject = canvas?.getActiveObject();
+
+    if (!canvas || !activeObject) {
+      setSelectedDesignMetrics(null);
+      return;
+    }
+
+    const { area, sheetWidth, sheetHeight } = getPrintableScale();
+    const bounds = activeObject.getBoundingRect();
+    const widthIn = (bounds.width / Math.max(area.width, 1)) * sheetWidth;
+    const heightIn = (bounds.height / Math.max(area.height, 1)) * sheetHeight;
+    const exceedsBounds = distanceFromPrintableArea(bounds, area) > 0;
+
+    setSelectedDesignMetrics({
+      widthIn,
+      heightIn,
+      widthPx: inchesToPrintPixels(widthIn),
+      heightPx: inchesToPrintPixels(heightIn),
+      left: bounds.left,
+      top: bounds.top,
+      widthCanvas: bounds.width,
+      heightCanvas: bounds.height,
+      exceedsBounds,
+    });
+  };
+
+  const syncCropControlsFromActiveImage = () => {
+    const activeObject = getCanvas()?.getActiveObject();
+    if (!isImageObject(activeObject)) {
+      setCropControls({ x: 0, y: 0, width: 0, height: 0 });
+      return;
+    }
+
+    const { sheetWidth, sheetHeight, area } = getPrintableScale();
+    const cropCandidate = activeObject as FabricImage & {
+      cropX?: number;
+      cropY?: number;
+    };
+
+    const scaleX = Number(activeObject.scaleX) || 1;
+    const scaleY = Number(activeObject.scaleY) || 1;
+    const cropX = Number(cropCandidate.cropX) || 0;
+    const cropY = Number(cropCandidate.cropY) || 0;
+    const cropWidth = Number(activeObject.width) || 0;
+    const cropHeight = Number(activeObject.height) || 0;
+
+    setCropControls({
+      x: (cropX * scaleX / Math.max(area.width, 1)) * sheetWidth,
+      y: (cropY * scaleY / Math.max(area.height, 1)) * sheetHeight,
+      width: (cropWidth * scaleX / Math.max(area.width, 1)) * sheetWidth,
+      height: (cropHeight * scaleY / Math.max(area.height, 1)) * sheetHeight,
+    });
+  };
+
+  const updateLayers = () => {
+    const canvas = getCanvas();
+    if (!canvas) {
+      setLayers([]);
+      return;
+    }
+
+    const activeObject = canvas.getActiveObject();
+    const nextLayers = canvas
+      .getObjects()
+      .map((object, index) => {
+        const objectType = getObjectType(object) || "object";
+        const objectName =
+          typeof (object as { name?: unknown }).name === "string"
+            ? String((object as { name?: unknown }).name).trim()
+            : "";
+        const textPreview = isTextObject(object)
+          ? String(object.text || "").replace(/\s+/g, " ").trim()
+          : "";
+        const label = objectName || (textPreview
+          ? `Text: ${textPreview.slice(0, 24)}`
+          : objectType === "image"
+            ? `Artwork ${index + 1}`
+            : `${objectType} ${index + 1}`);
+
+        return {
+          id: `${objectType}-${index}`,
+          index,
+          label,
+          type: objectType,
+          locked: isLockedObject(object),
+          visible: (object as { visible?: boolean }).visible !== false,
+          active: object === activeObject,
+        };
+      })
+      .reverse();
+
+    setLayers(nextLayers);
+  };
+
+  const withLayerObject = (
+    index: number,
+    callback: (object: Parameters<Canvas["centerObject"]>[0]) => void
+  ) => {
+    const canvas = getCanvas();
+    const object = canvas?.getObjects()[index];
+    if (!canvas || !object) return;
+
+    callback(object);
+    object.setCoords();
+    canvas.requestRenderAll();
+    updateLayers();
+    scheduleHistorySnapshot();
+    requestDraftSave({ resume: true });
+  };
+
+  const renameLayer = (index: number) => {
+    const canvas = getCanvas();
+    const object = canvas?.getObjects()[index];
+    if (!canvas || !object || typeof window === "undefined") return;
+
+    const currentName = String((object as { name?: unknown }).name || "");
+    const nextName = window.prompt("Layer name", currentName);
+    if (nextName === null) return;
+
+    (object as { name?: string }).name = nextName.trim();
+    updateLayers();
+    requestDraftSave({ resume: true });
+  };
+
+  const toggleLayerVisibility = (index: number) => {
+    withLayerObject(index, (object) => {
+      const mutable = object as { visible?: boolean };
+      mutable.visible = mutable.visible === false;
+    });
+  };
+
+  const toggleLayerLock = (index: number) => {
+    withLayerObject(index, (object) => {
+      const current = isLockedObject(object);
+      const target = !current;
+      const mutable = object as {
+        lockMovementX?: boolean;
+        lockMovementY?: boolean;
+        lockScalingX?: boolean;
+        lockScalingY?: boolean;
+        lockRotation?: boolean;
+        selectable?: boolean;
+      };
+      mutable.lockMovementX = target;
+      mutable.lockMovementY = target;
+      mutable.lockScalingX = target;
+      mutable.lockScalingY = target;
+      mutable.lockRotation = target;
+      mutable.selectable = true;
+    });
+  };
+
+  const duplicateLayer = async (index: number) => {
+    const canvas = getCanvas();
+    const object = canvas?.getObjects()[index];
+    if (!canvas || !object) return;
+
+    const clone = await object.clone();
+    clone.set({ left: (object.left || 0) + 20, top: (object.top || 0) + 20 });
+    canvas.add(clone);
+    canvas.setActiveObject(clone);
+    clone.setCoords();
+    canvas.requestRenderAll();
+    syncSelectedObject();
+    requestDraftSave({ resume: true });
+  };
+
+  const bringLayerForward = (index: number) => {
+    const canvas = getCanvas();
+    const object = canvas?.getObjects()[index];
+    if (!canvas || !object) return;
+    canvas.setActiveObject(object);
+    canvas.bringObjectForward(object);
+    canvas.requestRenderAll();
+    syncSelectedObject();
+    requestDraftSave({ resume: true });
+  };
+
+  const sendLayerBackward = (index: number) => {
+    const canvas = getCanvas();
+    const object = canvas?.getObjects()[index];
+    if (!canvas || !object) return;
+    canvas.setActiveObject(object);
+    canvas.sendObjectBackwards(object);
+    canvas.requestRenderAll();
+    syncSelectedObject();
+    requestDraftSave({ resume: true });
+  };
+
+  const deleteLayer = (index: number) => {
+    const canvas = getCanvas();
+    const object = canvas?.getObjects()[index];
+    if (!canvas || !object) return;
+    const objectType = getObjectType(object);
+
+    canvas.remove(object);
+    canvas.discardActiveObject();
+
+    if (objectType === "image") {
+      const hasRemainingImageObjects = canvas
+        .getObjects()
+        .some((candidate) => getObjectType(candidate) === "image");
+
+      if (!hasRemainingImageObjects) {
+        uploadedArtworkByViewRef.current[currentView] = "";
+      }
+    }
+
+    canvas.requestRenderAll();
+    syncSelectedObject();
+    requestDraftSave({ resume: true });
+  };
+
+  const selectLayer = (index: number) => {
+    const canvas = getCanvas();
+    const object = canvas?.getObjects()[index];
+    if (!canvas || !object) return;
+
+    canvas.setActiveObject(object);
+    canvas.requestRenderAll();
+    syncSelectedObject();
   };
 
   const syncTextControlsFromObject = (textObject: Textbox) => {
@@ -1019,6 +1649,12 @@ export default function CustomizerPage() {
       outlineColor: (textObject.stroke as string) || "#000000",
       outlineWidth: Number(textObject.strokeWidth) || 0,
       letterSpacing: Number(textObject.charSpacing) || 0,
+      lineHeight: Number(textObject.lineHeight) || 1.16,
+      textAlign:
+        textObject.textAlign === "left" || textObject.textAlign === "right"
+          ? textObject.textAlign
+          : "center",
+      opacity: Number(textObject.opacity) || 1,
       bold: textObject.fontWeight === "bold" || Number(textObject.fontWeight) >= 700,
       italic: textObject.fontStyle === "italic",
       uppercase:
@@ -1065,6 +1701,9 @@ export default function CustomizerPage() {
     }
 
     updateBoundaryWarning();
+    updateSelectedDesignMetrics();
+    syncCropControlsFromActiveImage();
+    updateLayers();
   };
 
   const saveCurrentView = () => {
@@ -1084,6 +1723,7 @@ export default function CustomizerPage() {
     setCurrentView(view);
     setAiSuggestions([]);
     setBoundaryWarning("");
+    setImageQualityWarning("");
 
     if (isSmallPrintLocation(view)) {
       setTransferSize(getSafeTransferSizeForView(view));
@@ -1091,6 +1731,7 @@ export default function CustomizerPage() {
 
     const saved = viewsRef.current[view];
     if (saved?.objects?.length) {
+      await ensureSnapshotFontsLoaded(saved);
       await canvas.loadFromJSON(saved);
     }
 
@@ -1098,6 +1739,8 @@ export default function CustomizerPage() {
     const savedArtworkUrl = uploadedArtworkByViewRef.current[view];
     setCartStatus(savedArtworkUrl ? `Using saved Cloudinary artwork for ${VIEW_LABELS[view]}.` : "");
     syncSelectedObject();
+    resetHistoryForCurrentCanvas();
+    setImageQualityWarning("");
     requestDraftSave({ resume: true });
   };
 
@@ -1159,12 +1802,27 @@ export default function CustomizerPage() {
         stroke: next.outlineColor,
         strokeWidth: next.outlineWidth,
         charSpacing: next.letterSpacing,
+        lineHeight: next.lineHeight,
+        textAlign: next.textAlign,
+        opacity: next.opacity,
         fontWeight: next.bold ? "bold" : "normal",
         fontStyle: next.italic ? "italic" : "normal",
         shadow: nextShadow,
       });
 
       applyTextCurve(textObject, next.curveMode, next.bendCurve);
+    });
+    scheduleHistorySnapshot();
+
+    void ensureFontLoaded(next.fontFamily).then(() => {
+      const canvas = getCanvas();
+      const activeObject = canvas?.getActiveObject();
+      if (!canvas || !isTextObject(activeObject)) return;
+      if (activeObject.fontFamily !== next.fontFamily) return;
+      activeObject.dirty = true;
+      activeObject.setCoords();
+      canvas.requestRenderAll();
+      requestDraftSave({ resume: true });
     });
   };
 
@@ -1257,11 +1915,12 @@ export default function CustomizerPage() {
     }
 
     if (!isImageObject(activeObject)) {
-      setAiStatus("Select an image first.");
+      setAiStatus("Select an uploaded image before removing background.");
       return;
     }
 
     try {
+      setActiveAiAction(actionName);
       setAiStatus(`${actionName}...`);
       const imageDataUrl = activeObject.toDataURL({ format: "png", multiplier: 1 });
 
@@ -1293,7 +1952,7 @@ export default function CustomizerPage() {
         const fallbackError = actionName === "Remove Background"
           ? "Background removal failed. Please try another image or upload a transparent PNG."
           : `${actionName} failed.`;
-        setAiStatus(result.error || fallbackError);
+        setAiStatus(formatAiErrorMessage(result, fallbackError));
         return;
       }
 
@@ -1314,12 +1973,16 @@ export default function CustomizerPage() {
 
       setAiStatus(result.note || `${actionName} finished.`);
     } catch (error) {
-      console.error(`${actionName} failed:`, error);
+      console.error(`${actionName} failed:`, {
+        errorType: error instanceof Error ? error.name : typeof error,
+      });
       setAiStatus(
         actionName === "Remove Background"
           ? "Background removal failed. Please try another image or upload a transparent PNG."
           : `${actionName} failed.`
       );
+    } finally {
+      setActiveAiAction("");
     }
   };
 
@@ -1355,11 +2018,12 @@ export default function CustomizerPage() {
     const prompt = designIdeaPrompt.trim();
 
     if (!prompt) {
-      setAiStatus("Describe your design idea first.");
+      setAiStatus("Enter a prompt before generating artwork.");
       return;
     }
 
     try {
+      setActiveAiAction("Generate Idea");
       setAiStatus("Generating design idea...");
       const response = await fetch("/api/ai/generate-idea", {
         method: "POST",
@@ -1395,30 +2059,9 @@ export default function CustomizerPage() {
       });
 
       if (!response.ok || result.ok === false) {
-        const canvas = getCanvas();
-        if (canvas) {
-          const fallbackText = new Textbox(prompt.slice(0, 80), {
-            left: printableAreaRef.current.left + 12,
-            top: printableAreaRef.current.top + 12,
-            fill: textControls.textColor,
-            stroke: textControls.outlineColor,
-            strokeWidth: textControls.outlineWidth,
-            fontSize: Math.max(18, Math.min(44, textControls.fontSize)),
-            fontFamily: textControls.fontFamily,
-            width: Math.max(140, printableAreaRef.current.width - 24),
-          });
-          canvas.add(fallbackText);
-          canvas.setActiveObject(fallbackText);
-          fallbackText.setCoords();
-          canvas.requestRenderAll();
-          syncSelectedObject();
-          requestDraftSave({ resume: true });
-          setAiStatus("AI service unavailable. Added prompt text to canvas as a fallback.");
-        } else {
-          setAiStatus(
-            result.error || "AI design generation is not configured. Add OPENAI_API_KEY in Vercel."
-          );
-        }
+        setAiStatus(
+          formatAiErrorMessage(result, "AI design generation failed. Please try a different prompt.")
+        );
         return;
       }
 
@@ -1442,29 +2085,12 @@ export default function CustomizerPage() {
         setAiSuggestions(result.suggestions);
       }
     } catch (error) {
-      console.error("AI design generation failed:", error);
-      const canvas = getCanvas();
-      if (canvas) {
-        const fallbackText = new Textbox(prompt.slice(0, 80), {
-          left: printableAreaRef.current.left + 12,
-          top: printableAreaRef.current.top + 12,
-          fill: textControls.textColor,
-          stroke: textControls.outlineColor,
-          strokeWidth: textControls.outlineWidth,
-          fontSize: Math.max(18, Math.min(44, textControls.fontSize)),
-          fontFamily: textControls.fontFamily,
-          width: Math.max(140, printableAreaRef.current.width - 24),
-        });
-        canvas.add(fallbackText);
-        canvas.setActiveObject(fallbackText);
-        fallbackText.setCoords();
-        canvas.requestRenderAll();
-        syncSelectedObject();
-        requestDraftSave({ resume: true });
-        setAiStatus("AI request failed. Added prompt text to canvas as a fallback.");
-      } else {
-        setAiStatus("AI design generation failed. Please try a different prompt.");
-      }
+      console.error("AI design generation failed:", {
+        errorType: error instanceof Error ? error.name : typeof error,
+      });
+      setAiStatus("AI design generation failed. Please try a different prompt.");
+    } finally {
+      setActiveAiAction("");
     }
   };
 
@@ -1770,9 +2396,58 @@ export default function CustomizerPage() {
   const maxPrintHeight = normalizePrintLimit(resolvedLocationData?.maxPrintHeight);
   const availableViews = getAvailableViews(printLocations);
   const transferDimensions = parseTransferSize(transferSize);
+  const variantSizeDimensions = parseSizeLabel(selectedSize || "");
   const isSmallLocation = isSmallPrintLocation(currentView);
   const safePrintAreaLabel = getSmallPrintAreaLabel(currentView);
+  const activeSheetSize: SheetSize = (() => {
+    if (shouldShowTransferSizePreview && transferDimensions) {
+      return { width: transferDimensions.width, height: transferDimensions.height, source: "transfer size" };
+    }
+
+    if (maxPrintWidth && maxPrintHeight) {
+      return { width: maxPrintWidth, height: maxPrintHeight, source: "product print area" };
+    }
+
+    if (variantSizeDimensions) {
+      return { width: variantSizeDimensions.width, height: variantSizeDimensions.height, source: "selected variant" };
+    }
+
+    if (isSmallLocation) {
+      const smallDimensions = parseTransferSize(getSafeTransferSizeForView(currentView));
+      if (smallDimensions) {
+        return { width: smallDimensions.width, height: smallDimensions.height, source: "location default" };
+      }
+    }
+
+    return { width: 12, height: 12, source: "default sheet" };
+  })();
   const hasSelectedDesign = selectedObjectType !== "none";
+  const canvasPixelWidth = inchesToPrintPixels(activeSheetSize.width);
+  const canvasPixelHeight = inchesToPrintPixels(activeSheetSize.height);
+  const rulerInchTicksX = useMemo(() => {
+    const max = Math.max(activeSheetSize.width, 0.1);
+    const ticks = [];
+    for (let value = 0; value <= max + 0.001; value += 0.5) {
+      ticks.push({
+        value,
+        left: resolvedPrintAreaBounds.left + (value / max) * resolvedPrintAreaBounds.width,
+        major: Math.abs(value - Math.round(value)) < 0.001,
+      });
+    }
+    return ticks;
+  }, [activeSheetSize.width, resolvedPrintAreaBounds.left, resolvedPrintAreaBounds.width]);
+  const rulerInchTicksY = useMemo(() => {
+    const max = Math.max(activeSheetSize.height, 0.1);
+    const ticks = [];
+    for (let value = 0; value <= max + 0.001; value += 0.5) {
+      ticks.push({
+        value,
+        top: resolvedPrintAreaBounds.top + (value / max) * resolvedPrintAreaBounds.height,
+        major: Math.abs(value - Math.round(value)) < 0.001,
+      });
+    }
+    return ticks;
+  }, [activeSheetSize.height, resolvedPrintAreaBounds.height, resolvedPrintAreaBounds.top]);
 
   const exceedsPrintWidth = Boolean(
     !isSmallLocation &&
@@ -1922,6 +2597,8 @@ export default function CustomizerPage() {
 
   useEffect(() => {
     printableAreaRef.current = resolvedPrintAreaBounds;
+    updateSelectedDesignMetrics();
+    syncCropControlsFromActiveImage();
   }, [resolvedPrintAreaBounds]);
 
   useEffect(() => {
@@ -1929,9 +2606,77 @@ export default function CustomizerPage() {
   }, [shouldDebugAiLog]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const root = document.documentElement;
+    const body = document.body;
+    const previousRoot = {
+      height: root.style.height,
+      maxHeight: root.style.maxHeight,
+      overflow: root.style.overflow,
+      overscrollBehavior: root.style.overscrollBehavior,
+    };
+    const previousBody = {
+      height: body.style.height,
+      maxHeight: body.style.maxHeight,
+      overflow: body.style.overflow,
+      overscrollBehavior: body.style.overscrollBehavior,
+      position: body.style.position,
+      inset: body.style.inset,
+      width: body.style.width,
+    };
+
+    const restore = () => {
+      root.style.height = previousRoot.height;
+      root.style.maxHeight = previousRoot.maxHeight;
+      root.style.overflow = previousRoot.overflow;
+      root.style.overscrollBehavior = previousRoot.overscrollBehavior;
+      body.style.height = previousBody.height;
+      body.style.maxHeight = previousBody.maxHeight;
+      body.style.overflow = previousBody.overflow;
+      body.style.overscrollBehavior = previousBody.overscrollBehavior;
+      body.style.position = previousBody.position;
+      body.style.inset = previousBody.inset;
+      body.style.width = previousBody.width;
+    };
+
+    const applyMobileScrollLock = () => {
+      if (window.innerWidth > 768) {
+        restore();
+        return;
+      }
+
+      root.style.height = "100dvh";
+      root.style.maxHeight = "100dvh";
+      root.style.overflow = "hidden";
+      root.style.overscrollBehavior = "none";
+      body.style.height = "100dvh";
+      body.style.maxHeight = "100dvh";
+      body.style.overflow = "hidden";
+      body.style.overscrollBehavior = "none";
+      body.style.position = "fixed";
+      body.style.inset = "0";
+      body.style.width = "100%";
+    };
+
+    applyMobileScrollLock();
+    window.addEventListener("resize", applyMobileScrollLock);
+    window.addEventListener("orientationchange", applyMobileScrollLock);
+
+    return () => {
+      window.removeEventListener("resize", applyMobileScrollLock);
+      window.removeEventListener("orientationchange", applyMobileScrollLock);
+      restore();
+    };
+  }, []);
+
+  useEffect(() => {
     return () => {
       if (typeof window === "undefined") return;
       cancelDraftAutosave();
+      if (historyTimerRef.current !== null) {
+        window.clearTimeout(historyTimerRef.current);
+      }
     };
   }, []);
 
@@ -1940,8 +2685,47 @@ export default function CustomizerPage() {
     suspendAutosaveRef.current = true;
   }, [draftStorageKey]);
 
+  const snapObjectToPrintableCenter = (object: unknown) => {
+    if (!object || typeof object !== "object") return false;
+    const target = object as {
+      left?: number;
+      top?: number;
+      getCenterPoint?: () => { x: number; y: number };
+      getScaledWidth?: () => number;
+      getScaledHeight?: () => number;
+      set?: (patch: Partial<{ left: number; top: number }>) => void;
+      setCoords?: () => void;
+    };
+
+    if (!target.getCenterPoint || !target.getScaledWidth || !target.getScaledHeight || !target.set) {
+      return false;
+    }
+
+    const area = printableAreaRef.current;
+    const center = target.getCenterPoint();
+    const areaCenterX = area.left + area.width / 2;
+    const areaCenterY = area.top + area.height / 2;
+    const nextPosition: Partial<{ left: number; top: number }> = {};
+
+    if (Math.abs(center.x - areaCenterX) <= SNAP_TO_CENTER_THRESHOLD) {
+      nextPosition.left = areaCenterX - target.getScaledWidth() / 2;
+    }
+
+    if (Math.abs(center.y - areaCenterY) <= SNAP_TO_CENTER_THRESHOLD) {
+      nextPosition.top = areaCenterY - target.getScaledHeight() / 2;
+    }
+
+    if (typeof nextPosition.left !== "number" && typeof nextPosition.top !== "number") {
+      return false;
+    }
+
+    target.set(nextPosition);
+    target.setCoords?.();
+    return true;
+  };
+
   useEffect(() => {
-    if (!isReady || !draftStorageKey || !availableViews.length) return;
+    if (!isReady || !draftStorageKey) return;
     if (!fabricCanvasRef.current) return;
     if (restoredDraftKeyRef.current === draftStorageKey) return;
 
@@ -1953,7 +2737,11 @@ export default function CustomizerPage() {
 
       try {
         const rawDraft = window.localStorage.getItem(draftStorageKey);
-        if (!rawDraft) return;
+        if (!rawDraft) {
+          suspendAutosaveRef.current = false;
+          resetHistoryForCurrentCanvas();
+          return;
+        }
 
         const parsedDraft = JSON.parse(rawDraft) as Partial<DraftPayload>;
         const draftProductHandle =
@@ -1989,9 +2777,10 @@ export default function CustomizerPage() {
             restoredArtworkByView[view] = typeof candidate === "string" ? candidate : "";
           }
         }
-        const restoredView = availableViews.includes(parsedDraft.currentView)
+        const draftAvailableViews = availableViews.length ? availableViews : VIEW_NAMES;
+        const restoredView = draftAvailableViews.includes(parsedDraft.currentView)
           ? parsedDraft.currentView
-          : availableViews[0];
+          : draftAvailableViews[0];
         const restoredActiveCanvas =
           restoredView === parsedDraft.currentView
             ? normalizeDraftSnapshot(parsedDraft.activeCanvas) || restoredViews[restoredView]
@@ -2014,6 +2803,7 @@ export default function CustomizerPage() {
 
         if (restoredActiveCanvas?.objects?.length) {
           try {
+            await ensureSnapshotFontsLoaded(restoredActiveCanvas);
             await canvas.loadFromJSON(restoredActiveCanvas);
           } catch (error) {
             console.error("Failed to load saved design draft canvas JSON:", error);
@@ -2026,6 +2816,7 @@ export default function CustomizerPage() {
 
         canvas.renderAll();
         syncSelectedObject();
+        resetHistoryForCurrentCanvas();
         suspendAutosaveRef.current = false;
         setDraftStatus("Previous design restored");
         lastSavedDraftRef.current = rawDraft;
@@ -2067,7 +2858,6 @@ export default function CustomizerPage() {
       if (shouldDebugAiLogRef.current) {
         const activeObject = canvas.getActiveObject();
         console.log("[AI DEBUG]", {
-          selectedObject: activeObject,
           selectedObjectType: getObjectType(activeObject) || "none",
         });
       }
@@ -2075,14 +2865,35 @@ export default function CustomizerPage() {
 
     const handleObjectChange = () => {
       updateBoundaryWarning();
+      updateSelectedDesignMetrics();
+      syncCropControlsFromActiveImage();
+      updateLayers();
       requestDraftSave({ resume: true });
     };
 
+    const handleObjectMoving = (event: { target?: unknown }) => {
+      if (event.target && snapObjectToPrintableCenter(event.target)) {
+        canvas.requestRenderAll();
+      }
+      handleObjectChange();
+    };
+
+    const handleObjectModified = () => {
+      handleObjectChange();
+      scheduleHistorySnapshot();
+    };
+
     const handleObjectAddedOrRemoved = () => {
+      updateLayers();
+      updateSelectedDesignMetrics();
+      syncCropControlsFromActiveImage();
+      scheduleHistorySnapshot();
       requestDraftSave();
     };
 
     const handleDraftTextChange = () => {
+      updateSelectedDesignMetrics();
+      scheduleHistorySnapshot();
       requestDraftSave({ resume: true });
     };
 
@@ -2090,11 +2901,12 @@ export default function CustomizerPage() {
     canvas.on("selection:updated", handleSelection);
     canvas.on("selection:cleared", handleSelection);
     canvas.on("object:added", handleObjectAddedOrRemoved);
-    canvas.on("object:moving", handleObjectChange);
+    canvas.on("object:moving", handleObjectMoving);
     canvas.on("object:scaling", handleObjectChange);
-    canvas.on("object:modified", handleObjectChange);
+    canvas.on("object:modified", handleObjectModified);
     canvas.on("object:removed", handleObjectAddedOrRemoved);
     canvas.on("text:changed", handleDraftTextChange);
+    resetHistoryForCurrentCanvas();
 
     setIsReady(true);
 
@@ -2103,9 +2915,9 @@ export default function CustomizerPage() {
       canvas.off("selection:updated", handleSelection);
       canvas.off("selection:cleared", handleSelection);
       canvas.off("object:added", handleObjectAddedOrRemoved);
-      canvas.off("object:moving", handleObjectChange);
+      canvas.off("object:moving", handleObjectMoving);
       canvas.off("object:scaling", handleObjectChange);
-      canvas.off("object:modified", handleObjectChange);
+      canvas.off("object:modified", handleObjectModified);
       canvas.off("object:removed", handleObjectAddedOrRemoved);
       canvas.off("text:changed", handleDraftTextChange);
       canvas.dispose();
@@ -2134,6 +2946,14 @@ export default function CustomizerPage() {
         const coverScale = Math.max(areaWidth / baseWidth, areaHeight / baseHeight);
         img.scale(coverScale);
 
+        if (Math.min(baseWidth, baseHeight) < LOW_RESOLUTION_UPLOAD_EDGE) {
+          setImageQualityWarning(
+            "Uploaded artwork is low resolution. Use a larger transparent PNG for sharper DTF output."
+          );
+        } else {
+          setImageQualityWarning("");
+        }
+
         img.set({
           left: areaLeft + (areaWidth - img.getScaledWidth()) / 2,
           top: areaTop + (areaHeight - img.getScaledHeight()) / 2,
@@ -2141,7 +2961,7 @@ export default function CustomizerPage() {
 
         canvas.add(img);
         canvas.setActiveObject(img);
-        canvas.renderAll();
+        canvas.requestRenderAll();
         syncSelectedObject();
         requestDraftSave({ resume: true });
       } catch (error) {
@@ -2153,9 +2973,78 @@ export default function CustomizerPage() {
     event.target.value = "";
   };
 
-  const addText = () => {
+  const updateCropControl = (key: keyof CropControlsState, value: number) => {
+    setCropControls((prev) => ({
+      ...prev,
+      [key]: Math.max(0, Number.isFinite(value) ? value : 0),
+    }));
+  };
+
+  const applyCropToSelectedImage = () => {
+    const canvas = getCanvas();
+    const activeObject = canvas?.getActiveObject();
+    if (!canvas || !isImageObject(activeObject)) {
+      setAiStatus("Select an uploaded image before cropping.");
+      return;
+    }
+
+    const { area, sheetWidth, sheetHeight } = getPrintableScale();
+    const scaleX = Math.max(Math.abs(Number(activeObject.scaleX) || 1), 0.0001);
+    const scaleY = Math.max(Math.abs(Number(activeObject.scaleY) || 1), 0.0001);
+    const sourceSize = getImageElementSize(activeObject);
+
+    const cropXSource = (cropControls.x / Math.max(sheetWidth, 0.1)) * area.width / scaleX;
+    const cropYSource = (cropControls.y / Math.max(sheetHeight, 0.1)) * area.height / scaleY;
+    const cropWidthSource = (cropControls.width / Math.max(sheetWidth, 0.1)) * area.width / scaleX;
+    const cropHeightSource = (cropControls.height / Math.max(sheetHeight, 0.1)) * area.height / scaleY;
+
+    const nextCropX = Math.max(0, Math.min(sourceSize.width - 1, cropXSource));
+    const nextCropY = Math.max(0, Math.min(sourceSize.height - 1, cropYSource));
+    const nextWidth = Math.max(1, Math.min(sourceSize.width - nextCropX, cropWidthSource));
+    const nextHeight = Math.max(1, Math.min(sourceSize.height - nextCropY, cropHeightSource));
+
+    activeObject.set({
+      cropX: nextCropX,
+      cropY: nextCropY,
+      width: nextWidth,
+      height: nextHeight,
+    } as Partial<FabricImage>);
+
+    activeObject.setCoords();
+    canvas.requestRenderAll();
+    syncSelectedObject();
+    scheduleHistorySnapshot();
+    requestDraftSave({ resume: true });
+  };
+
+  const resetCropOnSelectedImage = () => {
+    const canvas = getCanvas();
+    const activeObject = canvas?.getActiveObject();
+    if (!canvas || !isImageObject(activeObject)) {
+      setAiStatus("Select an uploaded image before resetting crop.");
+      return;
+    }
+
+    const sourceSize = getImageElementSize(activeObject);
+    activeObject.set({
+      cropX: 0,
+      cropY: 0,
+      width: sourceSize.width,
+      height: sourceSize.height,
+    } as Partial<FabricImage>);
+
+    activeObject.setCoords();
+    canvas.requestRenderAll();
+    syncSelectedObject();
+    scheduleHistorySnapshot();
+    requestDraftSave({ resume: true });
+  };
+
+  const addText = async () => {
     const canvas = getCanvas();
     if (!canvas) return;
+
+    await ensureFontLoaded(textControls.fontFamily);
 
     const text = new Textbox("Your Design", {
       left: 100,
@@ -2165,13 +3054,17 @@ export default function CustomizerPage() {
       strokeWidth: textControls.outlineWidth,
       fontSize: textControls.fontSize,
       fontFamily: textControls.fontFamily,
+      lineHeight: textControls.lineHeight,
+      textAlign: textControls.textAlign,
+      opacity: textControls.opacity,
       width: 250,
     });
 
     canvas.add(text);
     canvas.setActiveObject(text);
-    canvas.renderAll();
+    canvas.requestRenderAll();
     syncSelectedObject();
+    setImageQualityWarning("");
     requestDraftSave({ resume: true });
   };
 
@@ -2187,6 +3080,8 @@ export default function CustomizerPage() {
     activeObject.setCoords();
     canvas.requestRenderAll();
     syncSelectedObject();
+    setImageQualityWarning("");
+    scheduleHistorySnapshot();
     requestDraftSave({ resume: true });
   };
 
@@ -2261,9 +3156,17 @@ export default function CustomizerPage() {
 
   const centerSelected = () => {
     withActiveObject((obj) => {
-      const canvas = getCanvas();
-      if (!canvas) return;
-      canvas.centerObject(obj);
+      const mutable = obj as {
+        getScaledWidth?: () => number;
+        getScaledHeight?: () => number;
+        set?: (patch: Partial<{ left: number; top: number }>) => void;
+      };
+      if (!mutable.getScaledWidth || !mutable.getScaledHeight || !mutable.set) return;
+      const area = printableAreaRef.current;
+      mutable.set({
+        left: area.left + (area.width - mutable.getScaledWidth()) / 2,
+        top: area.top + (area.height - mutable.getScaledHeight()) / 2,
+      });
     });
   };
 
@@ -2320,6 +3223,8 @@ export default function CustomizerPage() {
     if (!canvas || !activeObject) return;
     canvas.bringObjectForward(activeObject);
     canvas.requestRenderAll();
+    updateLayers();
+    scheduleHistorySnapshot();
     requestDraftSave({ resume: true });
   };
 
@@ -2329,6 +3234,8 @@ export default function CustomizerPage() {
     if (!canvas || !activeObject) return;
     canvas.sendObjectBackwards(activeObject);
     canvas.requestRenderAll();
+    updateLayers();
+    scheduleHistorySnapshot();
     requestDraftSave({ resume: true });
   };
 
@@ -2365,6 +3272,7 @@ export default function CustomizerPage() {
     }
 
     syncSelectedObject();
+    resetHistoryForCurrentCanvas();
     setDraftStatus("Saved design cleared");
     isClearingDraftRef.current = false;
   };
@@ -2516,7 +3424,16 @@ export default function CustomizerPage() {
         @media (max-width: 768px) {
           html,
           body {
-            overflow-x: hidden;
+            height: 100dvh;
+            max-height: 100dvh;
+            overflow: hidden;
+            overscroll-behavior: none;
+          }
+
+          body {
+            position: fixed;
+            inset: 0;
+            width: 100%;
           }
 
           .customizer-mobile-shell-wrap {
@@ -2530,11 +3447,26 @@ export default function CustomizerPage() {
 
           .customizer-mobile-shell {
             display: grid;
-            grid-template-columns: minmax(170px, 40vw) minmax(170px, 1fr);
+            grid-template-columns: clamp(150px, 38vw, 260px) minmax(0, 1fr);
             width: 100%;
             min-width: 0;
             height: 100dvh;
             max-height: 100dvh;
+            overflow: hidden;
+          }
+
+          .customizer-mobile-shell > aside {
+            height: 100dvh;
+            min-width: 0;
+            overflow-x: hidden;
+            overflow-y: auto;
+            border-right: 1px solid #222;
+            border-top: 0;
+          }
+
+          .customizer-mobile-shell > main {
+            height: 100dvh;
+            min-width: 0;
             overflow: hidden;
           }
 
@@ -2586,6 +3518,7 @@ export default function CustomizerPage() {
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">Upload Artwork</h2>
           <input id="artwork-upload-input" name="artworkUpload" ref={fileInputRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
           <button type="button" onClick={() => fileInputRef.current?.click()} className="block w-full cursor-pointer rounded bg-[#1f1f1f] p-2 text-sm text-white hover:bg-[#333]">Upload Artwork</button>
+          {imageQualityWarning ? <p className="mt-2 text-xs text-yellow-300">{imageQualityWarning}</p> : null}
         </div>
 
         <div className="mt-3 rounded border border-[#2b2b2b] bg-[#171717] p-3">
@@ -2606,7 +3539,48 @@ export default function CustomizerPage() {
           </p>
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-2 text-sm">
+        <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-300">Canvas & Design Info</h2>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded border border-[#2b2b2b] bg-[#111] px-3 py-2">
+              <p className="text-gray-500">Canvas / Sheet</p>
+              <p className="mt-1 font-semibold text-white">{formatInches(activeSheetSize.width)}&quot; × {formatInches(activeSheetSize.height)}&quot;</p>
+              <p className="mt-1 text-[11px] text-gray-500">{activeSheetSize.source}</p>
+            </div>
+            <div className="rounded border border-[#2b2b2b] bg-[#111] px-3 py-2">
+              <p className="text-gray-500">300 DPI Pixels</p>
+              <p className="mt-1 font-semibold text-white">{formatPixels(canvasPixelWidth)} × {formatPixels(canvasPixelHeight)}</p>
+              <p className="mt-1 text-[11px] text-gray-500">print-ready estimate</p>
+            </div>
+            <div className="rounded border border-[#2b2b2b] bg-[#111] px-3 py-2">
+              <p className="text-gray-500">Selected Design</p>
+              <p className="mt-1 font-semibold text-white">
+                {selectedDesignMetrics
+                  ? `${formatInches(selectedDesignMetrics.widthIn)}" × ${formatInches(selectedDesignMetrics.heightIn)}"`
+                  : "No selection"}
+              </p>
+              {selectedDesignMetrics ? (
+                <p className="mt-1 text-[11px] text-gray-500">
+                  {formatPixels(selectedDesignMetrics.widthPx)} × {formatPixels(selectedDesignMetrics.heightPx)} px
+                </p>
+              ) : null}
+            </div>
+            <div className="rounded border border-[#2b2b2b] bg-[#111] px-3 py-2">
+              <p className="text-gray-500">View / Location</p>
+              <p className="mt-1 font-semibold text-white">{VIEW_LABELS[currentView]}</p>
+              <p className="mt-1 text-[11px] text-gray-500">{activeLocation}</p>
+            </div>
+          </div>
+          {selectedDesignMetrics?.exceedsBounds ? (
+            <p className="mt-3 rounded border border-yellow-700 bg-yellow-950 px-3 py-2 text-xs text-yellow-200">
+              Selected design exceeds the printable safe area.
+            </p>
+          ) : null}
+        </div>
+
+        <div className="mt-5 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+          <button type="button" onClick={undoCanvasChange} disabled={!canUndo} className="rounded bg-[#1f1f1f] px-3 py-2 text-left hover:bg-[#333] disabled:cursor-not-allowed disabled:opacity-50">Undo</button>
+          <button type="button" onClick={redoCanvasChange} disabled={!canRedo} className="rounded bg-[#1f1f1f] px-3 py-2 text-left hover:bg-[#333] disabled:cursor-not-allowed disabled:opacity-50">Redo</button>
           <button type="button" onClick={addText} className="rounded bg-[#1f1f1f] px-3 py-2 text-left hover:bg-[#333]">Add Text</button>
           <button type="button" onClick={duplicateSelected} className="rounded bg-[#1f1f1f] px-3 py-2 text-left hover:bg-[#333]">Duplicate</button>
           <button type="button" onClick={centerSelected} className="rounded bg-[#1f1f1f] px-3 py-2 text-left hover:bg-[#333]">Center</button>
@@ -2617,10 +3591,82 @@ export default function CustomizerPage() {
           <button type="button" onClick={rotateSelected} className="rounded bg-[#1f1f1f] px-3 py-2 text-left hover:bg-[#333]">Rotate</button>
           <button type="button" onClick={bringForward} className="rounded bg-[#1f1f1f] px-3 py-2 text-left hover:bg-[#333]">Bring Forward</button>
           <button type="button" onClick={sendBackward} className="rounded bg-[#1f1f1f] px-3 py-2 text-left hover:bg-[#333]">Send Backward</button>
-          <button type="button" onClick={removeArtwork} className="col-span-2 rounded bg-[#2a1111] px-3 py-2 text-left hover:bg-[#3b1616]">Remove Artwork</button>
+          <button type="button" onClick={removeArtwork} className="rounded bg-[#2a1111] px-3 py-2 text-left hover:bg-[#3b1616] sm:col-span-2">Remove Artwork</button>
         </div>
 
-        <div className="sticky bottom-0 z-30 mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4 shadow-[0_-6px_16px_rgba(0,0,0,0.45)] md:static md:shadow-none">
+        <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-300">Layers</h2>
+            <span className="text-xs text-gray-500">{layers.length} objects</span>
+          </div>
+          {layers.length ? (
+            <div className="space-y-2">
+              {layers.map((layer) => (
+                <div
+                  key={layer.id}
+                  className={`rounded border px-2 py-2 text-xs ${
+                    layer.active
+                      ? "border-white bg-[#242424]"
+                      : "border-[#2b2b2b] bg-[#111]"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => selectLayer(layer.index)}
+                    className="block w-full truncate text-left font-medium text-white"
+                    title={layer.label}
+                  >
+                    {layer.visible ? "" : "Hidden: "}{layer.label}
+                  </button>
+                  <div className="mt-2 grid grid-cols-4 gap-1">
+                    <button type="button" onClick={() => renameLayer(layer.index)} className="rounded bg-[#1f1f1f] px-2 py-1 hover:bg-[#333]">Name</button>
+                    <button type="button" onClick={() => toggleLayerVisibility(layer.index)} className="rounded bg-[#1f1f1f] px-2 py-1 hover:bg-[#333]">{layer.visible ? "Hide" : "Show"}</button>
+                    <button type="button" onClick={() => toggleLayerLock(layer.index)} className="rounded bg-[#1f1f1f] px-2 py-1 hover:bg-[#333]">{layer.locked ? "Unlock" : "Lock"}</button>
+                    <button type="button" onClick={() => duplicateLayer(layer.index)} className="rounded bg-[#1f1f1f] px-2 py-1 hover:bg-[#333]">Copy</button>
+                    <button type="button" onClick={() => bringLayerForward(layer.index)} className="rounded bg-[#1f1f1f] px-2 py-1 hover:bg-[#333]">Up</button>
+                    <button type="button" onClick={() => sendLayerBackward(layer.index)} className="rounded bg-[#1f1f1f] px-2 py-1 hover:bg-[#333]">Down</button>
+                    <button type="button" onClick={() => deleteLayer(layer.index)} className="col-span-2 rounded bg-[#2a1111] px-2 py-1 hover:bg-[#3b1616]">Delete</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400">Add text or artwork to build layers.</p>
+          )}
+        </div>
+
+        <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-300">Crop / Trim</h2>
+          <p className="mb-3 text-xs text-gray-400">
+            {selectedObjectType === "image"
+              ? "Trim the selected artwork using inch-based crop bounds."
+              : "Select uploaded artwork to crop or reset trim."}
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <label htmlFor="crop-width-input" className="text-xs text-gray-300">
+              W (in)
+              <input id="crop-width-input" name="cropWidth" type="number" min={0} step={0.05} value={Number(cropControls.width.toFixed(2))} onChange={(e) => updateCropControl("width", Number(e.target.value))} disabled={selectedObjectType !== "image"} className="mt-1 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm text-white disabled:opacity-50" />
+            </label>
+            <label htmlFor="crop-height-input" className="text-xs text-gray-300">
+              H (in)
+              <input id="crop-height-input" name="cropHeight" type="number" min={0} step={0.05} value={Number(cropControls.height.toFixed(2))} onChange={(e) => updateCropControl("height", Number(e.target.value))} disabled={selectedObjectType !== "image"} className="mt-1 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm text-white disabled:opacity-50" />
+            </label>
+            <label htmlFor="crop-x-input" className="text-xs text-gray-300">
+              X (in)
+              <input id="crop-x-input" name="cropX" type="number" min={0} step={0.05} value={Number(cropControls.x.toFixed(2))} onChange={(e) => updateCropControl("x", Number(e.target.value))} disabled={selectedObjectType !== "image"} className="mt-1 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm text-white disabled:opacity-50" />
+            </label>
+            <label htmlFor="crop-y-input" className="text-xs text-gray-300">
+              Y (in)
+              <input id="crop-y-input" name="cropY" type="number" min={0} step={0.05} value={Number(cropControls.y.toFixed(2))} onChange={(e) => updateCropControl("y", Number(e.target.value))} disabled={selectedObjectType !== "image"} className="mt-1 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm text-white disabled:opacity-50" />
+            </label>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+            <button type="button" onClick={applyCropToSelectedImage} disabled={selectedObjectType !== "image"} className="rounded bg-white px-3 py-2 font-semibold text-black hover:bg-gray-200 disabled:cursor-not-allowed disabled:bg-gray-500">Apply Crop</button>
+            <button type="button" onClick={resetCropOnSelectedImage} disabled={selectedObjectType !== "image"} className="rounded bg-[#1f1f1f] px-3 py-2 text-left hover:bg-[#333] disabled:cursor-not-allowed disabled:opacity-50">Reset Crop</button>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">Text & Font Customization</h2>
           <p className="mb-3 text-xs text-gray-400">Selected object: {selectedObjectType}</p>
 
@@ -2655,6 +3701,18 @@ export default function CustomizerPage() {
           <label htmlFor="letter-spacing-range" className="mb-1 block text-xs text-gray-300">Letter Spacing</label>
           <input id="letter-spacing-range" name="letterSpacing" type="range" min={-200} max={800} step={10} value={textControls.letterSpacing} onChange={(e) => updateTextControls({ letterSpacing: Number(e.target.value) })} className="mb-3 w-full" />
 
+          <label htmlFor="line-height-range" className="mb-1 block text-xs text-gray-300">Line Height</label>
+          <input id="line-height-range" name="lineHeight" type="range" min={0.8} max={2.2} step={0.02} value={textControls.lineHeight} onChange={(e) => updateTextControls({ lineHeight: Number(e.target.value) || 1.16 })} className="mb-3 w-full" />
+
+          <label htmlFor="text-opacity-range" className="mb-1 block text-xs text-gray-300">Opacity</label>
+          <input id="text-opacity-range" name="textOpacity" type="range" min={0.1} max={1} step={0.05} value={textControls.opacity} onChange={(e) => updateTextControls({ opacity: Number(e.target.value) || 1 })} className="mb-3 w-full" />
+
+          <div className="mb-2 grid grid-cols-3 gap-2 text-xs">
+            <button type="button" onClick={() => updateTextControls({ textAlign: "left" })} className={`rounded px-2 py-2 ${textControls.textAlign === "left" ? "bg-white text-black" : "bg-[#1f1f1f]"}`}>Left</button>
+            <button type="button" onClick={() => updateTextControls({ textAlign: "center" })} className={`rounded px-2 py-2 ${textControls.textAlign === "center" ? "bg-white text-black" : "bg-[#1f1f1f]"}`}>Center</button>
+            <button type="button" onClick={() => updateTextControls({ textAlign: "right" })} className={`rounded px-2 py-2 ${textControls.textAlign === "right" ? "bg-white text-black" : "bg-[#1f1f1f]"}`}>Right</button>
+          </div>
+
           <div className="mb-2 grid grid-cols-3 gap-2 text-xs">
             <button type="button" onClick={() => updateTextControls({ bold: !textControls.bold })} className={`rounded px-2 py-2 ${textControls.bold ? "bg-white text-black" : "bg-[#1f1f1f]"}`}>Bold</button>
             <button type="button" onClick={() => updateTextControls({ italic: !textControls.italic })} className={`rounded px-2 py-2 ${textControls.italic ? "bg-white text-black" : "bg-[#1f1f1f]"}`}>Italic</button>
@@ -2683,14 +3741,30 @@ export default function CustomizerPage() {
         <div className="mt-5 rounded border border-[#2b2b2b] bg-[#171717] p-4">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">AI Design Tools</h2>
           <div className="grid grid-cols-2 gap-2 text-xs">
-            <button type="button" onClick={() => runAiRouteAction("/api/ai/remove-background", "Remove Background")} className="rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333]" title="Remove any background from selected artwork">Remove Background</button>
+            <button
+              type="button"
+              onClick={() => runAiRouteAction("/api/ai/remove-background", "Remove Background")}
+              disabled={Boolean(activeAiAction)}
+              className="rounded bg-[#1f1f1f] px-2 py-2 text-left hover:bg-[#333] disabled:cursor-not-allowed disabled:opacity-60"
+              title="Remove any background from selected artwork"
+            >
+              {activeAiAction === "Remove Background" ? "Removing..." : "Remove Background"}
+            </button>
           </div>
 
           <div className="mt-3 rounded border border-[#2b2b2b] bg-[#111] p-3">
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-300">Design Idea</h3>
             <label htmlFor="design-idea-input" className="sr-only">Design idea prompt</label>
             <input id="design-idea-input" name="designIdeaPrompt" type="text" value={designIdeaPrompt} onChange={(e) => setDesignIdeaPrompt(e.target.value)} placeholder="Describe your design style and key elements" className="mb-2 w-full rounded bg-[#1f1f1f] px-2 py-2 text-sm" />
-            <button type="button" onClick={generateDesignIdea} className="w-full rounded bg-[#1f1f1f] px-2 py-2 text-left text-xs hover:bg-[#333]" title="AI Generate Design Idea">Generate Idea</button>
+            <button
+              type="button"
+              onClick={generateDesignIdea}
+              disabled={Boolean(activeAiAction)}
+              className="w-full rounded bg-[#1f1f1f] px-2 py-2 text-left text-xs hover:bg-[#333] disabled:cursor-not-allowed disabled:opacity-60"
+              title="AI Generate Design Idea"
+            >
+              {activeAiAction === "Generate Idea" ? "Generating..." : "Generate Idea"}
+            </button>
           </div>
 
           {aiStatus ? <p className="mt-3 text-xs text-gray-300">{aiStatus}</p> : null}
@@ -2745,6 +3819,7 @@ export default function CustomizerPage() {
             ) : null}
 
             {boundaryWarning ? <p className="mt-2 text-xs text-yellow-300">⚠ {boundaryWarning}</p> : null}
+            {imageQualityWarning ? <p className="mt-2 text-xs text-yellow-300">{imageQualityWarning}</p> : null}
           </div>
         ) : null}
 
@@ -2816,6 +3891,54 @@ export default function CustomizerPage() {
                 transformOrigin: "center center",
               }}
             >
+              <div
+                className="pointer-events-none absolute z-30 overflow-hidden rounded-sm border border-[#2f3f46] bg-[#111]/90 text-[9px] font-semibold text-cyan-100 shadow-lg"
+                style={{
+                  left: `${resolvedPrintAreaBounds.left}px`,
+                  top: `${Math.max(0, resolvedPrintAreaBounds.top - 20)}px`,
+                  width: `${resolvedPrintAreaBounds.width}px`,
+                  height: "18px",
+                }}
+              >
+                {rulerInchTicksX.map((tick) => (
+                  <div
+                    key={`x-${tick.value}`}
+                    className="absolute bottom-0 border-l border-cyan-200/70"
+                    style={{
+                      left: `${tick.left - resolvedPrintAreaBounds.left}px`,
+                      height: tick.major ? "14px" : "7px",
+                    }}
+                  >
+                    {tick.major ? (
+                      <span className="absolute left-1 top-0 text-[9px] leading-none text-cyan-100">{Math.round(tick.value)}</span>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+              <div
+                className="pointer-events-none absolute z-30 overflow-hidden rounded-sm border border-[#2f3f46] bg-[#111]/90 text-[9px] font-semibold text-cyan-100 shadow-lg"
+                style={{
+                  left: `${Math.max(0, resolvedPrintAreaBounds.left - 22)}px`,
+                  top: `${resolvedPrintAreaBounds.top}px`,
+                  width: "20px",
+                  height: `${resolvedPrintAreaBounds.height}px`,
+                }}
+              >
+                {rulerInchTicksY.map((tick) => (
+                  <div
+                    key={`y-${tick.value}`}
+                    className="absolute right-0 border-t border-cyan-200/70"
+                    style={{
+                      top: `${tick.top - resolvedPrintAreaBounds.top}px`,
+                      width: tick.major ? "16px" : "8px",
+                    }}
+                  >
+                    {tick.major ? (
+                      <span className="absolute right-1 top-0 text-[9px] leading-none text-cyan-100">{Math.round(tick.value)}</span>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={mockupLoadFailed ? GENERIC_BLANK_MOCKUPS[currentView] : resolvedMockupUrl}
@@ -2853,6 +3976,20 @@ export default function CustomizerPage() {
                 }}
               />
               <canvas ref={canvasElRef} className="relative z-10" />
+              {selectedDesignMetrics ? (
+                <div
+                  className="pointer-events-none absolute z-40 rounded-full border border-cyan-300/70 bg-[#0b1114]/95 px-2 py-1 text-[10px] font-semibold text-cyan-100 shadow-xl"
+                  style={{
+                    left: `${Math.min(
+                      CANVAS_DEFAULT_WIDTH - 150,
+                      Math.max(4, selectedDesignMetrics.left + selectedDesignMetrics.widthCanvas / 2 - 70)
+                    )}px`,
+                    top: `${Math.max(4, selectedDesignMetrics.top - 28)}px`,
+                  }}
+                >
+                  {formatInches(selectedDesignMetrics.widthIn)}&quot; x {formatInches(selectedDesignMetrics.heightIn)}&quot;
+                </div>
+              ) : null}
             </div>
           </div>
         </main>

@@ -8,6 +8,7 @@ const STAGE_WIDTH = 500;
 const STAGE_HEIGHT = 600;
 const LOCATION_KEYS = ["front", "back", "left_sleeve", "right_sleeve", "neck_tag"] as const;
 const COLOR_VARIANT_NAMES = ["Black", "White", "Red", "Navy", "Gray"] as const;
+const ADMIN_TOKEN_STORAGE_KEY = "dtf-admin-panel-token";
 
 type LocationKey = (typeof LOCATION_KEYS)[number];
 
@@ -221,9 +222,28 @@ function getSafeImageUrl(value: string) {
   return "";
 }
 
+function getSafeErrorMessage(status: number, error?: string, shopifyStatus?: number) {
+  if (status === 401 || status === 403) {
+    return "Unable to load products: admin token required";
+  }
+
+  if (error) {
+    return `Unable to load products: ${error}`;
+  }
+
+  if (shopifyStatus) {
+    return `Unable to load products: Shopify Admin API request failed (${shopifyStatus})`;
+  }
+
+  return "Unable to load products: request failed";
+}
+
 function AdminMockupManagerContent() {
   const searchParams = useSearchParams();
-  const token = "dev-mode";
+  const tokenFromUrl = searchParams?.get("token") || "";
+  const [adminToken, setAdminToken] = useState("");
+  const [adminTokenInput, setAdminTokenInput] = useState("");
+  const [isAdminTokenSaved, setIsAdminTokenSaved] = useState(false);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
@@ -247,27 +267,60 @@ function AdminMockupManagerContent() {
   );
 
   useEffect(() => {
-    if (!token) return;
+    const storedToken =
+      typeof window !== "undefined"
+        ? window.localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY) || ""
+        : "";
+    const nextToken = tokenFromUrl || storedToken;
+
+    setAdminTokenInput(nextToken);
+    setAdminToken(nextToken);
+    setIsAdminTokenSaved(Boolean(storedToken && nextToken === storedToken));
+  }, [tokenFromUrl]);
+
+  useEffect(() => {
+    const token = adminToken.trim();
+
+    if (!token) {
+      setProducts([]);
+      setSelectedProductId("");
+      setIsLoadingProducts(false);
+      setIsUnauthorized(false);
+      setProductsError("Admin token required. Enter ADMIN_PANEL_TOKEN to load products.");
+      return;
+    }
 
     let isCancelled = false;
     setIsLoadingProducts(true);
     setProductsError("");
     setIsUnauthorized(false);
 
-    fetch(`/api/admin/products?token=${encodeURIComponent(token)}`, {
+    fetch("/api/admin/products", {
       cache: "no-store",
+      headers: {
+        "x-admin-token": token,
+      },
     })
       .then(async (res) => {
-        const data = (await res.json().catch(() => ({}))) as { products?: Product[]; error?: string };
+        const data = (await res.json().catch(() => ({}))) as {
+          products?: Product[];
+          error?: string;
+          shopifyStatus?: number;
+        };
         if (isCancelled) return;
 
-        if (res.status === 401) {
+        if (res.status === 401 || res.status === 403) {
           setIsUnauthorized(true);
+          setProducts([]);
+          setSelectedProductId("");
+          setProductsError(getSafeErrorMessage(res.status, data.error, data.shopifyStatus));
           return;
         }
 
         if (!res.ok) {
-          setProductsError(data.error || "Failed to load products.");
+          setProducts([]);
+          setSelectedProductId("");
+          setProductsError(getSafeErrorMessage(res.status, data.error, data.shopifyStatus));
           return;
         }
 
@@ -278,7 +331,9 @@ function AdminMockupManagerContent() {
       .catch((error: unknown) => {
         if (isCancelled) return;
         const message = error instanceof Error ? error.message : String(error);
-        setProductsError(message || "Failed to load products.");
+        setProducts([]);
+        setSelectedProductId("");
+        setProductsError(`Unable to load products: ${message || "request failed"}`);
       })
       .finally(() => {
         if (!isCancelled) setIsLoadingProducts(false);
@@ -287,7 +342,34 @@ function AdminMockupManagerContent() {
     return () => {
       isCancelled = true;
     };
-  }, [token]);
+  }, [adminToken]);
+
+  function applyAdminToken() {
+    const nextToken = adminTokenInput.trim();
+    if (typeof window !== "undefined") {
+      if (nextToken) {
+        window.localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, nextToken);
+        setIsAdminTokenSaved(true);
+      } else {
+        window.localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+        setIsAdminTokenSaved(false);
+      }
+    }
+    setAdminToken(nextToken);
+  }
+
+  function clearSavedAdminToken() {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+    }
+    setAdminToken("");
+    setAdminTokenInput("");
+    setIsAdminTokenSaved(false);
+    setProducts([]);
+    setSelectedProductId("");
+    setProductsError("Admin token required. Enter ADMIN_PANEL_TOKEN to load products.");
+    setIsUnauthorized(false);
+  }
 
   useEffect(() => {
     if (!selectedProduct) {
@@ -337,6 +419,7 @@ function AdminMockupManagerContent() {
   }
 
   async function handleSave() {
+    const token = adminToken.trim();
     if (!selectedProduct || !token) return;
     setIsSaving(true);
     setSaveStatus("");
@@ -355,8 +438,9 @@ function AdminMockupManagerContent() {
       });
 
       const data = (await response.json().catch(() => ({}))) as { error?: string };
-      if (response.status === 401) {
+      if (response.status === 401 || response.status === 403) {
         setIsUnauthorized(true);
+        setSaveStatus("Unauthorized. Enter a valid admin token and try again.");
         return;
       }
 
@@ -374,21 +458,58 @@ function AdminMockupManagerContent() {
     }
   }
 
-  if (isUnauthorized) {
-  return (
-    <main className="min-h-screen bg-[#0f0f10] p-8 text-white">
-      <h1 className="text-2xl font-semibold">
-        Admin API Unauthorized
-      </h1>
-    </main>
-  );
-}
-
   return (
     <main className="min-h-screen bg-[#0f0f10] text-white">
       <div className="mx-auto flex max-w-[1280px] gap-6 p-6">
         <section className="w-full max-w-[380px] rounded-lg border border-[#232323] bg-[#151515] p-5">
           <h1 className="mb-5 text-xl font-semibold">Admin Mockup Manager</h1>
+
+          <div className="mb-5 rounded border border-[#2b2b2b] bg-[#111] p-3">
+            <label htmlFor="admin-token-input" className="mb-2 block text-sm text-gray-300">
+              Admin Token
+            </label>
+            <p className="mb-3 text-xs text-gray-400">
+              Enter your ADMIN_PANEL_TOKEN from Vercel to load Shopify products.
+            </p>
+            <div className="flex gap-2">
+              <input
+                id="admin-token-input"
+                type="password"
+                value={adminTokenInput}
+                onChange={(event) => setAdminTokenInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    applyAdminToken();
+                  }
+                }}
+                className="min-w-0 flex-1 rounded border border-[#2b2b2b] bg-[#1f1f1f] px-3 py-2 text-white"
+                placeholder="Enter admin token"
+              />
+              <button
+                type="button"
+                onClick={applyAdminToken}
+                className="rounded bg-white px-3 py-2 text-sm font-semibold text-black hover:bg-gray-200"
+              >
+                Load Products
+              </button>
+            </div>
+            {isAdminTokenSaved ? (
+              <div className="mt-3 flex items-center justify-between gap-3 rounded border border-[#2b2b2b] bg-[#171717] px-3 py-2">
+                <p className="text-xs text-green-300">Admin token saved in this browser.</p>
+                <button
+                  type="button"
+                  onClick={clearSavedAdminToken}
+                  className="shrink-0 text-xs font-semibold text-gray-300 underline-offset-2 hover:text-white hover:underline"
+                >
+                  Clear saved token
+                </button>
+              </div>
+            ) : null}
+            {isUnauthorized ? (
+              <p className="mt-2 text-xs text-red-300">Unauthorized. Enter a valid admin token.</p>
+            ) : null}
+          </div>
 
           <label htmlFor="admin-product-select" className="mb-2 block text-sm text-gray-300">
             Shopify Product
@@ -400,7 +521,15 @@ function AdminMockupManagerContent() {
             className="mb-4 w-full rounded border border-[#2b2b2b] bg-[#1f1f1f] px-3 py-2 text-white"
             disabled={isLoadingProducts}
           >
-            {!products.length ? <option value="">{isLoadingProducts ? "Loading products..." : "No products found"}</option> : null}
+            {!products.length ? (
+              <option value="">
+                {isLoadingProducts
+                  ? "Loading products..."
+                  : productsError
+                    ? "Products unavailable"
+                    : "No products found"}
+              </option>
+            ) : null}
             {products.map((product) => (
               <option key={product.id} value={product.id}>
                 {product.title}
