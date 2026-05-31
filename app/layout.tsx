@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import GangSheetCustomizerUiPatch from "./components/GangSheetCustomizerUiPatch";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -48,7 +47,6 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-slate-950 text-white">
-        <GangSheetCustomizerUiPatch />
         <div className="flex-1">{children}</div>
         <footer className="border-t border-white/10 bg-slate-950/95 px-4 py-4 text-sm text-slate-300">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
