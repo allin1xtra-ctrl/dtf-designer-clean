@@ -32,13 +32,13 @@ export default function Home() {
             Order DTF Transfers
           </a>
           <a
-            href="https://yourdtfplug.com/products/dtf-gang-sheet-builder-build-your-own-sheet?dtf_mode=transfer#dtf-designer"
+            href="/customizer?dtf_mode=transfer&mode=transfer&transferSize=13x60"
             className="rounded-full border border-white/20 px-8 py-4 font-bold text-white transition hover:bg-white/10"
           >
             Build a Gang Sheet
           </a>
           <a
-            href="https://yourdtfplug.com/collections/apparel"
+            href="https://yourdtfplug.com/collections/custom-apparel"
             className="rounded-full border border-white/20 px-8 py-4 font-bold text-white transition hover:bg-white/10"
           >
             Customize Apparel
