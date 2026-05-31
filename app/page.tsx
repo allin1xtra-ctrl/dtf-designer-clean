@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -33,23 +32,23 @@ export default function Home() {
             Order DTF Transfers
           </a>
           <a
-            href="https://yourdtfplug.com/products/dtf-gang-sheet-builder-build-your-own-sheet"
+            href="https://yourdtfplug.com/products/dtf-gang-sheet-builder-build-your-own-sheet?dtf_mode=transfer#dtf-designer"
             className="rounded-full border border-white/20 px-8 py-4 font-bold text-white transition hover:bg-white/10"
           >
             Build a Gang Sheet
           </a>
-          <Link
-            href="/customizer"
+          <a
+            href="https://yourdtfplug.com/collections/apparel"
             className="rounded-full border border-white/20 px-8 py-4 font-bold text-white transition hover:bg-white/10"
           >
             Customize Apparel
-          </Link>
-          <Link
+          </a>
+          <a
             href="/campaign-studio"
             className="rounded-full border border-cyan-400/40 bg-cyan-400/10 px-8 py-4 font-bold text-cyan-200 transition hover:bg-cyan-400/20"
           >
             Campaign Concept Studio
-          </Link>
+          </a>
         </div>
 
         <div className="mt-12 grid max-w-5xl gap-4 text-left md:grid-cols-3">
