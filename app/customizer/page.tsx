@@ -309,12 +309,12 @@ const PRODUCT_BLANK_MOCKUPS: Record<string, Partial<Record<ViewName, string>>> =
 const PRODUCT_PRINT_LOCATION_OVERRIDES: Record<string, Partial<Record<string, Partial<PrintLocationData>>>> = {
   "custom-t-shirt-upload-customize": {
     front: {
-      designArea: { x: 25, y: 17, width: 50, height: 65 },
+      designArea: { x: 26, y: 22, width: 48, height: 60 },
       maxPrintWidth: 12,
       maxPrintHeight: 16,
     },
     back: {
-      designArea: { x: 25, y: 17, width: 50, height: 65 },
+     designArea: { x: 26, y: 21, width: 48, height: 62 },
       maxPrintWidth: 12,
       maxPrintHeight: 16,
     },
