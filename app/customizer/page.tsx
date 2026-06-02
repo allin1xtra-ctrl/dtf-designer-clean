@@ -309,12 +309,12 @@ const PRODUCT_BLANK_MOCKUPS: Record<string, Partial<Record<ViewName, string>>> =
 const PRODUCT_PRINT_LOCATION_OVERRIDES: Record<string, Partial<Record<string, Partial<PrintLocationData>>>> = {
   "custom-t-shirt-upload-customize": {
     front: {
-      designArea: { x: 26, y: 22, width: 47, height: 60 },
+      designArea: { x: 30, y: 17, width: 40, height: 65 },
       maxPrintWidth: 12,
       maxPrintHeight: 16,
     },
     back: {
-     designArea: { x: 26, y: 22, width: 47, height: 60 },
+      designArea: { x: 25, y: 17, width: 50, height: 65 },
       maxPrintWidth: 12,
       maxPrintHeight: 16,
     },
@@ -1898,8 +1898,8 @@ export default function CustomizerPage() {
     const { left: areaLeft, top: areaTop, width: areaWidth, height: areaHeight } = printableAreaRef.current;
     const baseWidth = nextImage.width || 1;
     const baseHeight = nextImage.height || 1;
-    const coverScale = Math.max(areaWidth / baseWidth, areaHeight / baseHeight);
-    nextImage.scale(coverScale);
+    const containScale = Math.min(areaWidth / baseWidth, areaHeight / baseHeight);
+    nextImage.scale(containScale);
 
     nextImage.set({
       left: areaLeft + (areaWidth - nextImage.getScaledWidth()) / 2,
@@ -2754,6 +2754,62 @@ export default function CustomizerPage() {
     return true;
   };
 
+  const clampObjectToPrintableArea = (object: unknown) => {
+    if (!object || typeof object !== "object") return false;
+
+    const target = object as {
+      left?: number;
+      top?: number;
+      getBoundingRect?: (...args: unknown[]) => { left: number; top: number; width: number; height: number };
+      set?: (patch: Partial<{ left: number; top: number }>) => void;
+      setCoords?: () => void;
+    };
+
+    if (!target.getBoundingRect || !target.set) return false;
+
+    const rect = target.getBoundingRect(true, true);
+    const bounds = printableAreaRef.current;
+    const rectRight = rect.left + rect.width;
+    const rectBottom = rect.top + rect.height;
+    const boundsRight = bounds.left + bounds.width;
+    const boundsBottom = bounds.top + bounds.height;
+    let dx = 0;
+    let dy = 0;
+
+    if (rect.width <= bounds.width) {
+      if (rect.left < bounds.left) {
+        dx = bounds.left - rect.left;
+      } else if (rectRight > boundsRight) {
+        dx = boundsRight - rectRight;
+      }
+    } else if (rect.left > bounds.left) {
+      dx = bounds.left - rect.left;
+    } else if (rectRight < boundsRight) {
+      dx = boundsRight - rectRight;
+    }
+
+    if (rect.height <= bounds.height) {
+      if (rect.top < bounds.top) {
+        dy = bounds.top - rect.top;
+      } else if (rectBottom > boundsBottom) {
+        dy = boundsBottom - rectBottom;
+      }
+    } else if (rect.top > bounds.top) {
+      dy = bounds.top - rect.top;
+    } else if (rectBottom < boundsBottom) {
+      dy = boundsBottom - rectBottom;
+    }
+
+    if (!dx && !dy) return false;
+
+    target.set({
+      left: (target.left || 0) + dx,
+      top: (target.top || 0) + dy,
+    });
+    target.setCoords?.();
+    return true;
+  };
+
   useEffect(() => {
     if (!isReady || !draftStorageKey) return;
     if (!fabricCanvasRef.current) return;
@@ -2897,6 +2953,7 @@ export default function CustomizerPage() {
       isCanvasObjectInteractingRef.current = true;
       cancelDraftAutosave();
     };
+    let objectMovedDuringTransform = false;
 
     const finishObjectTransform = () => {
       isCanvasObjectInteractingRef.current = false;
@@ -2920,6 +2977,16 @@ export default function CustomizerPage() {
       handleObjectTransformStart();
     };
 
+    const handleObjectMoving = (event: { target?: unknown }) => {
+      handleObjectTransformStart();
+      objectMovedDuringTransform = true;
+      if (clampObjectToPrintableArea(event.target)) {
+        canvas.requestRenderAll();
+      }
+      updateBoundaryWarning();
+      updateSelectedDesignMetrics();
+    };
+
     const handleCanvasPointerUp = () => {
       finishObjectTransform();
     };
@@ -2927,7 +2994,12 @@ export default function CustomizerPage() {
     const handleObjectModified = (event: { target?: unknown }) => {
       finishObjectTransform();
       const target = event.target as { setCoords?: () => void } | undefined;
-      const snappedToCenter = event.target ? snapObjectToPrintableCenter(event.target) : false;
+      const transformAction = (event as { transform?: { action?: string } }).transform?.action || "";
+      const shouldSnapToCenter = !objectMovedDuringTransform && transformAction !== "drag" && transformAction !== "move";
+      const snappedToCenter = shouldSnapToCenter && event.target
+        ? snapObjectToPrintableCenter(event.target)
+        : false;
+      objectMovedDuringTransform = false;
       target?.setCoords?.();
       if (snappedToCenter) {
         canvas.requestRenderAll();
@@ -2954,7 +3026,7 @@ export default function CustomizerPage() {
     canvas.on("selection:updated", handleSelection);
     canvas.on("selection:cleared", handleSelection);
     canvas.on("object:added", handleObjectAddedOrRemoved);
-    canvas.on("object:moving", handleObjectTransforming);
+    canvas.on("object:moving", handleObjectMoving);
     canvas.on("object:scaling", handleObjectTransforming);
     canvas.on("object:rotating", handleObjectTransforming);
     canvas.on("object:skewing", handleObjectTransforming);
@@ -2972,7 +3044,7 @@ export default function CustomizerPage() {
       canvas.off("selection:updated", handleSelection);
       canvas.off("selection:cleared", handleSelection);
       canvas.off("object:added", handleObjectAddedOrRemoved);
-      canvas.off("object:moving", handleObjectTransforming);
+      canvas.off("object:moving", handleObjectMoving);
       canvas.off("object:scaling", handleObjectTransforming);
       canvas.off("object:rotating", handleObjectTransforming);
       canvas.off("object:skewing", handleObjectTransforming);
@@ -3004,8 +3076,8 @@ export default function CustomizerPage() {
         const { left: areaLeft, top: areaTop, width: areaWidth, height: areaHeight } = printableAreaRef.current;
         const baseWidth = img.width || 1;
         const baseHeight = img.height || 1;
-        const coverScale = Math.max(areaWidth / baseWidth, areaHeight / baseHeight);
-        img.scale(coverScale);
+        const containScale = Math.min(areaWidth / baseWidth, areaHeight / baseHeight);
+        img.scale(containScale);
 
         if (Math.min(baseWidth, baseHeight) < LOW_RESOLUTION_UPLOAD_EDGE) {
           setImageQualityWarning(
