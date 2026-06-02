@@ -308,8 +308,16 @@ const PRODUCT_BLANK_MOCKUPS: Record<string, Partial<Record<ViewName, string>>> =
 };
 const PRODUCT_PRINT_LOCATION_OVERRIDES: Record<string, Partial<Record<string, Partial<PrintLocationData>>>> = {
   "custom-t-shirt-upload-customize": {
-    front: { x: 33, y: 24, width: 34, height: 44 },
-    back: { x: 31, y: 22, width: 38, height: 48 },
+    front: {
+      designArea: { x: 25, y: 17, width: 50, height: 73 },
+      maxPrintWidth: 12,
+      maxPrintHeight: 16,
+    },
+    back: {
+      designArea: { x: 25, y: 17, width: 50, height: 73 },
+      maxPrintWidth: 12,
+      maxPrintHeight: 16,
+    },
     neck: { x: 41, y: 13, width: 18, height: 12 },
     neck_tag: { x: 41, y: 13, width: 18, height: 12 },
     neckLabel: { x: 41, y: 13, width: 18, height: 12 },
@@ -820,33 +828,35 @@ function getPreviewStageClassName(view: ViewName) {
   return base;
 }
 
+function getProductPrintLocationOverride(productHandle: string, locationKey: string) {
+  const normalizedHandle = productHandle.trim().toLowerCase();
+  if (!normalizedHandle) return undefined;
+  return PRODUCT_PRINT_LOCATION_OVERRIDES[normalizedHandle]?.[locationKey];
+}
+
 function getPrintLocationDataForView(
   printLocations: PrintLocationsMap,
   view: ViewName,
   productHandle: string
 ): { activeLocation: string; activeLocationData: PrintLocationData } {
   const keys = VIEW_LOCATION_KEYS[view];
-  const normalizedHandle = productHandle.trim().toLowerCase();
-  const handleOverrides = normalizedHandle ? PRODUCT_PRINT_LOCATION_OVERRIDES[normalizedHandle] : undefined;
 
   for (const key of keys) {
     const location = printLocations[key];
     if (location && typeof location === "object") {
-      const override = handleOverrides?.[key];
       return {
         activeLocation: key,
-        activeLocationData: override ? { ...override, ...location } : location,
+        activeLocationData: location,
       };
     }
   }
 
   const fallbackKey = keys[0] || view;
   const fallbackLocation = DEFAULT_MOCKUP_LOCATIONS[view] || {};
-  const handleOverride = handleOverrides?.[fallbackKey] || {};
 
   return {
     activeLocation: fallbackKey,
-    activeLocationData: { ...fallbackLocation, ...handleOverride },
+    activeLocationData: fallbackLocation,
   };
 }
 
@@ -2370,11 +2380,17 @@ export default function CustomizerPage() {
     [activeLocationData, matchedSizeMockupKey]
   );
   const resolvedLocationData = useMemo(
-    () =>
-      sizeMockupConfig
+    () => {
+      const mergedLocationData = sizeMockupConfig
         ? { ...activeLocationData, ...sizeMockupConfig }
-        : activeLocationData,
-    [activeLocationData, sizeMockupConfig]
+        : activeLocationData;
+      const productOverride = getProductPrintLocationOverride(productHandle, activeLocation);
+
+      return productOverride
+        ? { ...mergedLocationData, ...productOverride }
+        : mergedLocationData;
+    },
+    [activeLocation, activeLocationData, productHandle, sizeMockupConfig]
   );
   const selectedColorOption = selectedVariant?.selectedOptions?.find((option) => {
     const optionName = normalizeOptionLabel(String(option?.name || ""));
@@ -2404,12 +2420,12 @@ export default function CustomizerPage() {
   const isSmallLocation = isSmallPrintLocation(currentView);
   const safePrintAreaLabel = getSmallPrintAreaLabel(currentView);
   const activeSheetSize: SheetSize = (() => {
-    if (shouldShowTransferSizePreview && transferDimensions) {
-      return { width: transferDimensions.width, height: transferDimensions.height, source: "transfer size" };
-    }
-
     if (maxPrintWidth && maxPrintHeight) {
       return { width: maxPrintWidth, height: maxPrintHeight, source: "product print area" };
+    }
+
+    if (shouldShowTransferSizePreview && transferDimensions) {
+      return { width: transferDimensions.width, height: transferDimensions.height, source: "transfer size" };
     }
 
     if (variantSizeDimensions) {

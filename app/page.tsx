@@ -38,7 +38,7 @@ export default function Home() {
             Build a Gang Sheet
           </a>
           <a
-            href="https://yourdtfplug.com/collections/custom-apparel"
+            href="https://yourdtfplug.com/products/custom-t-shirt-upload-customize"
             className="rounded-full border border-white/20 px-8 py-4 font-bold text-white transition hover:bg-white/10"
           >
             Customize Apparel
