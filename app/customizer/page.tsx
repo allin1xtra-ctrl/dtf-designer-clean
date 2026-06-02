@@ -161,6 +161,8 @@ const fontLoadCache = new Map<string, Promise<void>>();
 const SNAP_TO_CENTER_THRESHOLD = 4;
 const LOW_RESOLUTION_UPLOAD_EDGE = 900;
 const MAX_HISTORY_STATES = 60;
+const CLAMP_EPSILON = 0.5;
+const CANVAS_JSON_PROPS = ["name", "__curveMode", "cropX", "cropY", "__dtfView"];
 
 const VIEW_LABELS: Record<ViewName, string> = {
   front: "Front",
@@ -309,12 +311,12 @@ const PRODUCT_BLANK_MOCKUPS: Record<string, Partial<Record<ViewName, string>>> =
 const PRODUCT_PRINT_LOCATION_OVERRIDES: Record<string, Partial<Record<string, Partial<PrintLocationData>>>> = {
   "custom-t-shirt-upload-customize": {
     front: {
-      designArea: { x: 30, y: 17, width: 40, height: 65 },
+      designArea: { x: 30, y: 19, width: 42, height: 61 },
       maxPrintWidth: 12,
       maxPrintHeight: 16,
     },
     back: {
-      designArea: { x: 25, y: 17, width: 50, height: 65 },
+      designArea: { x: 25, y: 19, width: 48, height: 59 },
       maxPrintWidth: 12,
       maxPrintHeight: 16,
     },
@@ -364,13 +366,38 @@ function normalizeDraftSnapshot(value: unknown): CanvasSnapshot | null {
   return value as CanvasSnapshot;
 }
 
+function tagCanvasObjectsForView(canvas: Canvas, view: ViewName) {
+  for (const object of canvas.getObjects()) {
+    (object as unknown as { __dtfView?: ViewName }).__dtfView = view;
+  }
+}
+
+function filterCanvasSnapshotForView(snapshot: CanvasSnapshot | null, view: ViewName): CanvasSnapshot | null {
+  if (!snapshot || typeof snapshot !== "object") return snapshot;
+
+  const candidate = snapshot as CanvasSnapshot & {
+    objects?: Array<Record<string, unknown>>;
+  };
+
+  if (!Array.isArray(candidate.objects)) return snapshot;
+
+  return {
+    ...candidate,
+    objects: candidate.objects.filter((object: Record<string, unknown>) => {
+      const objectView = object.__dtfView;
+      return typeof objectView !== "string" || objectView === view;
+    }),
+  } as CanvasSnapshot;
+}
+
 function normalizeDraftViews(value: unknown): Record<ViewName, CanvasSnapshot | null> {
   const normalized = createEmptyViews();
   if (!value || typeof value !== "object") return normalized;
 
   for (const view of VIEW_NAMES) {
-    normalized[view] = normalizeDraftSnapshot(
-      (value as Partial<Record<ViewName, CanvasSnapshot | null>>)[view]
+    normalized[view] = filterCanvasSnapshotForView(
+      normalizeDraftSnapshot((value as Partial<Record<ViewName, CanvasSnapshot | null>>)[view]),
+      view
     );
   }
 
@@ -1145,10 +1172,13 @@ export default function CustomizerPage() {
   const historyPastRef = useRef<CanvasSnapshot[]>([]);
   const historyFutureRef = useRef<CanvasSnapshot[]>([]);
   const isApplyingHistoryRef = useRef(false);
+  const isSwitchingViewRef = useRef(false);
   const historyTimerRef = useRef<number | null>(null);
   const isCanvasObjectInteractingRef = useRef(false);
   const pendingPreviewScaleUpdateRef = useRef(false);
   const updatePreviewScaleRef = useRef<(() => void) | null>(null);
+  const currentViewRef = useRef<ViewName>("front");
+  const requestDraftSaveRef = useRef<(options?: { resume?: boolean }) => void>(() => {});
 
   const viewsRef = useRef<Record<ViewName, CanvasSnapshot | null>>(createEmptyViews());
   const uploadedArtworkByViewRef = useRef<Record<ViewName, string>>(createEmptyUploadedArtworkByView());
@@ -1156,7 +1186,8 @@ export default function CustomizerPage() {
   const getCanvas = () => fabricCanvasRef.current;
   const normalizedProductHandle = productHandle.trim();
   const normalizedVariantId = normalizeVariantId(variantId) || variantId;
-  const draftStorageKey = `${DRAFT_STORAGE_KEY_PREFIX}:${normalizedProductHandle || "standalone"}:${
+  const draftStorageKey = `${DRAFT_STORAGE_KEY_PREFIX}:${normalizedProductHandle || "standalone"}:design`;
+  const legacyVariantDraftStorageKey = `${DRAFT_STORAGE_KEY_PREFIX}:${normalizedProductHandle || "standalone"}:${
     normalizedVariantId || "default"
   }`;
 
@@ -1166,19 +1197,22 @@ export default function CustomizerPage() {
     draftAutosaveTimerRef.current = null;
   };
 
+  useEffect(() => {
+    currentViewRef.current = currentView;
+  }, [currentView]);
+
   const captureViewSnapshot = (
     canvasOverride?: Canvas | null,
     viewOverride?: ViewName
   ): CanvasSnapshot | null => {
     const canvas = canvasOverride ?? getCanvas();
-    const targetView = viewOverride ?? currentView;
+    const targetView = viewOverride ?? currentViewRef.current;
     if (!canvas) return null;
-    const snapshot = (canvas as unknown as { toJSON: (propertiesToInclude?: string[]) => CanvasSnapshot }).toJSON([
-      "name",
-      "__curveMode",
-      "cropX",
-      "cropY",
-    ]);
+    tagCanvasObjectsForView(canvas, targetView);
+    const snapshot = filterCanvasSnapshotForView(
+      (canvas as unknown as { toJSON: (propertiesToInclude?: string[]) => CanvasSnapshot }).toJSON(CANVAS_JSON_PROPS),
+      targetView
+    );
     viewsRef.current[targetView] = snapshot;
     return snapshot;
   };
@@ -1188,7 +1222,8 @@ export default function CustomizerPage() {
     const canvas = getCanvas();
     if (!canvas) return null;
 
-    const activeCanvas = captureViewSnapshot(canvas, currentView);
+    const activeView = currentViewRef.current;
+    const activeCanvas = captureViewSnapshot(canvas, activeView);
     return {
       version: DRAFT_STORAGE_VERSION,
       productHandle: normalizedProductHandle,
@@ -1197,7 +1232,7 @@ export default function CustomizerPage() {
       selectedSize,
       transferSize,
       quantity: normalizeDraftQuantity(quantity),
-      currentView,
+      currentView: activeView,
       views: { ...viewsRef.current },
       activeCanvas,
       uploadedArtworkByView: { ...uploadedArtworkByViewRef.current },
@@ -1236,6 +1271,10 @@ export default function CustomizerPage() {
     }, DRAFT_AUTOSAVE_DEBOUNCE_MS);
   };
 
+  useEffect(() => {
+    requestDraftSaveRef.current = requestDraftSave;
+  });
+
   const updateHistoryAvailability = () => {
     setCanUndo(historyPastRef.current.length > 1);
     setCanRedo(historyFutureRef.current.length > 0);
@@ -1244,12 +1283,11 @@ export default function CustomizerPage() {
   const getCanvasSnapshot = (canvasOverride?: Canvas | null): CanvasSnapshot | null => {
     const canvas = canvasOverride ?? getCanvas();
     if (!canvas) return null;
-    return (canvas as unknown as { toJSON: (propertiesToInclude?: string[]) => CanvasSnapshot }).toJSON([
-      "name",
-      "__curveMode",
-      "cropX",
-      "cropY",
-    ]);
+    tagCanvasObjectsForView(canvas, currentViewRef.current);
+    return filterCanvasSnapshotForView(
+      (canvas as unknown as { toJSON: (propertiesToInclude?: string[]) => CanvasSnapshot }).toJSON(CANVAS_JSON_PROPS),
+      currentViewRef.current
+    );
   };
 
   const pushHistorySnapshot = (options?: { clearFuture?: boolean }) => {
@@ -1297,10 +1335,11 @@ export default function CustomizerPage() {
     canvas.clear();
     canvas.backgroundColor = "transparent";
     canvas.discardActiveObject();
-    await ensureSnapshotFontsLoaded(snapshot);
-    await canvas.loadFromJSON(snapshot);
+    const viewSnapshot = filterCanvasSnapshotForView(snapshot, currentViewRef.current);
+    await ensureSnapshotFontsLoaded(viewSnapshot);
+    await canvas.loadFromJSON(viewSnapshot);
     canvas.requestRenderAll();
-    captureViewSnapshot(canvas, currentView);
+    captureViewSnapshot(canvas, currentViewRef.current);
     syncSelectedObject();
     requestDraftSave({ resume: true });
     isApplyingHistoryRef.current = false;
@@ -1630,7 +1669,7 @@ export default function CustomizerPage() {
         .some((candidate) => getObjectType(candidate) === "image");
 
       if (!hasRemainingImageObjects) {
-        uploadedArtworkByViewRef.current[currentView] = "";
+        uploadedArtworkByViewRef.current[currentViewRef.current] = "";
       }
     }
 
@@ -1723,39 +1762,49 @@ export default function CustomizerPage() {
   const saveCurrentView = () => {
     const canvas = getCanvas();
     if (!canvas) return;
-    captureViewSnapshot(canvas, currentView);
+    captureViewSnapshot(canvas, currentViewRef.current);
   };
 
   const loadView = async (view: ViewName) => {
     const canvas = getCanvas();
     if (!canvas) return;
 
-    saveCurrentView();
-    canvas.clear();
-    canvas.backgroundColor = "transparent";
+    const previousView = currentViewRef.current;
+    captureViewSnapshot(canvas, previousView);
+    isSwitchingViewRef.current = true;
 
-    setCurrentView(view);
-    setAiSuggestions([]);
-    setBoundaryWarning("");
-    setImageQualityWarning("");
+    try {
+      canvas.clear();
+      canvas.backgroundColor = "transparent";
+      canvas.discardActiveObject();
 
-    if (isSmallPrintLocation(view)) {
-      setTransferSize(getSafeTransferSizeForView(view));
+      currentViewRef.current = view;
+      setCurrentView(view);
+      setAiSuggestions([]);
+      setBoundaryWarning("");
+      setImageQualityWarning("");
+
+      if (isSmallPrintLocation(view)) {
+        setTransferSize(getSafeTransferSizeForView(view));
+      }
+
+      const saved = filterCanvasSnapshotForView(viewsRef.current[view], view);
+      viewsRef.current[view] = saved;
+      if (saved?.objects?.length) {
+        await ensureSnapshotFontsLoaded(saved);
+        await canvas.loadFromJSON(saved);
+      }
+
+      canvas.renderAll();
+      const savedArtworkUrl = uploadedArtworkByViewRef.current[view];
+      setCartStatus(savedArtworkUrl ? `Using saved Cloudinary artwork for ${VIEW_LABELS[view]}.` : "");
+      syncSelectedObject();
+      resetHistoryForCurrentCanvas();
+      setImageQualityWarning("");
+      requestDraftSave({ resume: true });
+    } finally {
+      isSwitchingViewRef.current = false;
     }
-
-    const saved = viewsRef.current[view];
-    if (saved?.objects?.length) {
-      await ensureSnapshotFontsLoaded(saved);
-      await canvas.loadFromJSON(saved);
-    }
-
-    canvas.renderAll();
-    const savedArtworkUrl = uploadedArtworkByViewRef.current[view];
-    setCartStatus(savedArtworkUrl ? `Using saved Cloudinary artwork for ${VIEW_LABELS[view]}.` : "");
-    syncSelectedObject();
-    resetHistoryForCurrentCanvas();
-    setImageQualityWarning("");
-    requestDraftSave({ resume: true });
   };
 
   const applyTextCurve = (textObject: Textbox, mode: CurveMode, bendCurve: number) => {
@@ -2295,6 +2344,7 @@ export default function CustomizerPage() {
   }, [hasColorOptions, hasSizeOptions, selectedColor, selectedSize, selectedVariant]);
 
   const handleColorChange = (nextColor: string) => {
+    saveCurrentView();
     const normalizedColor = normalizeColorName(nextColor);
     setSelectedColor(normalizedColor);
 
@@ -2318,6 +2368,7 @@ export default function CustomizerPage() {
   };
 
   const handleSizeChange = (nextSize: string) => {
+    saveCurrentView();
     setSelectedSize(nextSize);
 
     if (!hasSizeOptions) return;
@@ -2498,6 +2549,7 @@ export default function CustomizerPage() {
 
   useEffect(() => {
     if (!availableViews.length || availableViews.includes(currentView)) return;
+    currentViewRef.current = availableViews[0];
     setCurrentView(availableViews[0]);
   }, [availableViews, currentView]);
 
@@ -2760,47 +2812,44 @@ export default function CustomizerPage() {
     const target = object as {
       left?: number;
       top?: number;
-      getBoundingRect?: (...args: unknown[]) => { left: number; top: number; width: number; height: number };
+      getBoundingRect?: () => { left: number; top: number; width: number; height: number };
       set?: (patch: Partial<{ left: number; top: number }>) => void;
       setCoords?: () => void;
     };
 
     if (!target.getBoundingRect || !target.set) return false;
 
-    const rect = target.getBoundingRect(true, true);
+    target.setCoords?.();
+    const rect = target.getBoundingRect();
     const bounds = printableAreaRef.current;
-    const rectRight = rect.left + rect.width;
-    const rectBottom = rect.top + rect.height;
-    const boundsRight = bounds.left + bounds.width;
-    const boundsBottom = bounds.top + bounds.height;
+    const oversizedX = rect.width > bounds.width + CLAMP_EPSILON;
+    const oversizedY = rect.height > bounds.height + CLAMP_EPSILON;
+    const leftOverflow = bounds.left - rect.left;
+    const rightOverflow = rect.left + rect.width - (bounds.left + bounds.width);
+    const topOverflow = bounds.top - rect.top;
+    const bottomOverflow = rect.top + rect.height - (bounds.top + bounds.height);
     let dx = 0;
     let dy = 0;
 
-    if (rect.width <= bounds.width) {
-      if (rect.left < bounds.left) {
-        dx = bounds.left - rect.left;
-      } else if (rectRight > boundsRight) {
-        dx = boundsRight - rectRight;
+    if (!oversizedX) {
+      if (leftOverflow > CLAMP_EPSILON && rightOverflow <= CLAMP_EPSILON) {
+        dx = leftOverflow;
+      } else if (rightOverflow > CLAMP_EPSILON && leftOverflow <= CLAMP_EPSILON) {
+        dx = -rightOverflow;
       }
-    } else if (rect.left > bounds.left) {
-      dx = bounds.left - rect.left;
-    } else if (rectRight < boundsRight) {
-      dx = boundsRight - rectRight;
     }
 
-    if (rect.height <= bounds.height) {
-      if (rect.top < bounds.top) {
-        dy = bounds.top - rect.top;
-      } else if (rectBottom > boundsBottom) {
-        dy = boundsBottom - rectBottom;
+    if (!oversizedY) {
+      if (topOverflow > CLAMP_EPSILON && bottomOverflow <= CLAMP_EPSILON) {
+        dy = topOverflow;
+      } else if (bottomOverflow > CLAMP_EPSILON && topOverflow <= CLAMP_EPSILON) {
+        dy = -bottomOverflow;
       }
-    } else if (rect.top > bounds.top) {
-      dy = bounds.top - rect.top;
-    } else if (rectBottom < boundsBottom) {
-      dy = boundsBottom - rectBottom;
     }
 
-    if (!dx && !dy) return false;
+    if (Math.abs(dx) <= CLAMP_EPSILON && Math.abs(dy) <= CLAMP_EPSILON) {
+      return false;
+    }
 
     target.set({
       left: (target.left || 0) + dx,
@@ -2822,7 +2871,11 @@ export default function CustomizerPage() {
       lastSavedDraftRef.current = "";
 
       try {
-        const rawDraft = window.localStorage.getItem(draftStorageKey);
+        const rawDraft =
+          window.localStorage.getItem(draftStorageKey) ||
+          (legacyVariantDraftStorageKey !== draftStorageKey
+            ? window.localStorage.getItem(legacyVariantDraftStorageKey)
+            : null);
         if (!rawDraft) {
           suspendAutosaveRef.current = false;
           resetHistoryForCurrentCanvas();
@@ -2832,15 +2885,9 @@ export default function CustomizerPage() {
         const parsedDraft = JSON.parse(rawDraft) as Partial<DraftPayload>;
         const draftProductHandle =
           typeof parsedDraft.productHandle === "string" ? parsedDraft.productHandle.trim() : "";
-        const draftVariantId =
-          typeof parsedDraft.variantId === "string"
-            ? normalizeVariantId(parsedDraft.variantId) || parsedDraft.variantId
-            : "";
-
         if (
           parsedDraft.version !== DRAFT_STORAGE_VERSION ||
           draftProductHandle !== normalizedProductHandle ||
-          draftVariantId !== normalizedVariantId ||
           !isViewName(parsedDraft.currentView)
         ) {
           window.localStorage.removeItem(draftStorageKey);
@@ -2867,10 +2914,12 @@ export default function CustomizerPage() {
         const restoredView = draftAvailableViews.includes(parsedDraft.currentView)
           ? parsedDraft.currentView
           : draftAvailableViews[0];
-        const restoredActiveCanvas =
+        const restoredActiveCanvas = filterCanvasSnapshotForView(
           restoredView === parsedDraft.currentView
             ? normalizeDraftSnapshot(parsedDraft.activeCanvas) || restoredViews[restoredView]
-            : restoredViews[restoredView];
+            : restoredViews[restoredView],
+          restoredView
+        );
 
         isRestoringDraftRef.current = true;
         setQuantity(normalizeDraftQuantity(parsedDraft.quantity));
@@ -2879,6 +2928,7 @@ export default function CustomizerPage() {
         setTransferSize(
           typeof parsedDraft.transferSize === "string" ? parsedDraft.transferSize : "12x12"
         );
+        currentViewRef.current = restoredView;
         setCurrentView(restoredView);
         viewsRef.current = restoredViews;
         uploadedArtworkByViewRef.current = restoredArtworkByView;
@@ -2905,6 +2955,7 @@ export default function CustomizerPage() {
         resetHistoryForCurrentCanvas();
         suspendAutosaveRef.current = false;
         setDraftStatus("Previous design restored");
+        window.localStorage.setItem(draftStorageKey, rawDraft);
         lastSavedDraftRef.current = rawDraft;
       } catch (error) {
         console.error("Failed to restore saved design draft:", error);
@@ -2939,6 +2990,19 @@ export default function CustomizerPage() {
 
     fabricCanvasRef.current = canvas;
 
+    const setTransformRenderMode = (object: unknown, isTransforming: boolean) => {
+      if (!object || typeof object !== "object") return;
+      const target = object as {
+        objectCaching?: boolean;
+        noScaleCache?: boolean;
+        dirty?: boolean;
+      };
+
+      target.objectCaching = !isTransforming;
+      target.noScaleCache = isTransforming;
+      target.dirty = true;
+    };
+
     const handleSelection = () => {
       syncSelectedObject();
       if (shouldDebugAiLogRef.current) {
@@ -2949,13 +3013,16 @@ export default function CustomizerPage() {
       }
     };
 
-    const handleObjectTransformStart = () => {
+    const handleObjectTransformStart = (target?: unknown) => {
+      setTransformRenderMode(target, true);
+      if (isCanvasObjectInteractingRef.current) return;
       isCanvasObjectInteractingRef.current = true;
       cancelDraftAutosave();
     };
     let objectMovedDuringTransform = false;
 
-    const finishObjectTransform = () => {
+    const finishObjectTransform = (target?: unknown) => {
+      setTransformRenderMode(target, false);
       isCanvasObjectInteractingRef.current = false;
       if (pendingPreviewScaleUpdateRef.current) {
         pendingPreviewScaleUpdateRef.current = false;
@@ -2969,22 +3036,18 @@ export default function CustomizerPage() {
       syncCropControlsFromActiveImage();
       updateLayers();
       if (options?.autosave !== false) {
-        requestDraftSave({ resume: true });
+        requestDraftSaveRef.current({ resume: true });
       }
     };
 
-    const handleObjectTransforming = () => {
-      handleObjectTransformStart();
+    const handleObjectTransforming = (event: { target?: unknown }) => {
+      handleObjectTransformStart(event.target);
+      objectMovedDuringTransform = true;
     };
 
     const handleObjectMoving = (event: { target?: unknown }) => {
-      handleObjectTransformStart();
+      handleObjectTransformStart(event.target);
       objectMovedDuringTransform = true;
-      if (clampObjectToPrintableArea(event.target)) {
-        canvas.requestRenderAll();
-      }
-      updateBoundaryWarning();
-      updateSelectedDesignMetrics();
     };
 
     const handleCanvasPointerUp = () => {
@@ -2992,16 +3055,22 @@ export default function CustomizerPage() {
     };
 
     const handleObjectModified = (event: { target?: unknown }) => {
-      finishObjectTransform();
       const target = event.target as { setCoords?: () => void } | undefined;
+      finishObjectTransform(target);
+      const clampedToPrintableArea = event.target
+        ? clampObjectToPrintableArea(event.target)
+        : false;
       const transformAction = (event as { transform?: { action?: string } }).transform?.action || "";
-      const shouldSnapToCenter = !objectMovedDuringTransform && transformAction !== "drag" && transformAction !== "move";
+      const shouldSnapToCenter = !clampedToPrintableArea
+        && !objectMovedDuringTransform
+        && transformAction !== "drag"
+        && transformAction !== "move";
       const snappedToCenter = shouldSnapToCenter && event.target
         ? snapObjectToPrintableCenter(event.target)
         : false;
       objectMovedDuringTransform = false;
       target?.setCoords?.();
-      if (snappedToCenter) {
+      if (clampedToPrintableArea || snappedToCenter) {
         canvas.requestRenderAll();
       }
       handleObjectChange();
@@ -3009,17 +3078,19 @@ export default function CustomizerPage() {
     };
 
     const handleObjectAddedOrRemoved = () => {
+      if (isSwitchingViewRef.current) return;
       updateLayers();
       updateSelectedDesignMetrics();
       syncCropControlsFromActiveImage();
       scheduleHistorySnapshot();
-      requestDraftSave();
+      requestDraftSaveRef.current();
     };
 
     const handleDraftTextChange = () => {
+      if (isSwitchingViewRef.current) return;
       updateSelectedDesignMetrics();
       scheduleHistorySnapshot();
-      requestDraftSave({ resume: true });
+      requestDraftSaveRef.current({ resume: true });
     };
 
     canvas.on("selection:created", handleSelection);
@@ -3094,6 +3165,7 @@ export default function CustomizerPage() {
 
         canvas.add(img);
         canvas.setActiveObject(img);
+        captureViewSnapshot(canvas, currentViewRef.current);
         canvas.requestRenderAll();
         syncSelectedObject();
         requestDraftSave({ resume: true });
@@ -3235,7 +3307,7 @@ export default function CustomizerPage() {
         .some((object) => getObjectType(object) === "image");
 
       if (!hasRemainingImageObjects) {
-        uploadedArtworkByViewRef.current[currentView] = "";
+        uploadedArtworkByViewRef.current[currentViewRef.current] = "";
       }
     }
 
@@ -3265,7 +3337,7 @@ export default function CustomizerPage() {
       .some((object) => getObjectType(object) === "image");
 
     if (!hasRemainingImageObjects) {
-      uploadedArtworkByViewRef.current[currentView] = "";
+      uploadedArtworkByViewRef.current[currentViewRef.current] = "";
     }
 
     syncSelectedObject();
@@ -3424,11 +3496,12 @@ export default function CustomizerPage() {
   };
 
   const uploadPreviewImage = async () => {
+    const activeView = currentViewRef.current;
     const blob = await exportCurrentViewBlob();
     if (!blob) throw new Error("Preview image could not be generated.");
 
     const formData = new FormData();
-    formData.append("file", blob, `dtf-${currentView}.png`);
+    formData.append("file", blob, `dtf-${activeView}.png`);
 
     const response = await fetch("/api/upload", { method: "POST", body: formData });
     const result = (await response.json()) as UploadResponse;
@@ -3437,7 +3510,7 @@ export default function CustomizerPage() {
       throw new Error(result.error || "Artwork upload failed.");
     }
 
-    uploadedArtworkByViewRef.current[currentView] = result.url;
+    uploadedArtworkByViewRef.current[activeView] = result.url;
     requestDraftSave({ resume: true });
     return result.url;
   };
@@ -3463,7 +3536,8 @@ export default function CustomizerPage() {
       setIsSubmitting(true);
       setCartStatus("Uploading artwork...");
 
-      const existingArtworkUrl = uploadedArtworkByViewRef.current[currentView];
+      const activeView = currentViewRef.current;
+      const existingArtworkUrl = uploadedArtworkByViewRef.current[activeView];
       const uploadedArtworkUrl = isCloudinaryUrl(existingArtworkUrl)
         ? existingArtworkUrl
         : await uploadPreviewImage();
@@ -3477,7 +3551,7 @@ export default function CustomizerPage() {
       const lineItemProperties: Record<string, string> = {
         "Design ID": createDesignId(),
         Size: selectedSize || "Custom",
-        Placement: VIEW_LABELS[currentView],
+        Placement: VIEW_LABELS[activeView],
         "Print Location": activeLocation,
         "Artwork URL": uploadedArtworkUrl,
         "Preview URL": uploadedArtworkUrl,
