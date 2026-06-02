@@ -314,7 +314,7 @@ const PRODUCT_PRINT_LOCATION_OVERRIDES: Record<string, Partial<Record<string, Pa
       maxPrintHeight: 16,
     },
     back: {
-     designArea: { x: 30, y: 17, width: 38, height: 65 },
+     designArea: { x: 26, y: 22, width: 48, height: 60 },
       maxPrintWidth: 12,
       maxPrintHeight: 16,
     },
