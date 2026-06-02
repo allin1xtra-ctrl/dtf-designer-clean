@@ -310,12 +310,12 @@ const PRODUCT_PRINT_LOCATION_OVERRIDES: Record<string, Partial<Record<string, Pa
   "custom-t-shirt-upload-customize": {
     front: {
       designArea: { x: 25, y: 17, width: 50, height: 65 },
-      maxPrintWidth: 10,
+      maxPrintWidth: 14,
       maxPrintHeight: 15,
     },
     back: {
       designArea: { x: 25, y: 17, width: 50, height: 65 },
-      maxPrintWidth: 10,
+      maxPrintWidth: 14,
       maxPrintHeight: 15,
     },
     neck: { x: 41, y: 13, width: 18, height: 12 },
