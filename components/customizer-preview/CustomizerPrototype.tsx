@@ -1,0 +1,2520 @@
+"use client";
+
+import { ChangeEvent, useEffect, useMemo, useState } from "react";
+
+type PreviewMode = "apparel" | "transfer";
+type PanelTab = "tools" | "assistant" | "order";
+type ViewId = "front" | "back" | "leftSleeve" | "rightSleeve" | "neckTag";
+type StagingUploadStatus = "idle" | "uploading" | "success" | "warning" | "error";
+type StagingSaveStatus = "idle" | "saving" | "success" | "warning" | "error";
+type MockupBlendMode = "normal" | "multiply" | "overlay" | "soft-light";
+type TemplateCategory =
+  | "Logos"
+  | "Streetwear"
+  | "Jerseys"
+  | "Business"
+  | "Events"
+  | "Family Reunion"
+  | "Stickers"
+  | "Gang Sheets"
+  | "Labels"
+  | "Transfers";
+
+type ArtworkState = {
+  url: string;
+  name: string;
+  file: File;
+};
+
+type EditableLayerType = "text" | "image" | "shape" | "placeholder";
+
+type EditableTemplateLayer = {
+  id: string;
+  type: EditableLayerType;
+  name: string;
+  text?: string;
+  sourceUrl?: string;
+  sourceName?: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  opacity: number;
+  color: string;
+  fontFamily: string;
+  fontSize: number;
+  locked: boolean;
+  hidden: boolean;
+};
+
+type StagingUploadAsset = {
+  id: string;
+  purpose: string;
+  filename: string;
+  contentType: string;
+  size: number;
+  stagingOnly: boolean;
+  url?: string;
+};
+
+type StagingUploadResult = {
+  artworkName: string;
+  asset?: StagingUploadAsset;
+  errors: string[];
+  warnings: string[];
+};
+
+type StagingGeneratedAssetResult = {
+  asset?: StagingUploadAsset;
+  errors: string[];
+  warnings: string[];
+};
+
+type StagingSaveResult = {
+  savedDesign?: {
+    id: string;
+    stagingOnly: boolean;
+    createdAt: string;
+    payload: unknown;
+  };
+  errors: string[];
+  warnings: string[];
+  lineItemPropertiesPreview?: Record<string, string>;
+};
+
+type StarterTemplateCard = {
+  title: string;
+  category: TemplateCategory;
+  mode: PreviewMode | "both";
+  description: string;
+};
+
+type StagingPrintArea = { x: number; y: number; width: number; height: number };
+type StagingPrintLocation = {
+  id: string;
+  label?: string;
+  printArea?: StagingPrintArea;
+  maxPrintWidth?: number;
+  maxPrintHeight?: number;
+  enabled?: boolean;
+  mockupUrl?: string;
+};
+type StagingTransferSize = { id: string; label?: string; width: number; height: number; enabled?: boolean; isGangSheet?: boolean };
+type StagingCustomizerConfig = {
+  type?: string;
+  editorMode?: string;
+  label?: string;
+  productHandle?: string;
+  colors?: Array<{ id?: string; label?: string; hex?: string; enabled?: boolean; mockupUrl?: string }>;
+  printLocations?: StagingPrintLocation[];
+  transferSizes?: StagingTransferSize[];
+  materialOptions?: Array<{ id?: string; label?: string; enabled?: boolean }>;
+  fileRules?: {
+    allowedExtensions?: string[];
+    maxFileSizeMb?: number;
+    minDpi?: number;
+    recommendedDpi?: number;
+    allowTransparentPng?: boolean;
+  };
+  stagingSettings?: {
+    transferMockupUrl?: string;
+    gangSheetMockupUrl?: string;
+    defaultTransferSizeId?: string;
+    inkOptions?: string[];
+    lowResolutionWarningEnabled?: boolean;
+    transparentBackgroundRecommended?: boolean;
+    templateSettings?: {
+      enabledForApparel?: boolean;
+      enabledForTransfer?: boolean;
+      enabledCategories?: string[];
+      defaultCategory?: string;
+    };
+    realismDefaults?: {
+      enabled?: boolean;
+      fabricBlendEnabled?: boolean;
+      defaultBlendMode?: MockupBlendMode;
+      defaultInkOpacity?: number;
+      textureOverlayEnabled?: boolean;
+    };
+    pricingPreview?: {
+      basePrice?: number;
+      pricePerSquareInch?: number;
+      rushFee?: number;
+      quantityBreaks?: string;
+    };
+  };
+};
+
+type EditorState = {
+  mode: PreviewMode;
+  activeView: ViewId;
+  transferSize: string;
+  artworkByView: Record<ViewId, ArtworkState | null>;
+  transferArtwork: ArtworkState | null;
+  zoom: number;
+  rotation: number;
+  scale: number;
+  x: number;
+  y: number;
+  selectedTemplate: string;
+  layersByView: Record<ViewId, EditableTemplateLayer[]>;
+  transferLayersBySize: Record<string, EditableTemplateLayer[]>;
+  selectedLayerId: string | null;
+  status: string;
+  usingSafeDefaults: boolean;
+};
+
+const APPAREL_VIEWS: Array<{ id: ViewId; label: string; short: string }> = [
+  { id: "front", label: "Front", short: "F" },
+  { id: "back", label: "Back", short: "B" },
+  { id: "leftSleeve", label: "Left Sleeve", short: "LS" },
+  { id: "rightSleeve", label: "Right Sleeve", short: "RS" },
+  { id: "neckTag", label: "Neck Tag", short: "N" },
+];
+
+const TRANSFER_SIZES = ["3x3", "5x5", "8x10", "11x17", "12x24", "13x24", "13x60", "Gang Sheet"];
+const PRODUCT_COLORS = ["#101316", "#f4f7fb", "#334155", "#7f1d1d", "#075985", "#14532d"];
+const MATERIAL_OPTIONS = ["Hot Peel Film", "Cold Peel Film", "Matte Finish", "Gloss Finish"];
+const FONT_OPTIONS = ["Inter", "Arial", "Impact", "Montserrat", "Oswald"];
+const MOCKUP_BLEND_MODES: MockupBlendMode[] = ["normal", "multiply", "overlay", "soft-light"];
+const TEMPLATE_CATEGORIES: TemplateCategory[] = [
+  "Logos",
+  "Streetwear",
+  "Jerseys",
+  "Business",
+  "Events",
+  "Family Reunion",
+  "Stickers",
+  "Gang Sheets",
+  "Labels",
+  "Transfers",
+];
+const STARTER_TEMPLATE_LIBRARY: StarterTemplateCard[] = [
+  { title: "Centered Logo", category: "Logos", mode: "apparel", description: "Simple logo and text layout." },
+  { title: "Full Chest", category: "Streetwear", mode: "apparel", description: "Large apparel print with logo placeholder." },
+  { title: "Back Statement", category: "Streetwear", mode: "apparel", description: "Bold back print with editable headline." },
+  { title: "Sleeve Mark", category: "Streetwear", mode: "apparel", description: "Compact sleeve badge layout." },
+  { title: "Neck Label", category: "Labels", mode: "apparel", description: "Brand and size tag layout." },
+  { title: "Logo Transfer", category: "Transfers", mode: "transfer", description: "Logo-first transfer sheet." },
+  { title: "Text Transfer", category: "Transfers", mode: "transfer", description: "Editable text transfer layout." },
+  { title: "Sticker Sheet", category: "Stickers", mode: "transfer", description: "Multiple editable sticker slots." },
+  { title: "Jersey Name/Number", category: "Jerseys", mode: "both", description: "Name and number design starter." },
+  { title: "Gang Sheet Starter", category: "Gang Sheets", mode: "transfer", description: "Multi-artwork gang sheet starter." },
+  { title: "Brand Label", category: "Labels", mode: "transfer", description: "Small brand label layout." },
+  { title: "Boutique Logo", category: "Business", mode: "both", description: "Clean boutique brand lockup." },
+  { title: "Barber Shop Badge", category: "Business", mode: "both", description: "Badge layout for local brands." },
+  { title: "Food Truck Tee", category: "Business", mode: "apparel", description: "Menu-inspired shirt starter." },
+  { title: "Event Staff", category: "Events", mode: "apparel", description: "Staff shirt with editable role text." },
+  { title: "Birthday Crew", category: "Events", mode: "apparel", description: "Celebration layout with name text." },
+  { title: "Family Reunion Crest", category: "Family Reunion", mode: "apparel", description: "Family crest and year layout." },
+  { title: "Memorial Shirt", category: "Family Reunion", mode: "apparel", description: "Respectful photo/logo placeholder layout." },
+  { title: "Mascot Jersey", category: "Jerseys", mode: "apparel", description: "Team mascot and number layout." },
+  { title: "Varsity Transfer Pack", category: "Jerseys", mode: "transfer", description: "Numbers and name sheet." },
+  { title: "Streetwear Drop", category: "Streetwear", mode: "apparel", description: "Bold brand drop composition." },
+  { title: "Logo Sticker Pack", category: "Stickers", mode: "transfer", description: "Repeat logo sticker placements." },
+  { title: "Care Label Set", category: "Labels", mode: "transfer", description: "Label pack for apparel brands." },
+  { title: "Small Business Pack", category: "Business", mode: "transfer", description: "Logo plus contact transfer starter." },
+];
+const STAGING_CUSTOMIZER_CONFIG_STORAGE_KEY = "dtf-staging-customizer-config";
+const SAFE_TRANSFER_SIZE = "3x3";
+
+const emptyArtworkByView: Record<ViewId, ArtworkState | null> = {
+  front: null,
+  back: null,
+  leftSleeve: null,
+  rightSleeve: null,
+  neckTag: null,
+};
+
+const emptyLayersByView: Record<ViewId, EditableTemplateLayer[]> = {
+  front: [],
+  back: [],
+  leftSleeve: [],
+  rightSleeve: [],
+  neckTag: [],
+};
+
+const emptyTransferLayersBySize = TRANSFER_SIZES.reduce<Record<string, EditableTemplateLayer[]>>((sizes, size) => {
+  sizes[size] = [];
+  return sizes;
+}, {});
+
+const initialState: EditorState = {
+  mode: "apparel",
+  activeView: "front",
+  transferSize: SAFE_TRANSFER_SIZE,
+  artworkByView: emptyArtworkByView,
+  transferArtwork: null,
+  zoom: 96,
+  rotation: 0,
+  scale: 56,
+  x: 50,
+  y: 45,
+  selectedTemplate: "Centered Logo",
+  layersByView: emptyLayersByView,
+  transferLayersBySize: emptyTransferLayersBySize,
+  selectedLayerId: null,
+  status: "Prototype ready. No live checkout connection.",
+  usingSafeDefaults: false,
+};
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function safeNumber(value: number, min: number, max: number, fallback: number) {
+  return Number.isFinite(value) ? clamp(value, min, max) : fallback;
+}
+
+function createLayerId(template: string, index: number) {
+  return `${template.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now()}-${index}`;
+}
+
+function layerDefaults(layer: Partial<EditableTemplateLayer>): EditableTemplateLayer {
+  return {
+    id: layer.id || createLayerId(layer.name || "layer", 0),
+    type: layer.type || "text",
+    name: layer.name || "Design Layer",
+    text: layer.text,
+    sourceUrl: layer.sourceUrl,
+    sourceName: layer.sourceName,
+    x: layer.x ?? 50,
+    y: layer.y ?? 50,
+    width: layer.width ?? 50,
+    height: layer.height ?? 20,
+    rotation: layer.rotation ?? 0,
+    opacity: layer.opacity ?? 1,
+    color: layer.color || "#67e8f9",
+    fontFamily: layer.fontFamily || "Inter",
+    fontSize: layer.fontSize ?? 28,
+    locked: layer.locked ?? false,
+    hidden: layer.hidden ?? false,
+  };
+}
+
+function createTemplateLayers(template: string, mode: PreviewMode): EditableTemplateLayer[] {
+  const base = (layers: Array<Partial<EditableTemplateLayer>>) =>
+    layers.map((layer, index) => layerDefaults({ ...layer, id: createLayerId(template, index) }));
+
+  if (mode === "transfer") {
+    if (template === "Text Transfer") {
+      return base([
+        { type: "text", name: "Main Text", text: "YOUR TEXT", x: 50, y: 45, width: 78, height: 22, color: "#071015", fontSize: 34, fontFamily: "Impact" },
+        { type: "shape", name: "Accent Shape", x: 50, y: 63, width: 70, height: 8, color: "#22d3ee", opacity: 0.75 },
+      ]);
+    }
+    if (template === "Sticker Sheet") {
+      return base([
+        { type: "placeholder", name: "Sticker 1", text: "Your Design Here", x: 32, y: 34, width: 34, height: 22, color: "#0f172a" },
+        { type: "placeholder", name: "Sticker 2", text: "Your Design Here", x: 68, y: 34, width: 34, height: 22, color: "#0f172a" },
+        { type: "placeholder", name: "Sticker 3", text: "Your Design Here", x: 50, y: 64, width: 42, height: 24, color: "#0f172a" },
+      ]);
+    }
+    if (template === "Jersey Name/Number") {
+      return base([
+        { type: "text", name: "Player Name", text: "NAME", x: 50, y: 26, width: 78, height: 15, color: "#111827", fontSize: 28, fontFamily: "Oswald" },
+        { type: "text", name: "Number", text: "23", x: 50, y: 58, width: 60, height: 42, color: "#111827", fontSize: 58, fontFamily: "Impact" },
+      ]);
+    }
+    if (template === "Gang Sheet Starter") {
+      return base([
+        { type: "placeholder", name: "Logo Slot", text: "Upload Logo", x: 33, y: 28, width: 30, height: 18, color: "#0f172a" },
+        { type: "placeholder", name: "Artwork Slot", text: "Your Design Here", x: 67, y: 28, width: 30, height: 18, color: "#0f172a" },
+        { type: "text", name: "Label Text", text: "BRAND LABEL", x: 50, y: 62, width: 74, height: 16, color: "#111827", fontSize: 20 },
+      ]);
+    }
+    if (template === "Brand Label") {
+      return base([
+        { type: "shape", name: "Background Badge", x: 50, y: 50, width: 76, height: 42, color: "#111827", opacity: 0.92 },
+        { type: "text", name: "Brand Text", text: "YOUR BRAND", x: 50, y: 48, width: 64, height: 16, color: "#ffffff", fontSize: 22, fontFamily: "Montserrat" },
+        { type: "text", name: "Care Text", text: "DTF TRANSFER", x: 50, y: 62, width: 54, height: 10, color: "#67e8f9", fontSize: 10 },
+      ]);
+    }
+    return base([
+      { type: "placeholder", name: "Upload Logo", text: "Upload Logo", x: 50, y: 42, width: 54, height: 28, color: "#0f172a" },
+      { type: "text", name: "Main Text", text: "CUSTOM TRANSFER", x: 50, y: 68, width: 70, height: 14, color: "#111827", fontSize: 18 },
+    ]);
+  }
+
+  if (template === "Full Chest") {
+    return base([
+      { type: "placeholder", name: "Upload Logo", text: "Upload Logo", x: 50, y: 42, width: 58, height: 30, color: "#0f172a" },
+      { type: "text", name: "Main Text", text: "YOUR BRAND", x: 50, y: 66, width: 70, height: 14, color: "#e5faff", fontSize: 18, fontFamily: "Montserrat" },
+    ]);
+  }
+  if (template === "Back Statement") {
+    return base([
+      { type: "text", name: "Main Text", text: "MAKE A STATEMENT", x: 50, y: 34, width: 82, height: 18, color: "#ffffff", fontSize: 23, fontFamily: "Impact" },
+      { type: "placeholder", name: "Your Design Here", text: "Your Design Here", x: 50, y: 58, width: 62, height: 28, color: "#0f172a" },
+    ]);
+  }
+  if (template === "Sleeve Mark") {
+    return base([
+      { type: "placeholder", name: "Upload Logo", text: "Upload Logo", x: 50, y: 42, width: 70, height: 32, color: "#0f172a" },
+      { type: "text", name: "Sleeve Text", text: "EST. 2026", x: 50, y: 68, width: 76, height: 12, color: "#67e8f9", fontSize: 12 },
+    ]);
+  }
+  if (template === "Neck Label") {
+    return base([
+      { type: "shape", name: "Background Badge", x: 50, y: 50, width: 82, height: 56, color: "#111827", opacity: 0.92 },
+      { type: "text", name: "Brand Text", text: "YOUR BRAND", x: 50, y: 45, width: 74, height: 16, color: "#ffffff", fontSize: 12 },
+      { type: "text", name: "Size Text", text: "SIZE L", x: 50, y: 61, width: 54, height: 12, color: "#67e8f9", fontSize: 9 },
+    ]);
+  }
+  return base([
+    { type: "placeholder", name: "Upload Logo", text: "Upload Logo", x: 50, y: 43, width: 48, height: 28, color: "#0f172a" },
+    { type: "text", name: "Main Text", text: "YOUR LOGO", x: 50, y: 65, width: 62, height: 13, color: "#e5faff", fontSize: 18, fontFamily: "Montserrat" },
+  ]);
+}
+
+function getRecommendedViewForTemplate(template: string, currentView: ViewId): ViewId {
+  if (template === "Neck Label") return "neckTag";
+  if (template === "Sleeve Mark") return "leftSleeve";
+  if (template === "Back Statement") return "back";
+  if (template === "Full Chest" || template === "Centered Logo") return currentView === "back" ? "back" : "front";
+  return currentView;
+}
+
+function formatFileSize(bytes: number) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 KB";
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+}
+
+function getUploadStatusClass(status: StagingUploadStatus | StagingSaveStatus) {
+  if (status === "success") return "border-emerald-400/50 bg-emerald-950/40 text-emerald-200";
+  if (status === "warning") return "border-yellow-400/50 bg-yellow-950/40 text-yellow-100";
+  if (status === "error") return "border-red-400/50 bg-red-950/40 text-red-100";
+  if (status === "uploading" || status === "saving") return "border-cyan-400/50 bg-cyan-950/40 text-cyan-100";
+  return "border-[#2c424a] bg-[#081114] text-neutral-300";
+}
+
+function getCurrentArtwork(state: EditorState) {
+  return state.mode === "apparel" ? state.artworkByView[state.activeView] : state.transferArtwork;
+}
+
+function getActiveLayers(state: EditorState) {
+  if (state.mode === "apparel") return state.layersByView[state.activeView] || [];
+  return state.transferLayersBySize[getSafeTransferSize(state.transferSize)] || [];
+}
+
+function mapLayerToPayloadLayer(
+  layer: EditableTemplateLayer,
+  state: EditorState,
+  safeTransferSize: string,
+  hostedArtworkUrl: string
+) {
+  const safeSourceUrl = layer.sourceUrl?.startsWith("blob:") ? hostedArtworkUrl || undefined : layer.sourceUrl;
+
+  return {
+    id: layer.id,
+    type: layer.type,
+    label: layer.name,
+    visible: !layer.hidden,
+    locked: layer.locked,
+    sourceUrl: safeSourceUrl,
+    text: layer.text,
+    x: layer.x,
+    y: layer.y,
+    width: layer.width,
+    height: layer.height,
+    rotation: layer.rotation,
+    opacity: layer.opacity,
+    printLocationId: state.mode === "apparel" ? state.activeView : undefined,
+    transferSizeId: state.mode === "transfer" ? safeTransferSize : undefined,
+    qualityStatus: "good_quality",
+  };
+}
+
+function getCanvasLabel(state: EditorState) {
+  if (state.mode === "transfer") return getSafeTransferSize(state.transferSize);
+  return APPAREL_VIEWS.find((view) => view.id === state.activeView)?.label || "Front";
+}
+
+function getTransferSizeLabel(value: unknown) {
+  if (!value || typeof value !== "object") return "";
+  const candidate = value as { label?: unknown; id?: unknown };
+  const label = typeof candidate.label === "string" ? candidate.label : "";
+  const id = typeof candidate.id === "string" ? candidate.id : "";
+  if (label.toLowerCase().includes("gang")) return "Gang Sheet";
+  return id && TRANSFER_SIZES.includes(id) ? id : TRANSFER_SIZES.includes(label.replace(/\s+x\s+/i, "x")) ? label.replace(/\s+x\s+/i, "x") : "";
+}
+
+function getConfiguredTransferSizeLabel(config: StagingCustomizerConfig | null, value: unknown) {
+  if (typeof value !== "string") return "";
+  const normalized = normalizeTransferSizeId(value);
+  const configured = getConfiguredTransferSizes(config);
+  return configured.find((size) => size.id === normalized || size.label === normalized)?.label || "";
+}
+
+function resolvePreviewModeFromConfigType(type: unknown): PreviewMode {
+  if (type === "apparel_customizer") return "apparel";
+  if (type === "dtf_transfer_by_size" || type === "gang_sheet_size_variant" || type === "upload_only_transfer") return "transfer";
+  return "apparel";
+}
+
+function getSafeTransferSize(value: unknown) {
+  return typeof value === "string" && TRANSFER_SIZES.includes(value) ? value : SAFE_TRANSFER_SIZE;
+}
+
+function formatInches(value: number) {
+  return `${value.toFixed(value >= 10 ? 1 : 2).replace(/\.0$/, "")} in`;
+}
+
+function escapeSvgText(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function normalizeTransferSizeId(value: string) {
+  if (value.toLowerCase().includes("gang")) return "Gang Sheet";
+  return value.replace(/\s+/g, "").replace(/X/g, "x");
+}
+
+function getConfiguredTransferSizes(config: StagingCustomizerConfig | null) {
+  const configured = config?.transferSizes
+    ?.filter((size) => size.enabled !== false && Number.isFinite(size.width) && Number.isFinite(size.height))
+    .map((size) => ({
+      ...size,
+      id: normalizeTransferSizeId(size.isGangSheet ? "Gang Sheet" : size.id || size.label || SAFE_TRANSFER_SIZE),
+      label: normalizeTransferSizeId(size.isGangSheet ? "Gang Sheet" : size.id || size.label || SAFE_TRANSFER_SIZE),
+    }));
+
+  return configured?.length ? configured : TRANSFER_SIZES.map((size) => {
+    if (size === "Gang Sheet") return { id: size, label: size, width: 22, height: 60, enabled: true, isGangSheet: true };
+    const [width, height] = size.split("x").map(Number);
+    return { id: size, label: size, width, height, enabled: true };
+  });
+}
+
+function getActivePrintLocation(config: StagingCustomizerConfig | null, view: ViewId) {
+  return config?.printLocations?.find((location) => location.id === view && location.enabled !== false) || null;
+}
+
+function getDefaultPrintAreaForView(state: EditorState): StagingPrintArea {
+  if (state.mode === "transfer") return { x: 50, y: 50, width: 44, height: 66 };
+
+  const defaults: Record<ViewId, StagingPrintArea> = {
+    front: { x: 50, y: 56, width: 38, height: 50 },
+    back: { x: 50, y: 56, width: 42, height: 50 },
+    leftSleeve: { x: 50, y: 50, width: 17, height: 31 },
+    rightSleeve: { x: 50, y: 50, width: 17, height: 31 },
+    neckTag: { x: 50, y: 28, width: 22, height: 14 },
+  };
+
+  return defaults[state.activeView];
+}
+
+function getSafePrintArea(config: StagingCustomizerConfig | null, state: EditorState) {
+  const location = state.mode === "apparel" ? getActivePrintLocation(config, state.activeView) : null;
+  const area = location?.printArea;
+  const fallback = getDefaultPrintAreaForView(state);
+
+  if (!area) return { area: fallback, usingFallback: false };
+
+  const width = safeNumber(area.width, 6, state.mode === "apparel" && state.activeView === "neckTag" ? 34 : 94, fallback.width);
+  const height = safeNumber(area.height, 6, state.mode === "apparel" && state.activeView === "neckTag" ? 24 : 94, fallback.height);
+  const x = safeNumber(area.x, width / 2, 100 - width / 2, fallback.x);
+  const y = safeNumber(area.y, height / 2, 100 - height / 2, fallback.y);
+  const invalid = x !== area.x || y !== area.y || width !== area.width || height !== area.height;
+
+  return { area: { x, y, width, height }, usingFallback: invalid };
+}
+
+function getPrintAreaStyle(area: StagingPrintArea) {
+  return {
+    left: `${area.x}%`,
+    top: `${area.y}%`,
+    width: `${area.width}%`,
+    height: `${area.height}%`,
+  };
+}
+
+function getFitLayerSize(state: EditorState) {
+  if (state.mode === "transfer") {
+    return state.transferSize === "Gang Sheet"
+      ? { width: 82, height: 54 }
+      : { width: 70, height: 44 };
+  }
+
+  if (state.activeView === "neckTag") return { width: 72, height: 48 };
+  if (state.activeView === "leftSleeve" || state.activeView === "rightSleeve") return { width: 72, height: 54 };
+  return { width: 70, height: 42 };
+}
+
+function ModeButton({
+  active,
+  children,
+  onClick,
+}: {
+  active: boolean;
+  children: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-md border px-3 py-2 text-sm font-semibold transition ${
+        active
+          ? "border-cyan-300 bg-cyan-300 text-neutral-950"
+          : "border-neutral-700 bg-neutral-900 text-neutral-200 hover:border-cyan-400"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function QuickActionCard({
+  title,
+  detail,
+  icon,
+  accent,
+  onClick,
+  children,
+}: {
+  title: string;
+  detail: string;
+  icon: string;
+  accent: string;
+  onClick?: () => void;
+  children?: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group min-h-[58px] rounded-lg border border-[#2e454f] bg-[linear-gradient(135deg,#101b20_0%,#071015_58%,#12242b_100%)] p-2 text-left shadow-[0_14px_34px_rgba(0,0,0,0.24)] transition hover:border-cyan-300/90 hover:bg-[#101c20]"
+    >
+      <span className="flex items-start justify-between gap-3">
+        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border border-white/10 bg-white/5 text-[10px] font-black text-cyan-100">
+          {icon}
+        </span>
+        <span className={`block h-1 w-10 rounded-full ${accent}`} />
+      </span>
+      <span className="mt-1 block text-sm font-semibold leading-4 text-white">{title}</span>
+      <span className="mt-0.5 block text-xs leading-4 text-neutral-400">{detail}</span>
+      {children}
+    </button>
+  );
+}
+
+function PanelCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-lg border border-[#223037] bg-[#0d1316] p-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.18)]">
+      <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-300">{title}</h2>
+      <div className="mt-2">{children}</div>
+    </section>
+  );
+}
+
+function ToolbarButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="min-w-0 rounded-lg border border-[#2b3d44] bg-[#0b1215] px-3.5 py-2 text-sm font-bold text-neutral-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:border-cyan-400 hover:text-cyan-100"
+    >
+      {label}
+    </button>
+  );
+}
+
+function ToolButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-md border border-[#2c424a] bg-[#081114] px-2.5 py-1.5 text-left text-xs font-semibold text-neutral-200 transition hover:border-cyan-400 hover:text-cyan-100"
+    >
+      {label}
+    </button>
+  );
+}
+
+function Slider({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-neutral-400">
+        {label}
+        <span>{value}</span>
+      </span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
+        className="mt-2 w-full accent-cyan-300"
+      />
+    </label>
+  );
+}
+
+export default function CustomizerPrototype() {
+  const [state, setState] = useState<EditorState>(initialState);
+  const [mobilePanel, setMobilePanel] = useState<PanelTab>("tools");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isCarting, setIsCarting] = useState(false);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [isPreviewOrderOpen, setIsPreviewOrderOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const [stagingUploadStatus, setStagingUploadStatus] = useState<StagingUploadStatus>("idle");
+  const [stagingUploadResult, setStagingUploadResult] = useState<StagingUploadResult | null>(null);
+  const [stagingSaveStatus, setStagingSaveStatus] = useState<StagingSaveStatus>("idle");
+  const [stagingSaveResult, setStagingSaveResult] = useState<StagingSaveResult | null>(null);
+  const [designJsonStatus, setDesignJsonStatus] = useState<StagingUploadStatus>("idle");
+  const [designJsonResult, setDesignJsonResult] = useState<StagingGeneratedAssetResult | null>(null);
+  const [previewImageStatus, setPreviewImageStatus] = useState<StagingUploadStatus>("idle");
+  const [previewImageResult, setPreviewImageResult] = useState<StagingGeneratedAssetResult | null>(null);
+  const [fabricBlendEnabled, setFabricBlendEnabled] = useState(false);
+  const [mockupBlendMode, setMockupBlendMode] = useState<MockupBlendMode>("multiply");
+  const [artworkOpacity, setArtworkOpacity] = useState(95);
+  const [textureOverlayEnabled, setTextureOverlayEnabled] = useState(true);
+  const [isTemplateLibraryOpen, setIsTemplateLibraryOpen] = useState(false);
+  const [templateSearch, setTemplateSearch] = useState("");
+  const [activeTemplateCategory, setActiveTemplateCategory] = useState<TemplateCategory | "All">("All");
+  const [stagingConfig, setStagingConfig] = useState<StagingCustomizerConfig | null>(null);
+  const [stagingConfigWarning, setStagingConfigWarning] = useState("");
+  const [brokenMockupUrls, setBrokenMockupUrls] = useState<string[]>([]);
+  const currentArtwork = getCurrentArtwork(state);
+  const currentStagingUploadResult =
+    currentArtwork && stagingUploadResult?.artworkName === currentArtwork.name ? stagingUploadResult : null;
+  const hostedArtworkUrl = currentStagingUploadResult?.asset?.url?.startsWith("http")
+    ? currentStagingUploadResult.asset.url
+    : "";
+  const hostedArtworkStatus = hostedArtworkUrl ? "ready" : "missing";
+  const hostedDesignJsonUrl = designJsonResult?.asset?.url?.startsWith("http") ? designJsonResult.asset.url : "";
+  const hostedPreviewImageUrl = previewImageResult?.asset?.url?.startsWith("http") ? previewImageResult.asset.url : "";
+  const hostedDesignJsonStatus = hostedDesignJsonUrl ? "ready" : designJsonStatus === "uploading" ? "pending" : "missing";
+  const hostedPreviewImageStatus = hostedPreviewImageUrl ? "ready" : previewImageStatus === "uploading" ? "pending" : "missing";
+  const safeTransferSize = getSafeTransferSize(state.transferSize);
+  const configuredTransferSizes = getConfiguredTransferSizes(stagingConfig);
+  const selectedTransferConfig = configuredTransferSizes.find((size) => size.id === safeTransferSize) || configuredTransferSizes[0];
+  const configuredColors = stagingConfig?.colors?.filter((color) => color.enabled !== false && color.hex) || PRODUCT_COLORS.map((hex) => ({ hex, label: hex }));
+  const configuredMaterials = stagingConfig?.materialOptions?.filter((material) => material.enabled !== false).map((material) => material.label || material.id || "Material") || MATERIAL_OPTIONS;
+  const templateSettings = stagingConfig?.stagingSettings?.templateSettings;
+  const enabledTemplateCategories = templateSettings?.enabledCategories?.length ? templateSettings.enabledCategories : TEMPLATE_CATEGORIES;
+  const printAreaResult = getSafePrintArea(stagingConfig, state);
+  const activePrintLocation = state.mode === "apparel" ? getActivePrintLocation(stagingConfig, state.activeView) : null;
+  const activeMockupUrl =
+    state.mode === "apparel"
+      ? activePrintLocation?.mockupUrl
+      : safeTransferSize === "Gang Sheet"
+        ? stagingConfig?.stagingSettings?.gangSheetMockupUrl || stagingConfig?.stagingSettings?.transferMockupUrl
+        : stagingConfig?.stagingSettings?.transferMockupUrl;
+  const safeMockupUrl = activeMockupUrl && !brokenMockupUrls.includes(activeMockupUrl) ? activeMockupUrl : "";
+  const mockupLoadFailed = Boolean(activeMockupUrl && brokenMockupUrls.includes(activeMockupUrl));
+  const activeLayers = getActiveLayers(state);
+  const selectedLayer = activeLayers.find((layer) => layer.id === state.selectedLayerId) || activeLayers[0] || null;
+  const safeZoom = safeNumber(state.zoom, 55, 110, 82);
+  const previewMaxHeight = Math.round(680 * (safeZoom / 100));
+  const safeScale = safeNumber(selectedLayer?.width ?? state.scale, 8, 100, 56);
+  const safeX = safeNumber(selectedLayer?.x ?? state.x, 0, 100, 50);
+  const safeY = safeNumber(selectedLayer?.y ?? state.y, 0, 100, 45);
+  const safeRotation = safeNumber(selectedLayer?.rotation ?? state.rotation, -30, 30, 0);
+  const safeArtworkOpacity = safeNumber(artworkOpacity, 45, 100, 95);
+  const effectiveBlendMode = state.mode === "apparel" && fabricBlendEnabled ? mockupBlendMode : "normal";
+  const measurementReference = useMemo(
+    () =>
+      state.mode === "apparel"
+        ? {
+            width: safeNumber(activePrintLocation?.maxPrintWidth || 12, 1, 40, 12),
+            height: safeNumber(activePrintLocation?.maxPrintHeight || 16, 1, 80, 16),
+          }
+        : {
+            width: safeNumber(selectedTransferConfig?.width || 3, 1, 80, 3),
+            height: safeNumber(selectedTransferConfig?.height || 3, 1, 120, 3),
+          },
+    [
+      activePrintLocation?.maxPrintHeight,
+      activePrintLocation?.maxPrintWidth,
+      selectedTransferConfig?.height,
+      selectedTransferConfig?.width,
+      state.mode,
+    ]
+  );
+  const selectedWidthInches = selectedLayer ? (selectedLayer.width / 100) * measurementReference.width : 0;
+  const selectedHeightInches = selectedLayer ? (selectedLayer.height / 100) * measurementReference.height : 0;
+  const filteredTemplateLibrary = useMemo(() => {
+    const query = templateSearch.trim().toLowerCase();
+
+    return STARTER_TEMPLATE_LIBRARY.filter((template) => {
+      const modeMatch = template.mode === "both" || template.mode === state.mode;
+      const categoryEnabled = enabledTemplateCategories.includes(template.category);
+      const templateModeEnabled =
+        state.mode === "apparel"
+          ? templateSettings?.enabledForApparel !== false
+          : templateSettings?.enabledForTransfer !== false;
+      const categoryMatch = activeTemplateCategory === "All" || template.category === activeTemplateCategory;
+      const queryMatch =
+        !query ||
+        template.title.toLowerCase().includes(query) ||
+        template.description.toLowerCase().includes(query) ||
+        template.category.toLowerCase().includes(query);
+
+      return modeMatch && templateModeEnabled && categoryEnabled && categoryMatch && queryMatch;
+    });
+  }, [activeTemplateCategory, enabledTemplateCategories, state.mode, templateSearch, templateSettings?.enabledForApparel, templateSettings?.enabledForTransfer]);
+
+  const previewPayload = useMemo(
+    () => ({
+      mode: state.mode,
+      view: state.mode === "apparel" ? state.activeView : null,
+      transferSize: state.mode === "transfer" ? safeTransferSize : null,
+      artworkName: currentArtwork?.name || null,
+      template: state.selectedTemplate,
+      layers: activeLayers.map((layer) => ({
+        ...layer,
+        sourceUrl: layer.sourceUrl?.startsWith("blob:") ? undefined : layer.sourceUrl,
+      })),
+      transform: {
+        x: safeX,
+        y: safeY,
+        scale: safeScale,
+        rotation: safeRotation,
+        opacity: state.mode === "apparel" ? safeArtworkOpacity : 100,
+        blendMode: state.mode === "apparel" ? effectiveBlendMode : "normal",
+      },
+    }),
+    [activeLayers, currentArtwork?.name, effectiveBlendMode, safeArtworkOpacity, safeRotation, safeScale, safeTransferSize, safeX, safeY, state.activeView, state.mode, state.selectedTemplate]
+  );
+
+  const designJson = useMemo(() => {
+    const selectedViewLabel = APPAREL_VIEWS.find((view) => view.id === state.activeView)?.label || "Front";
+    const selectedColorLabel = configuredColors[0]?.label || "Black";
+    const selectedMaterial = configuredMaterials[0] || "Hot Peel Film";
+    const selectedInkOption = stagingConfig?.stagingSettings?.inkOptions?.[0] || "CMYK";
+
+    return {
+      editorMode: state.mode,
+      productHandle: stagingConfig?.productHandle || "custom-t-shirt-upload-customize",
+      productTitle: stagingConfig?.label || "Customizer Preview Product",
+      selectedColor: state.mode === "apparel" ? selectedColorLabel : undefined,
+      selectedView: state.mode === "apparel" ? selectedViewLabel : undefined,
+      printLocation: state.mode === "apparel" ? state.activeView : undefined,
+      selectedTransferSize: state.mode === "transfer" ? safeTransferSize : undefined,
+      selectedMaterial: state.mode === "transfer" ? selectedMaterial : undefined,
+      selectedInkOption: state.mode === "transfer" ? selectedInkOption : undefined,
+      printArea: printAreaResult.area,
+      canvasSize: measurementReference,
+      layers: activeLayers.map((layer) => ({
+        ...layer,
+        sourceUrl: layer.sourceUrl?.startsWith("blob:") ? undefined : layer.sourceUrl,
+      })),
+      activeLayerId: selectedLayer?.id || null,
+      realismSettings: {
+        fabricBlendEnabled,
+        blendMode: effectiveBlendMode,
+        inkOpacity: safeArtworkOpacity,
+        textureOverlayEnabled,
+      },
+      templateId: state.selectedTemplate.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+      templateName: state.selectedTemplate,
+      qualityStatus: "good_quality",
+      createdAt: new Date().toISOString(),
+      stagingOnly: true,
+    };
+  }, [
+    activeLayers,
+    configuredColors,
+    configuredMaterials,
+    effectiveBlendMode,
+    fabricBlendEnabled,
+    measurementReference,
+    printAreaResult.area,
+    safeArtworkOpacity,
+    safeTransferSize,
+    selectedLayer?.id,
+    stagingConfig?.label,
+    stagingConfig?.productHandle,
+    stagingConfig?.stagingSettings?.inkOptions,
+    state.activeView,
+    state.mode,
+    state.selectedTemplate,
+    textureOverlayEnabled,
+  ]);
+
+  const stagingDesignPayload = useMemo(() => {
+    const selectedViewLabel = APPAREL_VIEWS.find((view) => view.id === state.activeView)?.label || "Front";
+    const selectedTarget = state.mode === "apparel" ? selectedViewLabel : safeTransferSize;
+    const selectedColorLabel = configuredColors[0]?.label || "Black";
+
+    return {
+      configId: "customizer-preview-staging",
+      type: state.mode === "apparel" ? "apparel_customizer" : "dtf_transfer_by_size",
+      editorMode: state.mode,
+      productHandle: "custom-t-shirt-upload-customize",
+      productTitle: "Customizer Preview Product",
+      quantity: 1,
+      selectedColor: state.mode === "apparel" ? selectedColorLabel : undefined,
+      selectedSize: state.mode === "apparel" ? "Custom" : undefined,
+      selectedView: state.mode === "apparel" ? selectedTarget : undefined,
+      selectedPrintLocationId: state.mode === "apparel" ? state.activeView : undefined,
+      selectedTransferSizeId: state.mode === "transfer" ? safeTransferSize : undefined,
+      selectedMaterialOptionId: state.mode === "transfer" ? configuredMaterials[0] : undefined,
+      artworkOriginalUrl: hostedArtworkUrl,
+      previewImageUrl: hostedPreviewImageUrl,
+      designJsonUrl: hostedDesignJsonUrl,
+      printReadyFileUrl: "",
+      layers: activeLayers.length > 0
+        ? activeLayers.map((layer) => mapLayerToPayloadLayer(layer, state, safeTransferSize, hostedArtworkUrl))
+        : [
+            {
+              id: "preview-layer-1",
+              type: "image",
+              label: currentArtwork?.name || "Preview artwork placeholder",
+              visible: true,
+              locked: false,
+              sourceUrl: hostedArtworkUrl || undefined,
+              x: safeX,
+              y: safeY,
+              width: safeScale,
+              height: safeScale,
+              rotation: safeRotation,
+              opacity: state.mode === "apparel" ? safeArtworkOpacity / 100 : 1,
+              printLocationId: state.mode === "apparel" ? state.activeView : undefined,
+              transferSizeId: state.mode === "transfer" ? safeTransferSize : undefined,
+              qualityStatus: "good_quality",
+            },
+          ],
+      qualityStatus: "good_quality",
+      stagingOnly: true,
+    };
+  }, [
+    currentArtwork?.name,
+    activeLayers,
+    configuredColors,
+    configuredMaterials,
+    hostedDesignJsonUrl,
+    hostedArtworkUrl,
+    hostedPreviewImageUrl,
+    safeRotation,
+    safeScale,
+    safeArtworkOpacity,
+    safeTransferSize,
+    safeX,
+    safeY,
+    state,
+  ]);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return (
+      <main className="grid min-h-screen place-items-center overflow-hidden bg-[#071015] text-neutral-100 xl:h-[100dvh]">
+        <div className="rounded-xl border border-[#18313a] bg-[#0b1519] px-5 py-4 text-sm font-semibold text-cyan-100 shadow-[0_14px_50px_rgba(0,0,0,0.35)]">
+          Loading staging customizer preview...
+        </div>
+      </main>
+    );
+  }
+
+  const setMode = (mode: PreviewMode) => {
+    setState((current) => ({
+      ...current,
+      mode,
+      selectedTemplate: mode === "apparel" ? "Centered Logo" : "Logo Transfer",
+      status:
+        mode === "apparel"
+          ? "Apparel preview mode active. View-specific artwork is isolated."
+          : "DTF transfer preview mode active. Apparel locations are hidden.",
+    }));
+  };
+
+  const updateActiveLayers = (
+    current: EditorState,
+    updater: (layers: EditableTemplateLayer[]) => EditableTemplateLayer[]
+  ): EditorState => {
+    if (current.mode === "apparel") {
+      return {
+        ...current,
+        layersByView: {
+          ...current.layersByView,
+          [current.activeView]: updater(current.layersByView[current.activeView] || []),
+        },
+      };
+    }
+
+    const size = getSafeTransferSize(current.transferSize);
+    return {
+      ...current,
+      transferLayersBySize: {
+        ...current.transferLayersBySize,
+        [size]: updater(current.transferLayersBySize[size] || []),
+      },
+    };
+  };
+
+  const updateSelectedLayer = (updates: Partial<EditableTemplateLayer>, status?: string) => {
+    setState((current) => {
+      if (!current.selectedLayerId) return { ...current, status: status || "Select a layer before editing." };
+      return {
+        ...updateActiveLayers(current, (layers) =>
+          layers.map((layer) =>
+            layer.id === current.selectedLayerId && (!layer.locked || Object.prototype.hasOwnProperty.call(updates, "locked"))
+              ? { ...layer, ...updates }
+              : layer
+          )
+        ),
+        status: status || "Selected layer updated.",
+      };
+    });
+  };
+
+  const loadEditableTemplate = (template: string) => {
+    setState((current) => {
+      const layers = createTemplateLayers(template, current.mode);
+      const targetView = current.mode === "apparel" ? getRecommendedViewForTemplate(template, current.activeView) : current.activeView;
+      const targetTransferSize = current.mode === "transfer" ? getSafeTransferSize(current.transferSize) : current.transferSize;
+      const nextState = { ...current, activeView: targetView, transferSize: targetTransferSize };
+      return {
+        ...updateActiveLayers(nextState, () => layers),
+        selectedTemplate: template,
+        selectedLayerId: layers[0]?.id || null,
+        status: current.mode === "apparel"
+          ? `${template} editable starter template loaded for ${getCanvasLabel(nextState)}.`
+          : `${template} editable starter template loaded. Edit layers in the left panel.`,
+      };
+    });
+  };
+
+  const addTextLayer = () => {
+    setState((current) => {
+      const layers = getActiveLayers(current);
+      const textLayer = layerDefaults({
+        id: createLayerId("custom-text", layers.length),
+        type: "text",
+        name: "Main Text",
+        text: "Edit Text",
+        x: 50,
+        y: 50,
+        width: 58,
+        height: 16,
+        color: "#e5faff",
+        fontSize: 24,
+        fontFamily: "Montserrat",
+      });
+
+      return {
+        ...updateActiveLayers(current, (currentLayers) => [...currentLayers, textLayer]),
+        selectedLayerId: textLayer.id,
+        status: "Editable text layer added to the staging canvas.",
+      };
+    });
+  };
+
+  const handleUpload = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      setStatusOnly("No artwork file selected.");
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      event.target.value = "";
+      setStatusOnly("Unsupported file type. Please choose an image file for this staging preview.");
+      return;
+    }
+
+    const fileRules = stagingConfig?.fileRules;
+    const extension = `.${file.name.split(".").pop()?.toLowerCase() || ""}`;
+    const allowedExtensions = fileRules?.allowedExtensions?.map((item) => item.toLowerCase()) || [".png", ".jpg", ".jpeg", ".svg", ".webp"];
+    const maxSizeMb = safeNumber(fileRules?.maxFileSizeMb || 25, 1, 500, 25);
+    const sizeMb = file.size / (1024 * 1024);
+    if (!allowedExtensions.includes(extension)) {
+      event.target.value = "";
+      setStatusOnly(`File type ${extension} is not allowed by the loaded staging file rules.`);
+      return;
+    }
+    if (sizeMb > maxSizeMb) {
+      event.target.value = "";
+      setStatusOnly(`File is ${sizeMb.toFixed(2)} MB, above the loaded staging max of ${maxSizeMb} MB.`);
+      return;
+    }
+
+    if (currentArtwork?.url.startsWith("blob:")) {
+      URL.revokeObjectURL(currentArtwork.url);
+    }
+
+    const artwork = {
+      url: URL.createObjectURL(file),
+      name: file.name,
+      file,
+    };
+
+    setStagingUploadStatus("idle");
+    setStagingUploadResult(null);
+
+    setState((current) => {
+      const replaceOrAddArtworkLayer = (layers: EditableTemplateLayer[]) => {
+        const placeholderIndex = layers.findIndex((layer) => layer.type === "placeholder" && !layer.locked);
+        const uploadedLayer = layerDefaults({
+          id: placeholderIndex >= 0 ? layers[placeholderIndex].id : createLayerId("customer-artwork", layers.length),
+          type: "image",
+          name: placeholderIndex >= 0 ? layers[placeholderIndex].name : "Customer Artwork",
+          sourceUrl: artwork.url,
+          sourceName: artwork.name,
+          x: placeholderIndex >= 0 ? layers[placeholderIndex].x : 50,
+          y: placeholderIndex >= 0 ? layers[placeholderIndex].y : 50,
+          width: placeholderIndex >= 0 ? layers[placeholderIndex].width : 54,
+          height: placeholderIndex >= 0 ? layers[placeholderIndex].height : 32,
+          rotation: placeholderIndex >= 0 ? layers[placeholderIndex].rotation : 0,
+          opacity: placeholderIndex >= 0 ? layers[placeholderIndex].opacity : 1,
+          color: "#ffffff",
+        });
+
+        if (placeholderIndex >= 0) {
+          return layers.map((layer, index) => (index === placeholderIndex ? uploadedLayer : layer));
+        }
+
+        return [...layers, uploadedLayer];
+      };
+
+      if (current.mode === "apparel") {
+        const nextLayers = replaceOrAddArtworkLayer(current.layersByView[current.activeView] || []);
+        return {
+          ...current,
+          artworkByView: {
+            ...current.artworkByView,
+            [current.activeView]: artwork,
+          },
+          layersByView: {
+            ...current.layersByView,
+            [current.activeView]: nextLayers,
+          },
+          selectedLayerId: nextLayers.find((layer) => layer.sourceUrl === artwork.url)?.id || null,
+          x: 50,
+          y: 50,
+          status: `Uploaded ${file.name} to ${getCanvasLabel(current)} and replaced the editable placeholder when available.`,
+        };
+      }
+
+      const size = getSafeTransferSize(current.transferSize);
+      const nextLayers = replaceOrAddArtworkLayer(current.transferLayersBySize[size] || []);
+      return {
+        ...current,
+        transferArtwork: artwork,
+        transferLayersBySize: {
+          ...current.transferLayersBySize,
+          [size]: nextLayers,
+        },
+        selectedLayerId: nextLayers.find((layer) => layer.sourceUrl === artwork.url)?.id || null,
+        x: 50,
+        y: 50,
+        status: `Uploaded ${file.name} to ${current.transferSize} preview.`,
+      };
+    });
+
+    event.target.value = "";
+  };
+
+  const removeArtwork = () => {
+    setState((current) => {
+      const layers = getActiveLayers(current);
+      const selected = layers.find((layer) => layer.id === current.selectedLayerId);
+
+      if (!selected) {
+        return { ...current, status: "Select a layer before deleting." };
+      }
+
+      return {
+        ...updateActiveLayers(current, (currentLayers) => currentLayers.filter((layer) => layer.id !== selected.id)),
+        selectedLayerId: layers.find((layer) => layer.id !== selected.id)?.id || null,
+        status: `${selected.name} deleted from the staging design.`,
+      };
+    });
+  };
+
+  const testStagingUpload = async () => {
+    if (!currentArtwork?.file) {
+      setStagingUploadStatus("error");
+      setStagingUploadResult({
+        artworkName: currentArtwork?.name || "No artwork",
+        errors: ["Select artwork before testing staging upload."],
+        warnings: [],
+      });
+      setStatusOnly("Select artwork before testing staging upload.");
+      return;
+    }
+
+    setStagingUploadStatus("uploading");
+    setStagingUploadResult({
+      artworkName: currentArtwork.name,
+      errors: [],
+      warnings: ["Uploading to staging validation route. Local preview remains active."],
+    });
+
+    const formData = new FormData();
+    formData.append("file", currentArtwork.file, currentArtwork.file.name);
+    formData.append("purpose", "artwork_original");
+
+    try {
+      const response = await fetch("/api/customizer/staging-upload", {
+        method: "POST",
+        body: formData,
+      });
+      const result = await response.json().catch(() => null) as {
+        ok?: boolean;
+        errors?: string[];
+        warnings?: string[];
+        asset?: StagingUploadAsset;
+      } | null;
+
+      const errors = Array.isArray(result?.errors) ? result.errors : [];
+      const warnings = Array.isArray(result?.warnings) ? result.warnings : [];
+      const nextStatus: StagingUploadStatus =
+        !response.ok || !result?.ok || errors.length > 0 ? "error" : warnings.length > 0 ? "warning" : "success";
+
+      setStagingUploadStatus(nextStatus);
+      setStagingUploadResult({
+        artworkName: currentArtwork.name,
+        asset: result?.asset,
+        errors: errors.length > 0 ? errors : response.ok ? [] : ["Staging upload failed."],
+        warnings,
+      });
+      const hasHostedUrl = typeof result?.asset?.url === "string" && result.asset.url.startsWith("http");
+      setStatusOnly(
+        hasHostedUrl
+          ? "Hosted staging artwork URL ready."
+          : nextStatus === "error"
+          ? "Staging upload test failed. Local preview remains active."
+          : nextStatus === "warning"
+            ? "Staging upload test returned warnings. Local preview remains active."
+            : "Staging upload test succeeded. Local preview remains active."
+      );
+    } catch {
+      setStagingUploadStatus("error");
+      setStagingUploadResult({
+        artworkName: currentArtwork.name,
+        errors: ["Could not reach staging upload API. Local preview remains active."],
+        warnings: [],
+      });
+      setStatusOnly("Could not reach staging upload API. Local preview remains active.");
+    }
+  };
+
+  const saveDesign = () => {
+    setIsSaving(true);
+    window.setTimeout(() => {
+      try {
+        window.localStorage.setItem("dtf-customizer-preview-design", JSON.stringify(previewPayload));
+        setState((current) => ({
+          ...current,
+          status: "Preview design saved locally. No live store data was changed.",
+        }));
+      } catch {
+        setState((current) => ({
+          ...current,
+          status: "Local staging save failed. Browser storage may be unavailable.",
+        }));
+      } finally {
+        setIsSaving(false);
+      }
+    }, 450);
+  };
+
+  const addToPreviewCart = () => {
+    setIsCarting(true);
+    window.setTimeout(() => {
+      setIsCarting(false);
+      setMobilePanel("order");
+      setIsPreviewOrderOpen(true);
+      setState((current) => ({
+        ...current,
+        status: "Test cart payload prepared locally and shown in Preview Order. Live checkout is not connected.",
+      }));
+    }, 450);
+  };
+
+  const uploadGeneratedStagingAsset = async (file: File, purpose: "design_json" | "preview_image") => {
+    const formData = new FormData();
+    formData.append("file", file, file.name);
+    formData.append("purpose", purpose);
+
+    const response = await fetch("/api/customizer/staging-upload", {
+      method: "POST",
+      body: formData,
+    });
+    const result = await response.json().catch(() => null) as {
+      ok?: boolean;
+      errors?: string[];
+      warnings?: string[];
+      asset?: StagingUploadAsset;
+    } | null;
+    const errors = Array.isArray(result?.errors) ? result.errors : [];
+    const warnings = Array.isArray(result?.warnings) ? result.warnings : [];
+
+    return {
+      ok: response.ok && Boolean(result?.ok) && errors.length === 0,
+      asset: result?.asset,
+      errors: errors.length > 0 ? errors : response.ok ? [] : ["Staging asset upload failed."],
+      warnings,
+    };
+  };
+
+  const testSaveDesignJson = async () => {
+    setDesignJsonStatus("uploading");
+    setMobilePanel("order");
+    setIsPreviewOrderOpen(true);
+    setDesignJsonResult({
+      errors: [],
+      warnings: ["Saving design JSON to staging upload route only. Shopify and checkout remain disconnected."],
+    });
+
+    try {
+      const json = JSON.stringify(designJson, null, 2);
+      const file = new File([new Blob([json], { type: "application/json" })], `dtf-design-${Date.now()}.json`, {
+        type: "application/json",
+      });
+      const result = await uploadGeneratedStagingAsset(file, "design_json");
+      const hostedUrl = result.asset?.url?.startsWith("http") ? result.asset.url : "";
+
+      setDesignJsonStatus(!result.ok ? "error" : hostedUrl ? result.warnings.length ? "warning" : "success" : "warning");
+      setDesignJsonResult({
+        asset: result.asset,
+        errors: result.errors,
+        warnings: hostedUrl
+          ? result.warnings
+          : [
+              ...result.warnings,
+              "Design JSON was validated for staging, but no hosted designJsonUrl was created because storage is not configured.",
+            ],
+      });
+      setStatusOnly(hostedUrl ? "Hosted staging design JSON URL ready." : "Design JSON generation staged. Hosted URL is missing until staging storage is configured.");
+    } catch {
+      setDesignJsonStatus("error");
+      setDesignJsonResult({
+        errors: ["Could not generate or upload design JSON staging asset."],
+        warnings: [],
+      });
+      setStatusOnly("Could not generate design JSON staging asset. Checkout and Shopify remain disconnected.");
+    }
+  };
+
+  const createPreviewSvg = () => {
+    const visibleLayers = activeLayers.filter((layer) => !layer.hidden);
+    const layerMarkup = visibleLayers.map((layer) => {
+      const x = 120 + layer.x * 3.6;
+      const y = 120 + layer.y * 4.8;
+      const width = Math.max(12, layer.width * 3.6);
+      const height = Math.max(12, layer.height * 4.8);
+      const opacity = safeNumber(layer.opacity, 0, 1, 1);
+
+      if (layer.type === "text") {
+        return `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" font-family="${layer.fontFamily}" font-size="${Math.max(12, layer.fontSize)}" fill="${layer.color}" opacity="${opacity}">${escapeSvgText(layer.text || layer.name)}</text>`;
+      }
+      if (layer.type === "shape") {
+        return `<rect x="${x - width / 2}" y="${y - height / 2}" width="${width}" height="${height}" rx="18" fill="${layer.color}" opacity="${opacity}" />`;
+      }
+      return `<rect x="${x - width / 2}" y="${y - height / 2}" width="${width}" height="${height}" rx="10" fill="#0f172a" stroke="#67e8f9" stroke-width="2" opacity="${opacity}" /><text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" font-family="Inter, Arial" font-size="18" fill="#cffafe">${escapeSvgText(layer.sourceName || layer.text || layer.name)}</text>`;
+    }).join("");
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="1200" viewBox="0 0 960 1200">
+      <rect width="960" height="1200" fill="#071015"/>
+      <rect x="180" y="120" width="600" height="920" rx="42" fill="#e8f0f7"/>
+      <rect x="300" y="250" width="360" height="720" rx="34" fill="${state.mode === "apparel" ? "#111827" : "#ffffff"}" opacity="0.96"/>
+      <rect x="${120 + printAreaResult.area.x * 3.6 - printAreaResult.area.width * 1.8}" y="${120 + printAreaResult.area.y * 4.8 - printAreaResult.area.height * 2.4}" width="${printAreaResult.area.width * 3.6}" height="${printAreaResult.area.height * 4.8}" fill="none" stroke="#22d3ee" stroke-width="3" stroke-dasharray="8 8"/>
+      ${layerMarkup}
+      <text x="480" y="1120" text-anchor="middle" font-family="Inter, Arial" font-size="24" fill="#cffafe">Staging preview image</text>
+    </svg>`;
+  };
+
+  const testGeneratePreviewImage = async () => {
+    setPreviewImageStatus("uploading");
+    setMobilePanel("order");
+    setIsPreviewOrderOpen(true);
+    setPreviewImageResult({
+      errors: [],
+      warnings: ["Generating a frontend-only staging preview image. No production rendering service is called."],
+    });
+
+    try {
+      const svg = createPreviewSvg();
+      const file = new File([new Blob([svg], { type: "image/svg+xml" })], `dtf-preview-${Date.now()}.svg`, {
+        type: "image/svg+xml",
+      });
+      const result = await uploadGeneratedStagingAsset(file, "preview_image");
+      const hostedUrl = result.asset?.url?.startsWith("http") ? result.asset.url : "";
+
+      setPreviewImageStatus(!result.ok ? "error" : hostedUrl ? result.warnings.length ? "warning" : "success" : "warning");
+      setPreviewImageResult({
+        asset: result.asset,
+        errors: result.errors,
+        warnings: hostedUrl
+          ? result.warnings
+          : [
+              ...result.warnings,
+              "Preview image generation is staged. No hosted previewImageUrl was created because storage is not configured.",
+            ],
+      });
+      setStatusOnly(hostedUrl ? "Hosted staging preview image URL ready." : "Preview image generation staged. Hosted URL is missing until staging storage is configured.");
+    } catch {
+      setPreviewImageStatus("error");
+      setPreviewImageResult({
+        errors: ["Could not generate or upload staging preview image."],
+        warnings: [],
+      });
+      setStatusOnly("Could not generate staging preview image. Checkout and Shopify remain disconnected.");
+    }
+  };
+
+  const testSavePayload = async () => {
+    setStagingSaveStatus("saving");
+    setMobilePanel("order");
+    setIsPreviewOrderOpen(true);
+    setStagingSaveResult({
+      errors: [],
+      warnings: ["Sending staging design payload for validation only. Checkout and Shopify remain disconnected."],
+    });
+
+    try {
+      const response = await fetch("/api/customizer/staging-save-design", {
+        method: "POST",
+        cache: "no-store",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ payload: stagingDesignPayload }),
+      });
+      const result = await response.json().catch(() => null) as {
+        ok?: boolean;
+        errors?: string[];
+        warnings?: string[];
+        savedDesign?: StagingSaveResult["savedDesign"];
+        lineItemPropertiesPreview?: Record<string, string>;
+      } | null;
+      const errors = Array.isArray(result?.errors) ? result.errors : [];
+      const warnings = Array.isArray(result?.warnings) ? result.warnings : [];
+      const nextStatus: StagingSaveStatus =
+        !response.ok || !result?.ok || errors.length > 0 ? "error" : warnings.length > 0 ? "warning" : "success";
+
+      setStagingSaveStatus(nextStatus);
+      setStagingSaveResult({
+        savedDesign: result?.savedDesign,
+        errors: errors.length > 0 ? errors : response.ok ? [] : ["Staging save payload failed."],
+        warnings,
+        lineItemPropertiesPreview: result?.lineItemPropertiesPreview,
+      });
+      setStatusOnly(
+        nextStatus === "error"
+          ? "Staging save payload failed. Checkout and Shopify remain disconnected."
+          : nextStatus === "warning"
+            ? "Staging save payload returned warnings. Checkout and Shopify remain disconnected."
+            : "Staging save payload accepted. Checkout and Shopify remain disconnected."
+      );
+    } catch {
+      setStagingSaveStatus("error");
+      setStagingSaveResult({
+        errors: ["Could not reach staging save design API."],
+        warnings: [],
+      });
+      setStatusOnly("Could not reach staging save design API. Checkout and Shopify remain disconnected.");
+    }
+  };
+
+  const runAiPlaceholder = () => {
+    setIsAiLoading(true);
+    window.setTimeout(() => {
+      setIsAiLoading(false);
+      setState((current) => ({
+        ...current,
+        status: "AI placeholder checked. No AI output generated until a staging endpoint is approved.",
+      }));
+    }, 500);
+  };
+
+  const loadStagingConfig = () => {
+    try {
+      const rawConfig = window.localStorage.getItem(STAGING_CUSTOMIZER_CONFIG_STORAGE_KEY);
+      if (!rawConfig) {
+        setStagingConfig(null);
+        setStagingConfigWarning("Using safe preview defaults.");
+        setState((current) => ({
+          ...current,
+          mode: "apparel",
+          transferSize: SAFE_TRANSFER_SIZE,
+          selectedTemplate: "Centered Logo",
+          usingSafeDefaults: true,
+          status: "Using safe preview defaults. Validate a config in /admin/customizer-setup to load setup values.",
+        }));
+        return;
+      }
+
+      const parsedConfig = JSON.parse(rawConfig) as StagingCustomizerConfig & {
+        type?: unknown;
+        label?: unknown;
+      };
+      const nextMode = resolvePreviewModeFromConfigType(parsedConfig.type);
+      const firstTransferSize = Array.isArray(parsedConfig.transferSizes)
+        ? parsedConfig.transferSizes.map(getTransferSizeLabel).find(Boolean)
+        : "";
+      const defaultTransferSize = getConfiguredTransferSizeLabel(parsedConfig, parsedConfig.stagingSettings?.defaultTransferSizeId);
+      const nextTransferSize = nextMode === "transfer" ? getSafeTransferSize(defaultTransferSize || firstTransferSize) : SAFE_TRANSFER_SIZE;
+      const usedFallback = nextMode === "transfer" && !firstTransferSize;
+      const label = typeof parsedConfig.label === "string" ? parsedConfig.label : "staging setup";
+      const realismDefaults = parsedConfig.stagingSettings?.realismDefaults;
+
+      setStagingConfig(parsedConfig);
+      setStagingConfigWarning(usedFallback ? "Invalid staging config, using safe defaults." : "");
+      if (realismDefaults) {
+        setFabricBlendEnabled(Boolean(realismDefaults.fabricBlendEnabled));
+        setMockupBlendMode(realismDefaults.defaultBlendMode || "multiply");
+        setArtworkOpacity(safeNumber(realismDefaults.defaultInkOpacity || 95, 45, 100, 95));
+        setTextureOverlayEnabled(realismDefaults.textureOverlayEnabled !== false);
+      }
+      if (parsedConfig.stagingSettings?.templateSettings?.defaultCategory) {
+        const defaultCategory = parsedConfig.stagingSettings.templateSettings.defaultCategory;
+        setActiveTemplateCategory(TEMPLATE_CATEGORIES.includes(defaultCategory as TemplateCategory) ? defaultCategory as TemplateCategory : "All");
+      }
+      setState((current) => ({
+        ...current,
+        mode: nextMode,
+        transferSize: nextTransferSize,
+        selectedTemplate: nextMode === "apparel" ? "Centered Logo" : "Logo Transfer",
+        usingSafeDefaults: usedFallback,
+        status: usedFallback
+          ? `Loaded ${label}, but transfer size was invalid. Using safe preview defaults.`
+          : "Loaded staging setup config. Production remains disconnected.",
+      }));
+    } catch {
+      setStagingConfig(null);
+      setStagingConfigWarning("Invalid staging config, using safe defaults.");
+      setState((current) => ({
+        ...current,
+        mode: "apparel",
+        transferSize: SAFE_TRANSFER_SIZE,
+        selectedTemplate: "Centered Logo",
+        usingSafeDefaults: true,
+        status: "Unable to load staging setup config. Using safe preview defaults.",
+      }));
+    }
+  };
+
+  const fitArtwork = () => {
+    setState((current) => ({
+      ...updateActiveLayers(current, (layers) =>
+        layers.map((layer) =>
+          layer.id === current.selectedLayerId && !layer.locked
+            ? { ...layer, x: 50, y: 50, ...getFitLayerSize(current), rotation: 0 }
+            : layer
+        )
+      ),
+      scale: getFitLayerSize(current).width,
+      x: 50,
+      y: 50,
+      rotation: 0,
+      status: current.selectedLayerId ? "Selected layer fit to the active print area." : "Artwork fit to the active preview area.",
+    }));
+  };
+
+  const setStatusOnly = (status: string) => {
+    setState((current) => ({ ...current, status }));
+  };
+
+  const centerDesign = () => {
+    setState((current) => ({
+      ...updateActiveLayers(current, (layers) =>
+        layers.map((layer) => (layer.id === current.selectedLayerId && !layer.locked ? { ...layer, x: 50, y: 50 } : layer))
+      ),
+      x: 50,
+      y: 50,
+      status: current.selectedLayerId ? "Selected layer centered in the print area." : "Design centered in the active preview area.",
+    }));
+  };
+
+  const rotateDesign = () => {
+    setState((current) => ({
+      ...updateActiveLayers(current, (layers) =>
+        layers.map((layer) =>
+          layer.id === current.selectedLayerId && !layer.locked
+            ? { ...layer, rotation: layer.rotation >= 30 ? -30 : layer.rotation + 15 }
+            : layer
+        )
+      ),
+      rotation: current.rotation >= 30 ? -30 : current.rotation + 15,
+      status: current.selectedLayerId ? "Selected layer rotated locally." : "Preview artwork rotated locally.",
+    }));
+  };
+
+  const duplicateDesign = () => {
+    setState((current) => {
+      const layers = getActiveLayers(current);
+      const selected = layers.find((layer) => layer.id === current.selectedLayerId);
+
+      if (!selected) return { ...current, status: "Select a layer before duplicating." };
+
+      const duplicate = {
+        ...selected,
+        id: createLayerId(selected.name, layers.length),
+        name: `${selected.name} Copy`,
+        x: clamp(selected.x + 5, 0, 100),
+        y: clamp(selected.y + 5, 0, 100),
+      };
+
+      return {
+        ...updateActiveLayers(current, (currentLayers) => [...currentLayers, duplicate]),
+        selectedLayerId: duplicate.id,
+        status: `${selected.name} duplicated for staging.`,
+      };
+    });
+  };
+
+  return (
+    <main className="min-h-screen overflow-x-hidden bg-[#071015] pb-14 text-neutral-100 lg:pb-0 xl:fixed xl:inset-0 xl:z-50 xl:h-[100dvh] xl:overflow-hidden">
+      <header className="border-b border-[#18313a] bg-[#09151a]/95 px-4 py-2 shadow-[0_14px_50px_rgba(0,0,0,0.35)] md:px-5 xl:h-14 xl:py-1.5">
+        <div className="mx-auto flex max-w-[1680px] flex-col gap-3 xl:h-full xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="grid h-9 w-9 place-items-center rounded-xl border border-cyan-400/40 bg-cyan-300 text-sm font-black text-[#061015] shadow-[0_0_24px_rgba(103,232,249,0.25)]">
+              DTF
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Preview / Staging</p>
+              <h1 className="text-base font-semibold text-white">DTF Designer Pro</h1>
+            </div>
+          </div>
+          <nav className="flex flex-wrap items-center gap-2 text-sm text-neutral-300">
+            {["Home", "Customize", "Gang Sheets", "DTF Transfers", "Apparel", "Rewards"].map((item) => (
+              <span key={item} className="rounded-md px-3 py-1.5 hover:bg-white/5">{item}</span>
+            ))}
+          </nav>
+          <div className="flex flex-wrap items-center gap-2">
+            <ModeButton active={state.mode === "apparel"} onClick={() => setMode("apparel")}>Apparel</ModeButton>
+            <ModeButton active={state.mode === "transfer"} onClick={() => setMode("transfer")}>Transfers</ModeButton>
+          </div>
+        </div>
+      </header>
+
+      <div className="mx-auto grid max-w-[1680px] gap-0 xl:h-[calc(100dvh-56px)] xl:overflow-hidden xl:grid-cols-[320px_minmax(0,1fr)_340px]">
+        <aside className={`${mobilePanel === "tools" ? "block" : "hidden"} bg-[#0b1519] p-3 pt-4 xl:block xl:h-full xl:min-h-0 xl:overflow-y-auto xl:border-r xl:border-[#18313a] xl:[scrollbar-color:#27515d_#081114] xl:[scrollbar-width:thin]`}>
+          <div className="space-y-2.5">
+            <PanelCard title="Layers">
+              <div className="space-y-2 text-sm text-neutral-300">
+                <div className="rounded-md bg-[#081114] px-3 py-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-semibold text-neutral-100">{selectedLayer ? selectedLayer.name : "No editable layer"}</span>
+                    <span className="text-cyan-300">{state.mode === "apparel" ? getCanvasLabel(state) : safeTransferSize}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-neutral-500">{selectedLayer ? `${selectedLayer.type} layer selected` : "Choose an editable starter template or upload artwork."}</p>
+                </div>
+                {activeLayers.length > 0 ? (
+                  <div className="grid gap-1.5">
+                    {activeLayers.map((layer) => (
+                      <button
+                        key={layer.id}
+                        type="button"
+                        onClick={() => setState((current) => ({ ...current, selectedLayerId: layer.id, status: `${layer.name} selected.` }))}
+                        className={`flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-left text-xs font-semibold ${
+                          layer.id === selectedLayer?.id
+                            ? "border-cyan-300 bg-cyan-300 text-neutral-950"
+                            : "border-[#2c424a] bg-[#071015] text-neutral-200"
+                        }`}
+                      >
+                        <span className="truncate">{layer.name}</span>
+                        <span className="shrink-0 uppercase opacity-70">{layer.hidden ? "hidden" : layer.locked ? "locked" : layer.type}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                <div className="grid grid-cols-2 gap-2">
+                  <ToolButton label="Duplicate Selected" onClick={duplicateDesign} />
+                  <ToolButton
+                    label="Hide / Show"
+                    onClick={() => updateSelectedLayer({ hidden: !selectedLayer?.hidden }, selectedLayer ? "Selected layer visibility updated." : "Select a layer before changing visibility.")}
+                  />
+                  <ToolButton
+                    label="Lock / Unlock"
+                    onClick={() => updateSelectedLayer({ locked: !selectedLayer?.locked }, selectedLayer ? "Selected layer lock updated." : "Select a layer before locking.")}
+                  />
+                  <ToolButton label="Delete Selected" onClick={removeArtwork} />
+                </div>
+                {currentArtwork ? (
+                  <div className="rounded-lg border border-[#20343b] bg-[#071015] p-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${getUploadStatusClass(stagingUploadStatus)}`}>
+                        {stagingUploadStatus === "idle" ? "Staging upload idle" : `Staging upload ${stagingUploadStatus}`}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={testStagingUpload}
+                        disabled={stagingUploadStatus === "uploading"}
+                        className="rounded-md border border-cyan-400/60 px-2.5 py-1.5 text-xs font-semibold text-cyan-100 transition hover:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {stagingUploadStatus === "uploading" ? "Testing..." : "Test Staging Upload"}
+                      </button>
+                    </div>
+                    {currentStagingUploadResult ? (
+                      <div className="mt-2 space-y-2 text-xs">
+                        {currentStagingUploadResult.asset ? (
+                          <dl className="grid grid-cols-[92px_minmax(0,1fr)] gap-x-2 gap-y-1 text-neutral-400">
+                            <dt>Filename</dt>
+                            <dd className="truncate text-neutral-200">{currentStagingUploadResult.asset.filename}</dd>
+                            <dt>Type</dt>
+                            <dd className="truncate text-neutral-200">{currentStagingUploadResult.asset.contentType}</dd>
+                            <dt>Size</dt>
+                            <dd className="text-neutral-200">{formatFileSize(currentStagingUploadResult.asset.size)}</dd>
+                            <dt>Purpose</dt>
+                            <dd className="text-neutral-200">{currentStagingUploadResult.asset.purpose}</dd>
+                            <dt>Staging</dt>
+                            <dd className="text-neutral-200">{String(currentStagingUploadResult.asset.stagingOnly)}</dd>
+                            {currentStagingUploadResult.asset.url ? (
+                              <>
+                                <dt>URL</dt>
+                                <dd className="truncate text-cyan-200">{currentStagingUploadResult.asset.url}</dd>
+                              </>
+                            ) : null}
+                          </dl>
+                        ) : null}
+                        {currentStagingUploadResult.warnings.length > 0 ? (
+                          <ul className="space-y-1 rounded-md border border-yellow-400/30 bg-yellow-950/20 p-2 text-yellow-100">
+                            {currentStagingUploadResult.warnings.map((warning) => (
+                              <li key={warning}>{warning}</li>
+                            ))}
+                          </ul>
+                        ) : null}
+                        {currentStagingUploadResult.errors.length > 0 ? (
+                          <ul className="space-y-1 rounded-md border border-red-400/30 bg-red-950/20 p-2 text-red-100">
+                            {currentStagingUploadResult.errors.map((error) => (
+                              <li key={error}>{error}</li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            </PanelCard>
+
+            <PanelCard title="Add Content">
+              <div className="grid grid-cols-2 gap-2">
+                <ToolButton label="Add Text" onClick={addTextLayer} />
+                <ToolButton label="Shapes" onClick={() => setStatusOnly("Shapes are a staging placeholder.")} />
+                <ToolButton label="Graphics" onClick={() => setStatusOnly("Graphics are a staging placeholder.")} />
+              </div>
+            </PanelCard>
+
+            <PanelCard title="Text Editing">
+              <div className="space-y-2 text-sm">
+                {selectedLayer?.type === "text" ? (
+                  <input
+                    aria-label="Edit selected text layer"
+                    value={selectedLayer.text || ""}
+                    onChange={(event) => updateSelectedLayer({ text: event.target.value }, "Selected text updated.")}
+                    className="w-full rounded-md border border-[#2c424a] bg-[#081114] px-2 py-1.5 text-xs text-neutral-200"
+                  />
+                ) : (
+                  <p className="rounded-md border border-[#2c424a] bg-[#081114] px-2 py-1.5 text-xs text-neutral-500">
+                    Select a text layer to edit copy.
+                  </p>
+                )}
+                <div className="grid grid-cols-[1fr_76px] gap-2">
+                  <select
+                    aria-label="Font"
+                    value={selectedLayer?.fontFamily || "Inter"}
+                    onChange={(event) => updateSelectedLayer({ fontFamily: event.target.value }, `${event.target.value} applied to selected layer.`)}
+                    className="min-w-0 rounded-md border border-[#2c424a] bg-[#081114] px-2 py-1.5 text-xs text-neutral-200"
+                  >
+                    {FONT_OPTIONS.map((font) => (
+                      <option key={font}>{font}</option>
+                    ))}
+                  </select>
+                  <input
+                    aria-label="Font size"
+                    type="number"
+                    min="8"
+                    max="120"
+                    value={selectedLayer?.fontSize || 42}
+                    onChange={(event) => updateSelectedLayer({ fontSize: Number(event.target.value), height: clamp(Number(event.target.value) / 1.5, 8, 60) }, `Font size ${event.target.value} applied.`)}
+                    className="rounded-md border border-[#2c424a] bg-[#081114] px-2 py-1.5 text-xs text-neutral-200"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    aria-label="Text color swatch"
+                    value={selectedLayer?.color || "#67e8f9"}
+                    onChange={(event) => updateSelectedLayer({ color: event.target.value }, "Selected layer color updated.")}
+                    className="h-8 w-10 rounded-md border border-cyan-300 bg-cyan-300 p-0.5"
+                  />
+                  <div className="grid flex-1 grid-cols-4 gap-2">
+                    {["Bold", "Italic", "Underline", "Align"].map((item) => (
+                      <ToolButton key={item} label={item} onClick={() => setStatusOnly(`${item} text control is staged.`)} />
+                    ))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {["Outline", "Shadow", "Arch", "Wave", "Distort"].map((item) => (
+                    <ToolButton key={item} label={item} onClick={() => setStatusOnly(`${item} text effect is staged.`)} />
+                  ))}
+                </div>
+              </div>
+            </PanelCard>
+
+            <PanelCard title="Image Tools">
+              <div className="grid grid-cols-2 gap-2">
+                {["Remove Background", "Clean Colors", "Upscale / Enhance", "Vectorize"].map((item) => (
+                  <ToolButton key={item} label={item} onClick={runAiPlaceholder} />
+                ))}
+                <ToolButton label="Opacity" onClick={() => setStatusOnly("Opacity control is staged.")} />
+                <ToolButton label="Flip" onClick={() => setStatusOnly("Flip control is staged.")} />
+              </div>
+            </PanelCard>
+
+            <PanelCard title="Positioning">
+              <div className="space-y-3">
+                <Slider
+                  label="Scale"
+                  value={safeScale}
+                  min={8}
+                  max={100}
+                  onChange={(scale) => {
+                    updateSelectedLayer({ width: scale, height: selectedLayer ? clamp(scale * (selectedLayer.height / Math.max(selectedLayer.width, 1)), 6, 100) : scale }, "Selected layer resized.");
+                    setState((current) => ({ ...current, scale }));
+                  }}
+                />
+                <Slider
+                  label="X Position"
+                  value={safeX}
+                  min={0}
+                  max={100}
+                  onChange={(x) => {
+                    updateSelectedLayer({ x }, "Selected layer moved horizontally.");
+                    setState((current) => ({ ...current, x }));
+                  }}
+                />
+                <Slider
+                  label="Y Position"
+                  value={safeY}
+                  min={0}
+                  max={100}
+                  onChange={(y) => {
+                    updateSelectedLayer({ y }, "Selected layer moved vertically.");
+                    setState((current) => ({ ...current, y }));
+                  }}
+                />
+                <Slider
+                  label="Rotation"
+                  value={safeRotation}
+                  min={-30}
+                  max={30}
+                  onChange={(rotation) => {
+                    updateSelectedLayer({ rotation }, "Selected layer rotation updated.");
+                    setState((current) => ({ ...current, rotation }));
+                  }}
+                />
+                <div className="grid grid-cols-3 gap-2">
+                  <ToolButton label="Resize" onClick={() => setStatusOnly("Resize mode is staged.")} />
+                  <ToolButton label="Position" onClick={() => setStatusOnly("Position mode is staged.")} />
+                  <ToolButton label="Align" onClick={() => setStatusOnly("Align controls are staged.")} />
+                  <ToolButton label="Center" onClick={centerDesign} />
+                </div>
+              </div>
+            </PanelCard>
+
+            <PanelCard title="Design Info">
+              <dl className="space-y-2 text-sm">
+                <div className="flex justify-between gap-3"><dt className="text-neutral-500">Canvas</dt><dd className="text-neutral-200">{state.mode === "apparel" ? "12 x 16 in" : safeTransferSize}</dd></div>
+                <div className="flex justify-between gap-3"><dt className="text-neutral-500">DPI</dt><dd className="text-neutral-200">300 preview</dd></div>
+                <div className="flex justify-between gap-3"><dt className="text-neutral-500">Mode</dt><dd className="text-neutral-200">{state.mode}</dd></div>
+                <div className="flex justify-between gap-3"><dt className="text-neutral-500">Quality</dt><dd className="text-emerald-300">Good Quality / Print Ready</dd></div>
+              </dl>
+            </PanelCard>
+          </div>
+        </aside>
+
+        <section className="flex min-h-[620px] flex-col bg-[#121a1f] p-2.5 xl:h-full xl:min-h-0 xl:overflow-hidden">
+          <div className="mb-1.5 grid shrink-0 grid-cols-2 gap-2 lg:grid-cols-4">
+            <label className="min-h-[58px] cursor-pointer rounded-lg border border-cyan-400/50 bg-cyan-300 p-2 text-left text-[#061015] shadow-[0_10px_24px_rgba(34,211,238,0.18)] transition hover:bg-cyan-200">
+              <span className="flex items-center justify-between gap-2">
+                <span className="grid h-7 w-7 place-items-center rounded-md bg-[#061015] text-[10px] font-black text-cyan-200">UP</span>
+                <span className="h-1 w-10 rounded-full bg-[#061015]/40" />
+              </span>
+              <span className="mt-1 block text-sm font-black leading-4">Upload Artwork</span>
+              <span className="mt-0.5 block text-xs font-semibold leading-4">PNG, JPG, SVG</span>
+              <input type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+            </label>
+            <QuickActionCard title={isCarting ? "Preparing..." : "Add to Cart"} detail="Preview payload only" icon="ATC" accent="bg-emerald-300" onClick={addToPreviewCart} />
+            <QuickActionCard
+              title={state.mode === "apparel" ? "Color Variants" : "Size Variants"}
+              detail={state.mode === "apparel" ? "6 staged colors" : safeTransferSize}
+              icon={state.mode === "apparel" ? "CLR" : "SZ"}
+              accent="bg-violet-300"
+              onClick={() => setStatusOnly(state.mode === "apparel" ? "Color variants are preview-only." : "Transfer sizes are preview-only.")}
+            />
+            <QuickActionCard title={isSaving ? "Saving..." : "Save Design"} detail="Local staging save" icon="SV" accent="bg-yellow-300" onClick={saveDesign} />
+          </div>
+
+          <div className="mb-1 flex shrink-0 justify-end">
+            <button
+              type="button"
+              onClick={loadStagingConfig}
+              className="rounded-md border border-cyan-400/50 bg-[#081114] px-3 py-1.5 text-xs font-semibold text-cyan-100 transition hover:border-cyan-300"
+            >
+              Load Setup Config
+            </button>
+          </div>
+
+          <div className="mb-1.5 shrink-0 rounded-xl border border-[#26343b] bg-[#0b1215] p-2">
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.16em] text-cyan-300">{state.mode === "apparel" ? "Current View" : "Choose Transfer Size"}</p>
+                <p className="mt-0.5 text-base font-semibold text-white">{state.mode === "apparel" ? getCanvasLabel(state) : `${safeTransferSize} Transfer`}</p>
+              </div>
+              <div className="flex max-w-full gap-2 overflow-x-auto pb-1">
+                {(state.mode === "apparel" ? APPAREL_VIEWS.map((view) => view.label) : configuredTransferSizes.map((size) => size.id)).map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => {
+                      if (state.mode === "apparel") {
+                        const match = APPAREL_VIEWS.find((view) => view.label === item);
+                        if (match) setState((current) => ({ ...current, activeView: match.id, status: `${match.label} preview active.` }));
+                      } else {
+                        setState((current) => ({ ...current, transferSize: item, status: `${item} transfer preview active.` }));
+                      }
+                    }}
+                    className={`shrink-0 rounded-full border px-3 py-1.5 text-sm font-semibold ${
+                      (state.mode === "apparel" && item === getCanvasLabel(state)) || (state.mode === "transfer" && item === safeTransferSize)
+                        ? "border-cyan-300 bg-cyan-300 text-neutral-950"
+                        : "border-[#2c424a] bg-[#081114] text-neutral-200"
+                    }`}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="relative grid min-h-[390px] min-w-0 flex-1 place-items-center overflow-hidden rounded-xl border border-[#2d454f] bg-[radial-gradient(circle_at_50%_42%,rgba(86,166,188,0.34)_0%,rgba(22,36,43,0.88)_36%,#070d10_76%)] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_28px_90px_rgba(0,0,0,0.42)] xl:min-h-0">
+            {state.usingSafeDefaults ? (
+              <div className="absolute left-3 top-3 z-30 rounded-full border border-yellow-400/40 bg-yellow-950/80 px-3 py-1 text-xs font-semibold text-yellow-100">
+                Using safe preview defaults.
+              </div>
+            ) : null}
+            {stagingConfigWarning ? (
+              <div className="absolute right-3 top-3 z-30 rounded-full border border-yellow-400/40 bg-yellow-950/80 px-3 py-1 text-xs font-semibold text-yellow-100">
+                {stagingConfigWarning}
+              </div>
+            ) : null}
+            {printAreaResult.usingFallback ? (
+              <div className="absolute right-3 top-10 z-30 rounded-full border border-yellow-400/40 bg-yellow-950/80 px-3 py-1 text-xs font-semibold text-yellow-100">
+                Print area clamped to safe bounds.
+              </div>
+            ) : null}
+            {mockupLoadFailed ? (
+              <div className="absolute left-3 top-10 z-30 rounded-full border border-yellow-400/40 bg-yellow-950/80 px-3 py-1 text-xs font-semibold text-yellow-100">
+                Staged mockup failed to load. Using fallback.
+              </div>
+            ) : null}
+            <div
+              className="relative aspect-[5/6] min-h-[330px] max-w-full shrink-0 overflow-visible rounded-2xl border border-white/20 bg-[linear-gradient(145deg,#f8fbff_0%,#dce6ef_46%,#ffffff_100%)] shadow-[0_38px_100px_rgba(0,0,0,0.58),0_0_0_1px_rgba(103,232,249,0.12),inset_0_1px_0_rgba(255,255,255,0.85)]"
+              style={{
+                height: `min(calc(100% - 2px), ${previewMaxHeight}px)`,
+                maxWidth: "min(100%, 760px)",
+              }}
+            >
+              {safeMockupUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={safeMockupUrl}
+                  alt="Configured staging mockup"
+                  className="absolute inset-0 z-0 h-full w-full rounded-2xl object-contain"
+                  onError={() => setBrokenMockupUrls((current) => current.includes(safeMockupUrl) ? current : [...current, safeMockupUrl])}
+                />
+              ) : null}
+              {state.mode === "apparel" ? (
+                <div className={`absolute inset-0 grid place-items-center overflow-hidden ${safeMockupUrl ? "opacity-0" : ""}`}>
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_15%,rgba(255,255,255,0.82),transparent_24%),radial-gradient(circle_at_50%_74%,rgba(15,23,42,0.18),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.26),rgba(15,23,42,0.08))]" />
+                  <div className="relative h-[90%] w-[72%] drop-shadow-[0_30px_48px_rgba(0,0,0,0.48)]">
+                    <div className="absolute left-[21%] top-[3%] h-[15%] w-[58%] rounded-b-[46%] bg-[linear-gradient(180deg,#1b2024_0%,#080b0d_82%)] shadow-[inset_0_-10px_18px_rgba(0,0,0,0.55)]" />
+                    <div className="absolute left-[-19%] top-[18%] h-[26%] w-[40%] -rotate-[18deg] rounded-[20px_24px_18px_16px] bg-[linear-gradient(145deg,#1d2428_0%,#07090a_76%)] shadow-[inset_10px_0_22px_rgba(255,255,255,0.03),0_16px_20px_rgba(0,0,0,0.28)]" />
+                    <div className="absolute right-[-19%] top-[18%] h-[26%] w-[40%] rotate-[18deg] rounded-[24px_20px_16px_18px] bg-[linear-gradient(215deg,#1d2428_0%,#07090a_76%)] shadow-[inset_-10px_0_22px_rgba(255,255,255,0.03),0_16px_20px_rgba(0,0,0,0.28)]" />
+                    <div className="absolute inset-x-[7%] top-[12%] h-[82%] rounded-[48px_48px_20px_20px] bg-[linear-gradient(115deg,#20272b_0%,#090c0e_48%,#151c20_100%)] shadow-[inset_34px_0_56px_rgba(255,255,255,0.045),inset_-38px_0_58px_rgba(0,0,0,0.42),inset_0_20px_26px_rgba(255,255,255,0.04),0_24px_34px_rgba(0,0,0,0.3)]" />
+                    <div className="absolute inset-x-[16%] top-[18%] h-[72%] rounded-[36px_36px_18px_18px] bg-[radial-gradient(circle_at_50%_12%,rgba(255,255,255,0.11),transparent_28%),repeating-linear-gradient(90deg,rgba(255,255,255,0.028)_0_1px,transparent_1px_6px),linear-gradient(90deg,rgba(255,255,255,0.045),transparent_22%,rgba(0,0,0,0.2)_70%,rgba(255,255,255,0.03))] opacity-90" />
+                    <div className="absolute inset-x-[11%] bottom-[7%] h-px bg-white/8" />
+                  </div>
+                </div>
+              ) : (
+                <div className={`absolute inset-0 grid place-items-center overflow-hidden bg-[linear-gradient(145deg,#eef6fb_0%,#dce6ef_100%)] ${safeMockupUrl ? "opacity-0" : ""}`}>
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.7),transparent_30%)]" />
+                  <div className="h-[90%] w-[66%] rounded-md border border-slate-300 bg-[linear-gradient(180deg,#ffffff_0%,#f7fbff_100%)] shadow-[0_28px_60px_rgba(15,23,42,0.22),inset_0_0_0_1px_rgba(255,255,255,0.8)]" />
+                </div>
+              )}
+
+              <div
+                className="absolute z-20 -translate-x-1/2 -translate-y-1/2 border border-dashed border-cyan-300 bg-cyan-300/5 shadow-[0_0_0_1px_rgba(8,47,73,0.35),0_0_32px_rgba(34,211,238,0.16)]"
+                style={getPrintAreaStyle(printAreaResult.area)}
+              >
+                <span className="absolute -right-1 -top-5 text-[10px] font-semibold uppercase tracking-wide text-cyan-100/80">
+                  {state.mode === "apparel"
+                    ? `${measurementReference.width}" x ${measurementReference.height}"`
+                    : `${measurementReference.width} x ${measurementReference.height}`}
+                </span>
+                {selectedLayer ? (
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute z-30"
+                    style={{
+                      left: `${selectedLayer.x}%`,
+                      top: `${selectedLayer.y}%`,
+                      width: `${selectedLayer.width}%`,
+                      height: `${selectedLayer.height}%`,
+                      transform: "translate(-50%, -50%)",
+                    }}
+                  >
+                    <div className="absolute -top-4 left-0 h-px w-full bg-cyan-200/90 shadow-[0_0_12px_rgba(103,232,249,0.45)]">
+                      <span className="absolute left-1/2 top-[-18px] -translate-x-1/2 rounded-sm border border-cyan-200/40 bg-[#071015]/90 px-1.5 py-0.5 text-[10px] font-semibold text-cyan-50">
+                        {formatInches(selectedWidthInches)}
+                      </span>
+                    </div>
+                    <div className="absolute -left-4 top-0 h-full w-px bg-cyan-200/90 shadow-[0_0_12px_rgba(103,232,249,0.45)]">
+                      <span className="absolute left-[-28px] top-1/2 -translate-y-1/2 -rotate-90 rounded-sm border border-cyan-200/40 bg-[#071015]/90 px-1.5 py-0.5 text-[10px] font-semibold text-cyan-50">
+                        {formatInches(selectedHeightInches)}
+                      </span>
+                    </div>
+                  </div>
+                ) : null}
+                <div className="absolute inset-0 overflow-hidden">
+                  {activeLayers.length > 0 ? (
+                    activeLayers.filter((layer) => !layer.hidden).map((layer) => {
+                      const isSelected = layer.id === selectedLayer?.id;
+                      const commonStyle = {
+                        left: `${layer.x}%`,
+                        top: `${layer.y}%`,
+                        width: `${layer.width}%`,
+                        height: `${layer.height}%`,
+                        transform: `translate(-50%, -50%) rotate(${layer.rotation}deg)`,
+                        opacity: layer.opacity,
+                      };
+
+                      if (layer.type === "image" && layer.sourceUrl) {
+                        return (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            key={layer.id}
+                            src={layer.sourceUrl}
+                            alt={layer.sourceName || layer.name}
+                            onClick={() => setState((current) => ({ ...current, selectedLayerId: layer.id, status: `${layer.name} selected.` }))}
+                            className={`absolute max-h-none max-w-none cursor-pointer rounded-sm object-contain shadow-[0_10px_18px_rgba(0,0,0,0.22)] ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
+                            style={{
+                              ...commonStyle,
+                              mixBlendMode: state.mode === "apparel" ? effectiveBlendMode : "normal",
+                            }}
+                            draggable={false}
+                          />
+                        );
+                      }
+
+                      if (layer.type === "shape") {
+                        return (
+                          <button
+                            key={layer.id}
+                            type="button"
+                            onClick={() => setState((current) => ({ ...current, selectedLayerId: layer.id, status: `${layer.name} selected.` }))}
+                            className={`absolute cursor-pointer rounded-lg border border-white/20 shadow-[0_8px_18px_rgba(0,0,0,0.18)] ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
+                            style={{ ...commonStyle, backgroundColor: layer.color }}
+                            aria-label={layer.name}
+                          />
+                        );
+                      }
+
+                      if (layer.type === "placeholder") {
+                        return (
+                          <button
+                            key={layer.id}
+                            type="button"
+                            onClick={() => setState((current) => ({ ...current, selectedLayerId: layer.id, status: `${layer.name} selected. Upload artwork to replace it.` }))}
+                            className={`absolute grid cursor-pointer place-items-center rounded-lg border border-dashed border-cyan-200/80 bg-[#071015]/78 px-2 text-center text-[10px] font-black uppercase tracking-wide text-cyan-100 shadow-[0_8px_18px_rgba(0,0,0,0.22)] ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
+                            style={commonStyle}
+                          >
+                            {layer.text || "Upload Logo"}
+                          </button>
+                        );
+                      }
+
+                      return (
+                        <button
+                          key={layer.id}
+                          type="button"
+                          onClick={() => setState((current) => ({ ...current, selectedLayerId: layer.id, status: `${layer.name} selected.` }))}
+                          className={`absolute grid cursor-pointer place-items-center px-1 text-center font-black leading-none drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)] ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
+                          style={{
+                            ...commonStyle,
+                            color: layer.color,
+                            fontFamily: layer.fontFamily,
+                            fontSize: `${layer.fontSize}px`,
+                          }}
+                        >
+                          {layer.text || "Edit Text"}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="grid h-full place-items-center px-4 text-center text-xs font-semibold uppercase tracking-wide text-cyan-100/70">
+                      Upload artwork
+                    </div>
+                  )}
+                  {state.mode === "apparel" && textureOverlayEnabled ? (
+                    <div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-0"
+                      style={{
+                        background:
+                          "linear-gradient(105deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.025) 28%, rgba(0,0,0,0.18) 62%, rgba(255,255,255,0.05) 100%), repeating-linear-gradient(88deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 5px), radial-gradient(circle at 42% 18%, rgba(255,255,255,0.13), transparent 38%)",
+                        mixBlendMode: "soft-light",
+                        opacity: fabricBlendEnabled ? 0.5 : 0.22,
+                      }}
+                    />
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="sticky bottom-0 z-30 mt-1.5 flex shrink-0 flex-wrap items-center justify-center gap-2 rounded-xl border border-cyan-300/30 bg-[#0b1215]/98 px-3 py-2 shadow-[0_-14px_30px_rgba(0,0,0,0.28)]">
+            <ToolbarButton label="Undo" onClick={() => setStatusOnly("Undo is staged for preview history.")} />
+            <ToolbarButton label="Redo" onClick={() => setStatusOnly("Redo is staged for preview history.")} />
+            <ToolbarButton label="Zoom Out" onClick={() => setState((current) => ({ ...current, zoom: clamp(current.zoom - 8, 55, 120), status: "Zoomed out locally." }))} />
+            <ToolbarButton label="Zoom In" onClick={() => setState((current) => ({ ...current, zoom: clamp(current.zoom + 8, 55, 120), status: "Zoomed in locally." }))} />
+            <ToolbarButton label="Rotate" onClick={rotateDesign} />
+            <ToolbarButton label="Duplicate" onClick={duplicateDesign} />
+            <ToolbarButton label="Delete" onClick={removeArtwork} />
+            <ToolbarButton label="Center Design" onClick={centerDesign} />
+            <ToolbarButton label="Fit to Area" onClick={fitArtwork} />
+            <ToolbarButton label="Save Design" onClick={saveDesign} />
+          </div>
+        </section>
+
+        <section className={`${mobilePanel === "assistant" || mobilePanel === "order" ? "block" : "hidden"} border-t border-[#1e2a2f] bg-[#11181c] p-3 pt-4 lg:block lg:border-l lg:border-t-0 xl:h-full xl:min-h-0 xl:overflow-y-auto xl:[scrollbar-color:#27515d_#081114] xl:[scrollbar-width:thin]`}>
+          <div className="space-y-3">
+            {state.mode === "apparel" ? (
+              <PanelCard title="Product Colors">
+                <div className="grid grid-cols-6 gap-2">
+                  {configuredColors.map((color) => (
+                    <button
+                      key={color.hex}
+                      type="button"
+                      onClick={() => setStatusOnly(`Color ${color.label || color.hex} selected for preview.`)}
+                      title={color.label || color.hex}
+                      className="h-9 rounded-full border border-white/20"
+                      style={{ backgroundColor: color.hex }}
+                    />
+                  ))}
+                </div>
+              </PanelCard>
+            ) : (
+              <PanelCard title="How It Works">
+                <ol className="space-y-2 text-sm text-neutral-400">
+                  <li>1. Choose a transfer size.</li>
+                  <li>2. Upload artwork and fit it to the sheet.</li>
+                  <li>3. Save or prepare a preview cart payload.</li>
+                </ol>
+              </PanelCard>
+            )}
+
+            <div className={`${mobilePanel === "assistant" ? "block" : "hidden"} lg:block`}>
+              <PanelCard title="AI Tools">
+                <div className="grid grid-cols-2 gap-2">
+                  {["Background Remover", "Image Enhancer", "Vectorizer", "Generate Idea"].map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={runAiPlaceholder}
+                      className="rounded-md border border-cyan-500/60 px-2.5 py-1.5 text-left text-xs font-semibold text-cyan-100"
+                    >
+                      {isAiLoading ? "Checking..." : item}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs leading-5 text-neutral-400">
+                  AI actions are staging placeholders only. No production endpoints are called.
+                </p>
+              </PanelCard>
+            </div>
+
+            <div className={`${mobilePanel === "assistant" ? "block" : "hidden"} lg:block`}>
+              <PanelCard title="Editable Templates">
+              <p className="text-xs leading-5 text-neutral-400">
+                Choose from premade editable designs, then customize text, artwork, colors, and placement.
+              </p>
+              <p className="mt-1 text-xs font-semibold text-cyan-200">Hundreds of editable templates available.</p>
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsTemplateLibraryOpen(true)}
+                  className="w-full rounded-lg border border-cyan-300 bg-cyan-300 px-3 py-2.5 text-left text-sm font-black text-neutral-950 shadow-[0_12px_28px_rgba(34,211,238,0.18)] transition hover:bg-cyan-200"
+                >
+                  Browse Editable Templates
+                  <span className="mt-1 block text-xs font-semibold text-neutral-800">
+                    Search logos, jerseys, labels, transfers, and more.
+                  </span>
+                </button>
+              </div>
+              </PanelCard>
+            </div>
+
+            <div className={`${mobilePanel === "assistant" ? "block" : "hidden"} lg:block`}>
+              <PanelCard title="Mockup Realism">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-cyan-300">Realistic Mockup Preview</p>
+                      <p className="text-xs text-neutral-400">{state.mode === "apparel" ? "Fabric effects on apparel only" : "Transfer preview stays clean"}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFabricBlendEnabled((enabled) => !enabled);
+                        setStatusOnly("Fabric blend preview updated. No production behavior was changed.");
+                      }}
+                      disabled={state.mode !== "apparel"}
+                      className={`rounded-md border px-2.5 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                        fabricBlendEnabled && state.mode === "apparel"
+                          ? "border-cyan-300 bg-cyan-300 text-neutral-950"
+                          : "border-[#2c424a] bg-[#071015] text-neutral-200"
+                      }`}
+                    >
+                      {fabricBlendEnabled ? "On" : "Off"}
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-[1fr_96px] gap-2">
+                    <label className="block text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                      Blend Mode
+                      <select
+                        value={mockupBlendMode}
+                        onChange={(event) => {
+                          setMockupBlendMode(event.target.value as MockupBlendMode);
+                          setStatusOnly("Blend mode preview updated. Apparel artwork only.");
+                        }}
+                        disabled={state.mode !== "apparel"}
+                        className="mt-1.5 w-full rounded-md border border-[#2c424a] bg-[#081114] px-2 py-1.5 text-xs text-neutral-200 disabled:opacity-50"
+                      >
+                        {MOCKUP_BLEND_MODES.map((mode) => (
+                          <option key={mode} value={mode}>{mode}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <div className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                      Opacity
+                      <div className="mt-1.5 rounded-md border border-[#2c424a] bg-[#081114] px-2 py-1.5 text-right text-neutral-200">
+                        {safeArtworkOpacity}%
+                      </div>
+                    </div>
+                  </div>
+                  <Slider
+                    label="Ink Opacity"
+                    value={safeArtworkOpacity}
+                    min={45}
+                    max={100}
+                    onChange={(opacity) => {
+                      setArtworkOpacity(opacity);
+                      setStatusOnly("Ink opacity preview updated. Source artwork was not changed.");
+                    }}
+                  />
+                </div>
+              </PanelCard>
+            </div>
+
+            {state.mode === "apparel" ? (
+              <PanelCard title="Get Started in 3 Easy Steps">
+                <ol className="space-y-2 text-sm text-neutral-400">
+                  <li>1. Upload artwork to a garment view.</li>
+                  <li>2. Adjust placement and choose a template.</li>
+                  <li>3. Save locally or prepare a test cart payload.</li>
+                </ol>
+              </PanelCard>
+            ) : (
+              <PanelCard title="Product / Material Options">
+                <div className="grid gap-2">
+                  {configuredMaterials.map((option) => (
+                    <button key={option} type="button" onClick={() => setStatusOnly(`${option} selected for preview.`)} className="rounded-md border border-[#2c424a] px-3 py-2 text-left text-sm text-neutral-200">
+                      {option}
+                    </button>
+                  ))}
+                </div>
+              </PanelCard>
+            )}
+
+            <div className={`${mobilePanel === "order" ? "block" : "hidden"} lg:block`}>
+              <PanelCard title="Preview Order">
+                <details open={isPreviewOrderOpen} onToggle={(event) => setIsPreviewOrderOpen(event.currentTarget.open)}>
+                  <summary className="cursor-pointer text-sm font-semibold text-cyan-100">Show local payload</summary>
+                  <dl className="mt-3 space-y-2 text-sm">
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-neutral-500">Mode</dt>
+                      <dd className="text-neutral-200">{state.mode}</dd>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-neutral-500">Target</dt>
+                      <dd className="text-neutral-200">{getCanvasLabel(state)}</dd>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-neutral-500">Template</dt>
+                      <dd className="text-neutral-200">{state.selectedTemplate}</dd>
+                    </div>
+                  </dl>
+                  {stagingConfig?.stagingSettings?.pricingPreview ? (
+                    <div className="mt-3 rounded-md border border-[#263d45] bg-[#081114] p-3 text-xs text-neutral-300">
+                      <div className="font-semibold uppercase tracking-wide text-cyan-200">Staging Pricing Preview</div>
+                      <dl className="mt-2 grid grid-cols-2 gap-2">
+                        <dt className="text-neutral-500">Base</dt>
+                        <dd className="text-right">${Number(stagingConfig.stagingSettings.pricingPreview.basePrice || 0).toFixed(2)}</dd>
+                        <dt className="text-neutral-500">Per sq in</dt>
+                        <dd className="text-right">${Number(stagingConfig.stagingSettings.pricingPreview.pricePerSquareInch || 0).toFixed(2)}</dd>
+                        <dt className="text-neutral-500">Rush</dt>
+                        <dd className="text-right">${Number(stagingConfig.stagingSettings.pricingPreview.rushFee || 0).toFixed(2)}</dd>
+                      </dl>
+                      <p className="mt-2 text-neutral-500">{stagingConfig.stagingSettings.pricingPreview.quantityBreaks || "Quantity breaks staged only."}</p>
+                    </div>
+                  ) : null}
+                  <div className="mt-3 rounded-md border border-[#263d45] bg-[#081114] p-3 text-xs text-neutral-300">
+                    <div className="font-semibold uppercase tracking-wide text-cyan-200">Staging Asset URLs</div>
+                    <dl className="mt-2 grid grid-cols-[1fr_auto] gap-x-3 gap-y-2">
+                      <dt className="text-neutral-500">Hosted Artwork URL</dt>
+                      <dd className={hostedArtworkStatus === "ready" ? "text-emerald-300" : "text-yellow-200"}>
+                        {hostedArtworkStatus}
+                      </dd>
+                      <dt className="text-neutral-500">Preview Image URL</dt>
+                      <dd className={hostedPreviewImageStatus === "ready" ? "text-emerald-300" : hostedPreviewImageStatus === "pending" ? "text-cyan-200" : "text-yellow-200"}>
+                        {hostedPreviewImageStatus}
+                      </dd>
+                      <dt className="text-neutral-500">Design JSON URL</dt>
+                      <dd className={hostedDesignJsonStatus === "ready" ? "text-emerald-300" : hostedDesignJsonStatus === "pending" ? "text-cyan-200" : "text-yellow-200"}>
+                        {hostedDesignJsonStatus}
+                      </dd>
+                      <dt className="text-neutral-500">Print Ready File URL</dt>
+                      <dd className="text-neutral-400">future</dd>
+                    </dl>
+                    {hostedArtworkUrl ? (
+                      <p className="mt-2 truncate text-cyan-200" title={hostedArtworkUrl}>{hostedArtworkUrl}</p>
+                    ) : (
+                      <p className="mt-2 text-yellow-100">Run Test Staging Upload with configured Cloudinary env vars to attach a hosted artwork URL.</p>
+                    )}
+                  </div>
+                  <pre className="mt-3 max-h-32 overflow-auto rounded-md bg-[#080c0e] p-3 text-xs text-neutral-400">
+                    {JSON.stringify(previewPayload, null, 2)}
+                  </pre>
+                  <div className="mt-3 rounded-lg border border-[#20343b] bg-[#071015] p-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${getUploadStatusClass(designJsonStatus)}`}>
+                        Design JSON {designJsonStatus}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={testSaveDesignJson}
+                        disabled={designJsonStatus === "uploading"}
+                        className="rounded-md border border-cyan-400/60 px-2.5 py-1.5 text-xs font-semibold text-cyan-100 transition hover:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {designJsonStatus === "uploading" ? "Saving..." : "Test Save Design JSON"}
+                      </button>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                      <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${getUploadStatusClass(previewImageStatus)}`}>
+                        Preview Image {previewImageStatus}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={testGeneratePreviewImage}
+                        disabled={previewImageStatus === "uploading"}
+                        className="rounded-md border border-cyan-400/60 px-2.5 py-1.5 text-xs font-semibold text-cyan-100 transition hover:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {previewImageStatus === "uploading" ? "Generating..." : "Test Generate Preview Image"}
+                      </button>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                      <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${getUploadStatusClass(stagingSaveStatus === "saving" ? "uploading" : stagingSaveStatus)}`}>
+                        {stagingSaveStatus === "idle" ? "Staging save idle" : `Staging save ${stagingSaveStatus}`}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={testSavePayload}
+                        disabled={stagingSaveStatus === "saving"}
+                        className="rounded-md border border-cyan-400/60 px-2.5 py-1.5 text-xs font-semibold text-cyan-100 transition hover:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {stagingSaveStatus === "saving" ? "Testing..." : "Test Save Payload"}
+                      </button>
+                    </div>
+                    {designJsonResult ? (
+                      <div className="mt-2 rounded-md border border-[#263d45] bg-[#081114] p-2 text-xs">
+                        <div className="font-semibold text-cyan-100">Design JSON Asset</div>
+                        {designJsonResult.asset?.url ? <p className="mt-1 truncate text-emerald-200">{designJsonResult.asset.url}</p> : null}
+                        {designJsonResult.warnings.length > 0 ? <p className="mt-1 text-yellow-100">{designJsonResult.warnings[0]}</p> : null}
+                        {designJsonResult.errors.length > 0 ? <p className="mt-1 text-red-100">{designJsonResult.errors[0]}</p> : null}
+                      </div>
+                    ) : null}
+                    {previewImageResult ? (
+                      <div className="mt-2 rounded-md border border-[#263d45] bg-[#081114] p-2 text-xs">
+                        <div className="font-semibold text-cyan-100">Preview Image Asset</div>
+                        {previewImageResult.asset?.url ? <p className="mt-1 truncate text-emerald-200">{previewImageResult.asset.url}</p> : null}
+                        {previewImageResult.warnings.length > 0 ? <p className="mt-1 text-yellow-100">{previewImageResult.warnings[0]}</p> : null}
+                        {previewImageResult.errors.length > 0 ? <p className="mt-1 text-red-100">{previewImageResult.errors[0]}</p> : null}
+                      </div>
+                    ) : null}
+                    {stagingSaveResult ? (
+                      <div className="mt-2 space-y-2 text-xs">
+                        {stagingSaveResult.savedDesign ? (
+                          <dl className="grid grid-cols-[92px_minmax(0,1fr)] gap-x-2 gap-y-1 text-neutral-400">
+                            <dt>Saved ID</dt>
+                            <dd className="truncate text-neutral-200">{stagingSaveResult.savedDesign.id}</dd>
+                            <dt>Created</dt>
+                            <dd className="truncate text-neutral-200">{stagingSaveResult.savedDesign.createdAt}</dd>
+                            <dt>Staging</dt>
+                            <dd className="text-neutral-200">{String(stagingSaveResult.savedDesign.stagingOnly)}</dd>
+                          </dl>
+                        ) : null}
+                        {stagingSaveResult.lineItemPropertiesPreview ? (
+                          <details>
+                            <summary className="cursor-pointer font-semibold text-cyan-100">Line item preview</summary>
+                            <pre className="mt-2 max-h-28 overflow-auto rounded-md bg-[#080c0e] p-2 text-neutral-400">
+                              {JSON.stringify(stagingSaveResult.lineItemPropertiesPreview, null, 2)}
+                            </pre>
+                          </details>
+                        ) : null}
+                        {stagingSaveResult.warnings.length > 0 ? (
+                          <ul className="space-y-1 rounded-md border border-yellow-400/30 bg-yellow-950/20 p-2 text-yellow-100">
+                            {stagingSaveResult.warnings.map((warning) => (
+                              <li key={warning}>{warning}</li>
+                            ))}
+                          </ul>
+                        ) : null}
+                        {stagingSaveResult.errors.length > 0 ? (
+                          <ul className="space-y-1 rounded-md border border-red-400/30 bg-red-950/20 p-2 text-red-100">
+                            {stagingSaveResult.errors.map((error) => (
+                              <li key={error}>{error}</li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                </details>
+              </PanelCard>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      {isTemplateLibraryOpen ? (
+        <div className="fixed inset-0 z-[80] bg-black/70 p-4 backdrop-blur-sm">
+          <div className="mx-auto flex h-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-cyan-300/25 bg-[#0b1519] shadow-[0_30px_120px_rgba(0,0,0,0.65)]">
+            <div className="flex shrink-0 flex-col gap-3 border-b border-[#1e343c] p-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Editable Templates</p>
+                <h2 className="text-xl font-black text-white">Template Library</h2>
+                <p className="mt-1 text-sm text-neutral-400">Choose a starter layout, then edit layers, text, artwork, and placement.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsTemplateLibraryOpen(false)}
+                className="rounded-md border border-[#2c424a] bg-[#081114] px-3 py-2 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300"
+              >
+                Close
+              </button>
+            </div>
+            <div className="grid shrink-0 gap-3 border-b border-[#1e343c] p-4 md:grid-cols-[minmax(0,1fr)_220px]">
+              <input
+                type="search"
+                value={templateSearch}
+                onChange={(event) => setTemplateSearch(event.target.value)}
+                placeholder="Search logos, jerseys, labels, transfers..."
+                className="rounded-lg border border-[#2c424a] bg-[#071015] px-3 py-2 text-sm text-neutral-100 outline-none transition placeholder:text-neutral-600 focus:border-cyan-300"
+              />
+              <select
+                value={activeTemplateCategory}
+                onChange={(event) => setActiveTemplateCategory(event.target.value as TemplateCategory | "All")}
+                className="rounded-lg border border-[#2c424a] bg-[#071015] px-3 py-2 text-sm text-neutral-100 outline-none transition focus:border-cyan-300"
+              >
+                <option value="All">All Categories</option>
+                {TEMPLATE_CATEGORIES.filter((category) => enabledTemplateCategories.includes(category)).map((category) => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 [scrollbar-color:#27515d_#081114] [scrollbar-width:thin]">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {filteredTemplateLibrary.map((template) => (
+                  <article
+                    key={`${template.category}-${template.title}`}
+                    className="rounded-xl border border-[#243b43] bg-[linear-gradient(145deg,#101b20,#071015)] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                  >
+                    <div className="mb-3 aspect-[4/3] overflow-hidden rounded-lg border border-white/10 bg-[radial-gradient(circle_at_50%_35%,rgba(103,232,249,0.18),transparent_30%),linear-gradient(145deg,#14242a,#080d10)] p-3">
+                      <div className="grid h-full place-items-center rounded-md border border-dashed border-cyan-300/45 bg-cyan-300/5 text-center text-xs font-black uppercase tracking-wide text-cyan-100">
+                        {template.title}
+                      </div>
+                    </div>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="font-semibold text-white">{template.title}</h3>
+                        <p className="mt-1 text-xs leading-5 text-neutral-400">{template.description}</p>
+                      </div>
+                      <span className="shrink-0 rounded-full border border-cyan-300/30 px-2 py-1 text-[10px] font-semibold text-cyan-200">
+                        {template.category}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        loadEditableTemplate(template.title);
+                        setIsTemplateLibraryOpen(false);
+                      }}
+                      className="mt-3 w-full rounded-md border border-cyan-300 bg-cyan-300 px-3 py-2 text-sm font-black text-neutral-950 transition hover:bg-cyan-200"
+                    >
+                      Use Template
+                    </button>
+                  </article>
+                ))}
+              </div>
+              {filteredTemplateLibrary.length === 0 ? (
+                <div className="grid min-h-48 place-items-center rounded-xl border border-[#243b43] bg-[#071015] p-6 text-center text-sm text-neutral-400">
+                  No templates found for this search. Try another category or keyword.
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-3 border-t border-[#1e2a2f] bg-[#0d1316] lg:hidden">
+        {[
+          ["tools", "Tools"],
+          ["assistant", "Helper"],
+          ["order", "Order"],
+        ].map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setMobilePanel(id as PanelTab)}
+            className={`px-3 py-3 text-sm font-semibold ${mobilePanel === id ? "bg-cyan-300 text-neutral-950" : "text-neutral-300"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div className="sticky bottom-12 z-40 border-t border-[#1e2a2f] bg-[#0c1114] px-4 py-3 text-sm text-neutral-300 lg:bottom-0 xl:hidden">
+        <div className="mx-auto max-w-[1500px]">{state.status}</div>
+      </div>
+    </main>
+  );
+}
