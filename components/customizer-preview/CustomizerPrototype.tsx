@@ -8,6 +8,7 @@ type ViewId = "front" | "back" | "leftSleeve" | "rightSleeve" | "neckTag";
 type StagingUploadStatus = "idle" | "uploading" | "success" | "warning" | "error";
 type StagingSaveStatus = "idle" | "saving" | "success" | "warning" | "error";
 type MockupBlendMode = "normal" | "multiply" | "overlay" | "soft-light";
+type ImageFitMode = "contain" | "cover" | "stretch" | "manual";
 type TemplateCategory =
   | "Logos"
   | "Streetwear"
@@ -44,6 +45,11 @@ type EditableTemplateLayer = {
   color: string;
   fontFamily: string;
   fontSize: number;
+  fitMode?: ImageFitMode;
+  cropX?: number;
+  cropY?: number;
+  cropZoom?: number;
+  lockAspectRatio?: boolean;
   locked: boolean;
   hidden: boolean;
 };
@@ -83,11 +89,17 @@ type StagingSaveResult = {
   lineItemPropertiesPreview?: Record<string, string>;
 };
 
+type TemplateLayerSeed = Partial<Omit<EditableTemplateLayer, "id">>;
+
 type StarterTemplateCard = {
-  title: string;
+  id: string;
+  name: string;
   category: TemplateCategory;
   mode: PreviewMode | "both";
+  targetView?: ViewId;
+  thumbnail: string;
   description: string;
+  layers: TemplateLayerSeed[];
 };
 
 type StagingPrintArea = { x: number; y: number; width: number; height: number };
@@ -146,6 +158,8 @@ type StagingCustomizerConfig = {
   };
 };
 
+type MockupColorKey = "black" | "white" | "heatherGrey";
+
 type EditorState = {
   mode: PreviewMode;
   activeView: ViewId;
@@ -161,6 +175,7 @@ type EditorState = {
   layersByView: Record<ViewId, EditableTemplateLayer[]>;
   transferLayersBySize: Record<string, EditableTemplateLayer[]>;
   selectedLayerId: string | null;
+  selectedColorHex: string;
   status: string;
   usingSafeDefaults: boolean;
 };
@@ -190,31 +205,207 @@ const TEMPLATE_CATEGORIES: TemplateCategory[] = [
   "Labels",
   "Transfers",
 ];
+
+function svgDataUrl(svg: string) {
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+function createMockupSvg(label: string, variant: "front" | "back" | "sleeve" | "neck" | "transfer" | "gang") {
+  const isTransfer = variant === "transfer" || variant === "gang";
+  const sheetHeight = variant === "gang" ? 2140 : 1760;
+  const garmentBody = variant === "neck"
+    ? '<rect x="685" y="500" width="510" height="390" rx="58" fill="#101417"/><path d="M760 500 C850 660 1030 660 1120 500" fill="#06080a"/><rect x="815" y="610" width="360" height="150" rx="26" fill="#e8eef4" opacity=".92"/><rect x="855" y="648" width="280" height="64" rx="14" fill="#111827" opacity=".95"/>'
+    : variant === "sleeve"
+      ? '<path d="M760 390 C910 330 1080 330 1230 390 L1320 1260 C1120 1360 880 1360 680 1260 Z" fill="url(#shirt)" filter="url(#shadow)"/><path d="M770 510 C910 560 1080 560 1220 510 L1190 1220 C1040 1280 960 1280 810 1220 Z" fill="url(#fabric)" opacity=".7"/>'
+      : '<path d="M715 430 L520 560 L360 1280 C520 1390 650 1330 700 1210 L700 1800 L1180 1800 L1180 1210 C1230 1330 1360 1390 1520 1280 L1360 560 L1165 430 C1080 520 800 520 715 430 Z" fill="url(#shirt)" filter="url(#shadow)"/><path d="M790 310 L1180 310 L1125 470 C1020 560 890 560 735 470 Z" fill="#080b0d"/><path d="M760 585 C850 655 1080 655 1220 585 L1160 1720 L740 1720 Z" fill="url(#fabric)" opacity=".72"/>';
+
+  const transferBody = `<rect x="520" y="140" width="840" height="${sheetHeight}" rx="42" fill="url(#sheet)" filter="url(#shadow)"/><path d="M560 210 H1320 M560 320 H1320 M560 430 H1320" stroke="#d5e2ec" stroke-width="4" opacity=".55"/><path d="M620 220 V${sheetHeight + 80} M760 220 V${sheetHeight + 80} M900 220 V${sheetHeight + 80} M1040 220 V${sheetHeight + 80} M1180 220 V${sheetHeight + 80}" stroke="#edf5fb" stroke-width="3" opacity=".75"/>`;
+
+  return svgDataUrl(`<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="2400" viewBox="0 0 2000 2400">
+    <defs>
+      <radialGradient id="bg" cx="50%" cy="18%" r="78%"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#dfe8f1"/><stop offset="1" stop-color="#b9c6d1"/></radialGradient>
+      <linearGradient id="shirt" x1="0" x2="1"><stop offset="0" stop-color="#20262a"/><stop offset=".52" stop-color="#080b0d"/><stop offset="1" stop-color="#1a2024"/></linearGradient>
+      <linearGradient id="fabric" x1="0" x2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".08"/><stop offset=".5" stop-color="#ffffff" stop-opacity=".02"/><stop offset="1" stop-color="#000000" stop-opacity=".28"/></linearGradient>
+      <linearGradient id="sheet" x1="0" x2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".6" stop-color="#f6fbff"/><stop offset="1" stop-color="#e8eef5"/></linearGradient>
+      <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="52" stdDeviation="44" flood-color="#0f172a" flood-opacity=".34"/></filter>
+    </defs>
+    <rect width="2000" height="2400" rx="0" fill="url(#bg)"/>
+    <ellipse cx="1000" cy="2180" rx="610" ry="110" fill="#0f172a" opacity=".16"/>
+    ${isTransfer ? transferBody : garmentBody}
+    <text x="1000" y="2260" text-anchor="middle" font-family="Inter, Arial" font-size="42" font-weight="800" fill="#50606b" opacity=".55">${label}</text>
+  </svg>`);
+}
+
+function createTemplateThumbnail(name: string, category: string, layers: TemplateLayerSeed[]) {
+  const layerMarkup = layers.map((layer, index) => {
+    const x = layer.x ?? 50;
+    const y = layer.y ?? 50;
+    const width = layer.width ?? 44;
+    const height = layer.height ?? 20;
+    const color = layer.color || (layer.type === "shape" ? "#22d3ee" : "#e5faff");
+    if (layer.type === "text") {
+      return `<text x="${x * 4}" y="${y * 3}" text-anchor="middle" dominant-baseline="middle" font-family="${layer.fontFamily || "Inter"}" font-size="${Math.max(11, Math.min(34, layer.fontSize || 18))}" font-weight="800" fill="${color}">${escapeSvgText(layer.text || layer.name || "Text")}</text>`;
+    }
+    if (layer.type === "shape") {
+      return `<rect x="${x * 4 - width * 2}" y="${y * 3 - height * 1.5}" width="${width * 4}" height="${height * 3}" rx="12" fill="${color}" opacity="${layer.opacity ?? 0.85}"/>`;
+    }
+    return `<rect x="${x * 4 - width * 2}" y="${y * 3 - height * 1.5}" width="${width * 4}" height="${height * 3}" rx="14" fill="#071015" stroke="#67e8f9" stroke-width="2" stroke-dasharray="7 7"/><text x="${x * 4}" y="${y * 3}" text-anchor="middle" dominant-baseline="middle" font-family="Inter, Arial" font-size="13" font-weight="900" fill="#cffafe">${escapeSvgText(layer.text || layer.name || `Slot ${index + 1}`)}</text>`;
+  }).join("");
+
+  return svgDataUrl(`<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 400 300">
+    <defs><radialGradient id="g" cx="50%" cy="20%" r="80%"><stop offset="0" stop-color="#24434d"/><stop offset="1" stop-color="#071015"/></radialGradient></defs>
+    <rect width="400" height="300" rx="28" fill="url(#g)"/>
+    <rect x="78" y="42" width="244" height="210" rx="18" fill="#0d171b" stroke="#22d3ee" stroke-width="2" stroke-dasharray="8 8"/>
+    ${layerMarkup}
+    <text x="28" y="34" font-family="Inter, Arial" font-size="12" font-weight="900" fill="#67e8f9">${escapeSvgText(category)}</text>
+    <text x="200" y="278" text-anchor="middle" font-family="Inter, Arial" font-size="18" font-weight="900" fill="#ffffff">${escapeSvgText(name)}</text>
+  </svg>`);
+}
+
+const STAGING_APPAREL_MOCKUPS: Record<MockupColorKey, Record<ViewId, { label: string; url: string }>> = {
+  black: {
+    front: { label: "Black T-Shirt Front Mockup", url: "/customizer-preview/mockups/black-front.png" },
+    back: { label: "Black T-Shirt Back Mockup", url: "/customizer-preview/mockups/black-back.png" },
+    leftSleeve: { label: "Black T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/black-left-sleeve.png" },
+    rightSleeve: { label: "Black T-Shirt Right Sleeve Mockup", url: "/customizer-preview/mockups/black-right-sleeve.png" },
+    neckTag: { label: "Black T-Shirt Neck Tag Mockup", url: "/customizer-preview/mockups/black-neck-tag.png" },
+  },
+  white: {
+    front: { label: "White T-Shirt Front Mockup", url: "/customizer-preview/mockups/white-front.png" },
+    back: { label: "White T-Shirt Back Mockup", url: createMockupSvg("White back apparel staging mockup", "back") },
+    leftSleeve: { label: "White T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/white-left-sleeve.png" },
+    rightSleeve: { label: "White T-Shirt Right Sleeve Mockup", url: "/customizer-preview/mockups/white-right-sleeve.png" },
+    neckTag: { label: "White T-Shirt Neck Tag Mockup", url: "/customizer-preview/mockups/white-neck-tag.png" },
+  },
+  heatherGrey: {
+    front: { label: "Heather Gray T-Shirt Front Mockup", url: "/customizer-preview/mockups/heather-grey-front.png" },
+    back: { label: "Heather Gray T-Shirt Back Mockup", url: "/customizer-preview/mockups/heather-grey-back.png" },
+    leftSleeve: { label: "Heather Gray T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/heather-grey-left-sleeve.png" },
+    rightSleeve: { label: "Heather Gray T-Shirt Right Sleeve Mockup", url: "/customizer-preview/mockups/heather-grey-right-sleeve.png" },
+    neckTag: { label: "Heather Gray T-Shirt Neck Tag Mockup", url: "/customizer-preview/mockups/heather-grey-neck-tag.png" },
+  },
+};
+
+const STAGING_TRANSFER_MOCKUPS = {
+  transferSheet: { label: "Blank Flat White Transfer Canvas", url: createMockupSvg("Blank transfer canvas", "transfer") },
+  gangSheet: { label: "Gang Sheet Staging Mockup", url: createMockupSvg("Gang sheet staging mockup", "gang") },
+};
+
+function templateDefinition(input: Omit<StarterTemplateCard, "thumbnail">): StarterTemplateCard {
+  return {
+    ...input,
+    thumbnail: createTemplateThumbnail(input.name, input.category, input.layers),
+  };
+}
+
 const STARTER_TEMPLATE_LIBRARY: StarterTemplateCard[] = [
-  { title: "Centered Logo", category: "Logos", mode: "apparel", description: "Simple logo and text layout." },
-  { title: "Full Chest", category: "Streetwear", mode: "apparel", description: "Large apparel print with logo placeholder." },
-  { title: "Back Statement", category: "Streetwear", mode: "apparel", description: "Bold back print with editable headline." },
-  { title: "Sleeve Mark", category: "Streetwear", mode: "apparel", description: "Compact sleeve badge layout." },
-  { title: "Neck Label", category: "Labels", mode: "apparel", description: "Brand and size tag layout." },
-  { title: "Logo Transfer", category: "Transfers", mode: "transfer", description: "Logo-first transfer sheet." },
-  { title: "Text Transfer", category: "Transfers", mode: "transfer", description: "Editable text transfer layout." },
-  { title: "Sticker Sheet", category: "Stickers", mode: "transfer", description: "Multiple editable sticker slots." },
-  { title: "Jersey Name/Number", category: "Jerseys", mode: "both", description: "Name and number design starter." },
-  { title: "Gang Sheet Starter", category: "Gang Sheets", mode: "transfer", description: "Multi-artwork gang sheet starter." },
-  { title: "Brand Label", category: "Labels", mode: "transfer", description: "Small brand label layout." },
-  { title: "Boutique Logo", category: "Business", mode: "both", description: "Clean boutique brand lockup." },
-  { title: "Barber Shop Badge", category: "Business", mode: "both", description: "Badge layout for local brands." },
-  { title: "Food Truck Tee", category: "Business", mode: "apparel", description: "Menu-inspired shirt starter." },
-  { title: "Event Staff", category: "Events", mode: "apparel", description: "Staff shirt with editable role text." },
-  { title: "Birthday Crew", category: "Events", mode: "apparel", description: "Celebration layout with name text." },
-  { title: "Family Reunion Crest", category: "Family Reunion", mode: "apparel", description: "Family crest and year layout." },
-  { title: "Memorial Shirt", category: "Family Reunion", mode: "apparel", description: "Respectful photo/logo placeholder layout." },
-  { title: "Mascot Jersey", category: "Jerseys", mode: "apparel", description: "Team mascot and number layout." },
-  { title: "Varsity Transfer Pack", category: "Jerseys", mode: "transfer", description: "Numbers and name sheet." },
-  { title: "Streetwear Drop", category: "Streetwear", mode: "apparel", description: "Bold brand drop composition." },
-  { title: "Logo Sticker Pack", category: "Stickers", mode: "transfer", description: "Repeat logo sticker placements." },
-  { title: "Care Label Set", category: "Labels", mode: "transfer", description: "Label pack for apparel brands." },
-  { title: "Small Business Pack", category: "Business", mode: "transfer", description: "Logo plus contact transfer starter." },
+  templateDefinition({ id: "centered-logo", name: "Centered Logo", category: "Logos", mode: "apparel", targetView: "front", description: "Simple logo and text layout.", layers: [
+    { type: "placeholder", name: "Upload Logo", text: "Upload Logo", x: 50, y: 42, width: 48, height: 28, color: "#0f172a" },
+    { type: "text", name: "Main Text", text: "YOUR LOGO", x: 50, y: 65, width: 62, height: 13, color: "#e5faff", fontSize: 18, fontFamily: "Montserrat" },
+  ] }),
+  templateDefinition({ id: "full-chest", name: "Full Chest", category: "Streetwear", mode: "apparel", targetView: "front", description: "Large apparel print with logo placeholder.", layers: [
+    { type: "placeholder", name: "Upload Logo", text: "Upload Logo", x: 50, y: 42, width: 58, height: 30, color: "#0f172a" },
+    { type: "text", name: "Main Text", text: "YOUR BRAND", x: 50, y: 66, width: 70, height: 14, color: "#e5faff", fontSize: 18, fontFamily: "Montserrat" },
+  ] }),
+  templateDefinition({ id: "back-statement", name: "Back Statement", category: "Streetwear", mode: "apparel", targetView: "back", description: "Bold back print with editable headline.", layers: [
+    { type: "text", name: "Main Text", text: "MAKE A STATEMENT", x: 50, y: 34, width: 82, height: 18, color: "#ffffff", fontSize: 23, fontFamily: "Impact" },
+    { type: "placeholder", name: "Your Design Here", text: "Your Design Here", x: 50, y: 58, width: 62, height: 28, color: "#0f172a" },
+  ] }),
+  templateDefinition({ id: "sleeve-mark", name: "Sleeve Mark", category: "Streetwear", mode: "apparel", targetView: "leftSleeve", description: "Compact sleeve badge layout.", layers: [
+    { type: "placeholder", name: "Upload Logo", text: "Upload Logo", x: 50, y: 42, width: 70, height: 32, color: "#0f172a" },
+    { type: "text", name: "Sleeve Text", text: "EST. 2026", x: 50, y: 68, width: 76, height: 12, color: "#67e8f9", fontSize: 12 },
+  ] }),
+  templateDefinition({ id: "neck-label", name: "Neck Label", category: "Labels", mode: "apparel", targetView: "neckTag", description: "Brand and size tag layout.", layers: [
+    { type: "shape", name: "Background Badge", x: 50, y: 50, width: 82, height: 56, color: "#111827", opacity: 0.92 },
+    { type: "text", name: "Brand Text", text: "YOUR BRAND", x: 50, y: 45, width: 74, height: 16, color: "#ffffff", fontSize: 12 },
+    { type: "text", name: "Size Text", text: "SIZE L", x: 50, y: 61, width: 54, height: 12, color: "#67e8f9", fontSize: 9 },
+  ] }),
+  templateDefinition({ id: "logo-transfer", name: "Logo Transfer", category: "Transfers", mode: "transfer", description: "Logo-first transfer sheet.", layers: [
+    { type: "placeholder", name: "Upload Logo", text: "Upload Logo", x: 50, y: 42, width: 54, height: 28, color: "#0f172a" },
+    { type: "text", name: "Main Text", text: "CUSTOM TRANSFER", x: 50, y: 68, width: 70, height: 14, color: "#111827", fontSize: 18 },
+  ] }),
+  templateDefinition({ id: "text-transfer", name: "Text Transfer", category: "Transfers", mode: "transfer", description: "Editable text transfer layout.", layers: [
+    { type: "text", name: "Main Text", text: "YOUR TEXT", x: 50, y: 45, width: 78, height: 22, color: "#071015", fontSize: 34, fontFamily: "Impact" },
+    { type: "shape", name: "Accent Shape", x: 50, y: 63, width: 70, height: 8, color: "#22d3ee", opacity: 0.75 },
+  ] }),
+  templateDefinition({ id: "sticker-sheet", name: "Sticker Sheet", category: "Stickers", mode: "transfer", description: "Multiple editable sticker slots.", layers: [
+    { type: "placeholder", name: "Sticker 1", text: "Your Design Here", x: 32, y: 34, width: 34, height: 22, color: "#0f172a" },
+    { type: "placeholder", name: "Sticker 2", text: "Your Design Here", x: 68, y: 34, width: 34, height: 22, color: "#0f172a" },
+    { type: "placeholder", name: "Sticker 3", text: "Your Design Here", x: 50, y: 64, width: 42, height: 24, color: "#0f172a" },
+  ] }),
+  templateDefinition({ id: "jersey-name-number", name: "Jersey Name/Number", category: "Jerseys", mode: "both", description: "Name and number design starter.", layers: [
+    { type: "text", name: "Player Name", text: "NAME", x: 50, y: 26, width: 78, height: 15, color: "#111827", fontSize: 28, fontFamily: "Oswald" },
+    { type: "text", name: "Number", text: "23", x: 50, y: 58, width: 60, height: 42, color: "#111827", fontSize: 58, fontFamily: "Impact" },
+  ] }),
+  templateDefinition({ id: "gang-sheet-starter", name: "Gang Sheet Starter", category: "Gang Sheets", mode: "transfer", description: "Multi-artwork gang sheet starter.", layers: [
+    { type: "placeholder", name: "Logo Slot", text: "Upload Logo", x: 33, y: 28, width: 30, height: 18, color: "#0f172a" },
+    { type: "placeholder", name: "Artwork Slot", text: "Your Design Here", x: 67, y: 28, width: 30, height: 18, color: "#0f172a" },
+    { type: "text", name: "Label Text", text: "BRAND LABEL", x: 50, y: 62, width: 74, height: 16, color: "#111827", fontSize: 20 },
+  ] }),
+  templateDefinition({ id: "brand-label", name: "Brand Label", category: "Labels", mode: "transfer", description: "Small brand label layout.", layers: [
+    { type: "shape", name: "Background Badge", x: 50, y: 50, width: 76, height: 42, color: "#111827", opacity: 0.92 },
+    { type: "text", name: "Brand Text", text: "YOUR BRAND", x: 50, y: 48, width: 64, height: 16, color: "#ffffff", fontSize: 22, fontFamily: "Montserrat" },
+    { type: "text", name: "Care Text", text: "DTF TRANSFER", x: 50, y: 62, width: 54, height: 10, color: "#67e8f9", fontSize: 10 },
+  ] }),
+  templateDefinition({ id: "boutique-logo", name: "Boutique Logo", category: "Business", mode: "both", description: "Clean boutique brand lockup.", layers: [
+    { type: "shape", name: "Accent Shape", x: 50, y: 45, width: 64, height: 30, color: "#e5faff", opacity: 0.9 },
+    { type: "text", name: "Brand Text", text: "BOUTIQUE", x: 50, y: 45, width: 58, height: 14, color: "#071015", fontSize: 21, fontFamily: "Montserrat" },
+    { type: "text", name: "Tagline", text: "EST. 2026", x: 50, y: 61, width: 48, height: 10, color: "#67e8f9", fontSize: 10 },
+  ] }),
+  templateDefinition({ id: "barber-shop-badge", name: "Barber Shop Badge", category: "Business", mode: "both", description: "Badge layout for local brands.", layers: [
+    { type: "shape", name: "Background Badge", x: 50, y: 50, width: 62, height: 46, color: "#111827", opacity: 0.94 },
+    { type: "text", name: "Main Text", text: "BARBER SHOP", x: 50, y: 48, width: 56, height: 15, color: "#ffffff", fontSize: 18, fontFamily: "Oswald" },
+    { type: "text", name: "Small Text", text: "PREMIUM CUTS", x: 50, y: 63, width: 48, height: 8, color: "#67e8f9", fontSize: 8 },
+  ] }),
+  templateDefinition({ id: "food-truck-tee", name: "Food Truck Tee", category: "Business", mode: "apparel", targetView: "front", description: "Menu-inspired shirt starter.", layers: [
+    { type: "text", name: "Main Text", text: "FOOD TRUCK", x: 50, y: 36, width: 70, height: 16, color: "#ffffff", fontSize: 22, fontFamily: "Impact" },
+    { type: "placeholder", name: "Upload Logo", text: "Upload Logo", x: 50, y: 55, width: 48, height: 24, color: "#0f172a" },
+    { type: "text", name: "Menu Text", text: "LOCAL FAVORITE", x: 50, y: 72, width: 64, height: 10, color: "#67e8f9", fontSize: 10 },
+  ] }),
+  templateDefinition({ id: "event-staff", name: "Event Staff", category: "Events", mode: "apparel", targetView: "front", description: "Staff shirt with editable role text.", layers: [
+    { type: "text", name: "Role Text", text: "STAFF", x: 50, y: 43, width: 78, height: 28, color: "#ffffff", fontSize: 42, fontFamily: "Impact" },
+    { type: "text", name: "Event Text", text: "EVENT TEAM", x: 50, y: 64, width: 70, height: 12, color: "#67e8f9", fontSize: 14 },
+  ] }),
+  templateDefinition({ id: "birthday-crew", name: "Birthday Crew", category: "Events", mode: "apparel", targetView: "front", description: "Celebration layout with name text.", layers: [
+    { type: "text", name: "Main Text", text: "BIRTHDAY CREW", x: 50, y: 42, width: 80, height: 18, color: "#ffffff", fontSize: 22, fontFamily: "Montserrat" },
+    { type: "placeholder", name: "Photo Slot", text: "Your Design Here", x: 50, y: 60, width: 46, height: 24, color: "#0f172a" },
+  ] }),
+  templateDefinition({ id: "family-reunion-crest", name: "Family Reunion Crest", category: "Family Reunion", mode: "apparel", targetView: "front", description: "Family crest and year layout.", layers: [
+    { type: "placeholder", name: "Family Crest", text: "Upload Crest", x: 50, y: 43, width: 52, height: 30, color: "#0f172a" },
+    { type: "text", name: "Family Text", text: "FAMILY REUNION", x: 50, y: 67, width: 78, height: 14, color: "#e5faff", fontSize: 17 },
+  ] }),
+  templateDefinition({ id: "memorial-shirt", name: "Memorial Shirt", category: "Family Reunion", mode: "apparel", targetView: "front", description: "Respectful photo/logo placeholder layout.", layers: [
+    { type: "placeholder", name: "Photo Placeholder", text: "Upload Photo", x: 50, y: 42, width: 46, height: 32, color: "#0f172a" },
+    { type: "text", name: "Name Text", text: "IN LOVING MEMORY", x: 50, y: 67, width: 74, height: 13, color: "#ffffff", fontSize: 15 },
+  ] }),
+  templateDefinition({ id: "mascot-jersey", name: "Mascot Jersey", category: "Jerseys", mode: "apparel", targetView: "front", description: "Team mascot and number layout.", layers: [
+    { type: "placeholder", name: "Mascot Logo", text: "Upload Mascot", x: 50, y: 36, width: 44, height: 22, color: "#0f172a" },
+    { type: "text", name: "Number", text: "23", x: 50, y: 62, width: 52, height: 38, color: "#ffffff", fontSize: 54, fontFamily: "Impact" },
+  ] }),
+  templateDefinition({ id: "varsity-transfer-pack", name: "Varsity Transfer Pack", category: "Jerseys", mode: "transfer", description: "Numbers and name sheet.", layers: [
+    { type: "text", name: "Player Name", text: "PLAYER", x: 50, y: 28, width: 76, height: 16, color: "#111827", fontSize: 26, fontFamily: "Oswald" },
+    { type: "text", name: "Number", text: "23", x: 50, y: 58, width: 62, height: 42, color: "#111827", fontSize: 58, fontFamily: "Impact" },
+  ] }),
+  templateDefinition({ id: "streetwear-drop", name: "Streetwear Drop", category: "Streetwear", mode: "apparel", targetView: "front", description: "Bold brand drop composition.", layers: [
+    { type: "text", name: "Top Text", text: "LIMITED DROP", x: 50, y: 33, width: 76, height: 14, color: "#67e8f9", fontSize: 16 },
+    { type: "placeholder", name: "Main Artwork", text: "Your Design Here", x: 50, y: 54, width: 62, height: 28, color: "#0f172a" },
+    { type: "text", name: "Bottom Text", text: "DTF COLLECTION", x: 50, y: 72, width: 70, height: 10, color: "#ffffff", fontSize: 10 },
+  ] }),
+  templateDefinition({ id: "logo-sticker-pack", name: "Logo Sticker Pack", category: "Stickers", mode: "transfer", description: "Repeat logo sticker placements.", layers: [
+    { type: "placeholder", name: "Sticker Logo 1", text: "Logo", x: 30, y: 35, width: 30, height: 20, color: "#0f172a" },
+    { type: "placeholder", name: "Sticker Logo 2", text: "Logo", x: 70, y: 35, width: 30, height: 20, color: "#0f172a" },
+    { type: "placeholder", name: "Sticker Logo 3", text: "Logo", x: 50, y: 64, width: 36, height: 22, color: "#0f172a" },
+  ] }),
+  templateDefinition({ id: "care-label-set", name: "Care Label Set", category: "Labels", mode: "transfer", description: "Label pack for apparel brands.", layers: [
+    { type: "shape", name: "Label Block", x: 50, y: 44, width: 72, height: 28, color: "#111827", opacity: 0.92 },
+    { type: "text", name: "Care Text", text: "WASH COLD", x: 50, y: 44, width: 60, height: 12, color: "#ffffff", fontSize: 15 },
+    { type: "text", name: "Brand Text", text: "YOUR BRAND", x: 50, y: 61, width: 58, height: 10, color: "#111827", fontSize: 10 },
+  ] }),
+  templateDefinition({ id: "small-business-pack", name: "Small Business Pack", category: "Business", mode: "transfer", description: "Logo plus contact transfer starter.", layers: [
+    { type: "placeholder", name: "Business Logo", text: "Upload Logo", x: 50, y: 36, width: 48, height: 24, color: "#0f172a" },
+    { type: "text", name: "Business Name", text: "SMALL BUSINESS", x: 50, y: 60, width: 72, height: 14, color: "#111827", fontSize: 18 },
+    { type: "text", name: "Contact Text", text: "@YOURHANDLE", x: 50, y: 72, width: 60, height: 9, color: "#111827", fontSize: 9 },
+  ] }),
 ];
 const STAGING_CUSTOMIZER_CONFIG_STORAGE_KEY = "dtf-staging-customizer-config";
 const SAFE_TRANSFER_SIZE = "3x3";
@@ -246,7 +437,7 @@ const initialState: EditorState = {
   transferSize: SAFE_TRANSFER_SIZE,
   artworkByView: emptyArtworkByView,
   transferArtwork: null,
-  zoom: 96,
+  zoom: 108,
   rotation: 0,
   scale: 56,
   x: 50,
@@ -255,6 +446,7 @@ const initialState: EditorState = {
   layersByView: emptyLayersByView,
   transferLayersBySize: emptyTransferLayersBySize,
   selectedLayerId: null,
+  selectedColorHex: "#101316",
   status: "Prototype ready. No live checkout connection.",
   usingSafeDefaults: false,
 };
@@ -288,91 +480,35 @@ function layerDefaults(layer: Partial<EditableTemplateLayer>): EditableTemplateL
     color: layer.color || "#67e8f9",
     fontFamily: layer.fontFamily || "Inter",
     fontSize: layer.fontSize ?? 28,
+    fitMode: layer.fitMode || (layer.type === "image" ? "contain" : undefined),
+    cropX: layer.cropX ?? 50,
+    cropY: layer.cropY ?? 50,
+    cropZoom: layer.cropZoom ?? 100,
+    lockAspectRatio: layer.lockAspectRatio ?? true,
     locked: layer.locked ?? false,
     hidden: layer.hidden ?? false,
   };
 }
 
-function createTemplateLayers(template: string, mode: PreviewMode): EditableTemplateLayer[] {
-  const base = (layers: Array<Partial<EditableTemplateLayer>>) =>
-    layers.map((layer, index) => layerDefaults({ ...layer, id: createLayerId(template, index) }));
+function findTemplate(templateIdOrName: string, mode: PreviewMode) {
+  return STARTER_TEMPLATE_LIBRARY.find(
+    (template) =>
+      (template.id === templateIdOrName || template.name === templateIdOrName) &&
+      (template.mode === mode || template.mode === "both")
+  );
+}
 
-  if (mode === "transfer") {
-    if (template === "Text Transfer") {
-      return base([
-        { type: "text", name: "Main Text", text: "YOUR TEXT", x: 50, y: 45, width: 78, height: 22, color: "#071015", fontSize: 34, fontFamily: "Impact" },
-        { type: "shape", name: "Accent Shape", x: 50, y: 63, width: 70, height: 8, color: "#22d3ee", opacity: 0.75 },
-      ]);
-    }
-    if (template === "Sticker Sheet") {
-      return base([
-        { type: "placeholder", name: "Sticker 1", text: "Your Design Here", x: 32, y: 34, width: 34, height: 22, color: "#0f172a" },
-        { type: "placeholder", name: "Sticker 2", text: "Your Design Here", x: 68, y: 34, width: 34, height: 22, color: "#0f172a" },
-        { type: "placeholder", name: "Sticker 3", text: "Your Design Here", x: 50, y: 64, width: 42, height: 24, color: "#0f172a" },
-      ]);
-    }
-    if (template === "Jersey Name/Number") {
-      return base([
-        { type: "text", name: "Player Name", text: "NAME", x: 50, y: 26, width: 78, height: 15, color: "#111827", fontSize: 28, fontFamily: "Oswald" },
-        { type: "text", name: "Number", text: "23", x: 50, y: 58, width: 60, height: 42, color: "#111827", fontSize: 58, fontFamily: "Impact" },
-      ]);
-    }
-    if (template === "Gang Sheet Starter") {
-      return base([
-        { type: "placeholder", name: "Logo Slot", text: "Upload Logo", x: 33, y: 28, width: 30, height: 18, color: "#0f172a" },
-        { type: "placeholder", name: "Artwork Slot", text: "Your Design Here", x: 67, y: 28, width: 30, height: 18, color: "#0f172a" },
-        { type: "text", name: "Label Text", text: "BRAND LABEL", x: 50, y: 62, width: 74, height: 16, color: "#111827", fontSize: 20 },
-      ]);
-    }
-    if (template === "Brand Label") {
-      return base([
-        { type: "shape", name: "Background Badge", x: 50, y: 50, width: 76, height: 42, color: "#111827", opacity: 0.92 },
-        { type: "text", name: "Brand Text", text: "YOUR BRAND", x: 50, y: 48, width: 64, height: 16, color: "#ffffff", fontSize: 22, fontFamily: "Montserrat" },
-        { type: "text", name: "Care Text", text: "DTF TRANSFER", x: 50, y: 62, width: 54, height: 10, color: "#67e8f9", fontSize: 10 },
-      ]);
-    }
-    return base([
-      { type: "placeholder", name: "Upload Logo", text: "Upload Logo", x: 50, y: 42, width: 54, height: 28, color: "#0f172a" },
-      { type: "text", name: "Main Text", text: "CUSTOM TRANSFER", x: 50, y: 68, width: 70, height: 14, color: "#111827", fontSize: 18 },
-    ]);
-  }
+function createTemplateLayers(templateIdOrName: string, mode: PreviewMode): EditableTemplateLayer[] {
+  const template = findTemplate(templateIdOrName, mode) || findTemplate(mode === "transfer" ? "logo-transfer" : "centered-logo", mode);
+  const templateKey = template?.id || templateIdOrName;
+  const layers = template?.layers || [];
 
-  if (template === "Full Chest") {
-    return base([
-      { type: "placeholder", name: "Upload Logo", text: "Upload Logo", x: 50, y: 42, width: 58, height: 30, color: "#0f172a" },
-      { type: "text", name: "Main Text", text: "YOUR BRAND", x: 50, y: 66, width: 70, height: 14, color: "#e5faff", fontSize: 18, fontFamily: "Montserrat" },
-    ]);
-  }
-  if (template === "Back Statement") {
-    return base([
-      { type: "text", name: "Main Text", text: "MAKE A STATEMENT", x: 50, y: 34, width: 82, height: 18, color: "#ffffff", fontSize: 23, fontFamily: "Impact" },
-      { type: "placeholder", name: "Your Design Here", text: "Your Design Here", x: 50, y: 58, width: 62, height: 28, color: "#0f172a" },
-    ]);
-  }
-  if (template === "Sleeve Mark") {
-    return base([
-      { type: "placeholder", name: "Upload Logo", text: "Upload Logo", x: 50, y: 42, width: 70, height: 32, color: "#0f172a" },
-      { type: "text", name: "Sleeve Text", text: "EST. 2026", x: 50, y: 68, width: 76, height: 12, color: "#67e8f9", fontSize: 12 },
-    ]);
-  }
-  if (template === "Neck Label") {
-    return base([
-      { type: "shape", name: "Background Badge", x: 50, y: 50, width: 82, height: 56, color: "#111827", opacity: 0.92 },
-      { type: "text", name: "Brand Text", text: "YOUR BRAND", x: 50, y: 45, width: 74, height: 16, color: "#ffffff", fontSize: 12 },
-      { type: "text", name: "Size Text", text: "SIZE L", x: 50, y: 61, width: 54, height: 12, color: "#67e8f9", fontSize: 9 },
-    ]);
-  }
-  return base([
-    { type: "placeholder", name: "Upload Logo", text: "Upload Logo", x: 50, y: 43, width: 48, height: 28, color: "#0f172a" },
-    { type: "text", name: "Main Text", text: "YOUR LOGO", x: 50, y: 65, width: 62, height: 13, color: "#e5faff", fontSize: 18, fontFamily: "Montserrat" },
-  ]);
+  return layers.map((layer, index) => layerDefaults({ ...layer, id: createLayerId(templateKey, index) }));
 }
 
 function getRecommendedViewForTemplate(template: string, currentView: ViewId): ViewId {
-  if (template === "Neck Label") return "neckTag";
-  if (template === "Sleeve Mark") return "leftSleeve";
-  if (template === "Back Statement") return "back";
-  if (template === "Full Chest" || template === "Centered Logo") return currentView === "back" ? "back" : "front";
+  const templateConfig = STARTER_TEMPLATE_LIBRARY.find((item) => item.id === template || item.name === template);
+  if (templateConfig?.targetView) return templateConfig.targetView;
   return currentView;
 }
 
@@ -388,6 +524,20 @@ function getUploadStatusClass(status: StagingUploadStatus | StagingSaveStatus) {
   if (status === "error") return "border-red-400/50 bg-red-950/40 text-red-100";
   if (status === "uploading" || status === "saving") return "border-cyan-400/50 bg-cyan-950/40 text-cyan-100";
   return "border-[#2c424a] bg-[#081114] text-neutral-300";
+}
+
+function getAssetStatusClass(status: string) {
+  if (status === "ready") return "text-emerald-300";
+  if (status === "pending" || status === "uploading" || status === "saving") return "text-cyan-200";
+  if (status === "future") return "text-neutral-400";
+  return "text-yellow-200";
+}
+
+function getMockupColorKey(hexOrLabel: string): MockupColorKey {
+  const normalized = hexOrLabel.trim().toLowerCase();
+  if (normalized.includes("white") || normalized === "#fff" || normalized === "#ffffff" || normalized === "#f4f7fb") return "white";
+  if (normalized.includes("gray") || normalized.includes("grey") || normalized === "#334155" || normalized === "#64748b") return "heatherGrey";
+  return "black";
 }
 
 function getCurrentArtwork(state: EditorState) {
@@ -421,6 +571,11 @@ function mapLayerToPayloadLayer(
     height: layer.height,
     rotation: layer.rotation,
     opacity: layer.opacity,
+    fitMode: layer.fitMode,
+    cropX: layer.cropX,
+    cropY: layer.cropY,
+    cropZoom: layer.cropZoom,
+    lockAspectRatio: layer.lockAspectRatio,
     printLocationId: state.mode === "apparel" ? state.activeView : undefined,
     transferSizeId: state.mode === "transfer" ? safeTransferSize : undefined,
     qualityStatus: "good_quality",
@@ -501,9 +656,9 @@ function getDefaultPrintAreaForView(state: EditorState): StagingPrintArea {
   const defaults: Record<ViewId, StagingPrintArea> = {
     front: { x: 50, y: 56, width: 38, height: 50 },
     back: { x: 50, y: 56, width: 42, height: 50 },
-    leftSleeve: { x: 50, y: 50, width: 17, height: 31 },
-    rightSleeve: { x: 50, y: 50, width: 17, height: 31 },
-    neckTag: { x: 50, y: 28, width: 22, height: 14 },
+    leftSleeve: { x: 51, y: 50, width: 30, height: 42 },
+    rightSleeve: { x: 49, y: 50, width: 30, height: 42 },
+    neckTag: { x: 50, y: 43, width: 28, height: 17 },
   };
 
   return defaults[state.activeView];
@@ -534,16 +689,31 @@ function getPrintAreaStyle(area: StagingPrintArea) {
   };
 }
 
-function getFitLayerSize(state: EditorState) {
-  if (state.mode === "transfer") {
-    return state.transferSize === "Gang Sheet"
-      ? { width: 82, height: 54 }
-      : { width: 70, height: 44 };
-  }
+function getLayerAspectRatio(layer: EditableTemplateLayer | null) {
+  if (!layer || !Number.isFinite(layer.width) || !Number.isFinite(layer.height) || layer.height <= 0) return 1;
+  return layer.width / layer.height;
+}
 
-  if (state.activeView === "neckTag") return { width: 72, height: 48 };
-  if (state.activeView === "leftSleeve" || state.activeView === "rightSleeve") return { width: 72, height: 54 };
-  return { width: 70, height: 42 };
+function getProportionalFitSize(layer: EditableTemplateLayer | null) {
+  const aspectRatio = getLayerAspectRatio(layer);
+  const maxWidth = 100;
+  const maxHeight = 100;
+  if (aspectRatio >= 1) {
+    return { width: maxWidth, height: clamp(maxWidth / aspectRatio, 6, maxHeight) };
+  }
+  return { width: clamp(maxHeight * aspectRatio, 6, maxWidth), height: maxHeight };
+}
+
+function clampLayerInsidePrintArea(layer: EditableTemplateLayer) {
+  const width = safeNumber(layer.width, 1, 100, 54);
+  const height = safeNumber(layer.height, 1, 100, 32);
+  return {
+    ...layer,
+    width,
+    height,
+    x: safeNumber(layer.x, width / 2, 100 - width / 2, 50),
+    y: safeNumber(layer.y, height / 2, 100 - height / 2, 50),
+  };
 }
 
 function ModeButton({
@@ -610,18 +780,6 @@ function PanelCard({ title, children }: { title: string; children: React.ReactNo
       <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-300">{title}</h2>
       <div className="mt-2">{children}</div>
     </section>
-  );
-}
-
-function ToolbarButton({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="min-w-0 rounded-lg border border-[#2b3d44] bg-[#0b1215] px-3.5 py-2 text-sm font-bold text-neutral-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:border-cyan-400 hover:text-cyan-100"
-    >
-      {label}
-    </button>
   );
 }
 
@@ -709,6 +867,8 @@ export default function CustomizerPrototype() {
   const configuredTransferSizes = getConfiguredTransferSizes(stagingConfig);
   const selectedTransferConfig = configuredTransferSizes.find((size) => size.id === safeTransferSize) || configuredTransferSizes[0];
   const configuredColors = stagingConfig?.colors?.filter((color) => color.enabled !== false && color.hex) || PRODUCT_COLORS.map((hex) => ({ hex, label: hex }));
+  const selectedColor = configuredColors.find((color) => color.hex?.toLowerCase() === state.selectedColorHex.toLowerCase()) || configuredColors[0];
+  const selectedMockupColorKey = getMockupColorKey(`${selectedColor?.label || ""} ${selectedColor?.hex || state.selectedColorHex}`);
   const configuredMaterials = stagingConfig?.materialOptions?.filter((material) => material.enabled !== false).map((material) => material.label || material.id || "Material") || MATERIAL_OPTIONS;
   const templateSettings = stagingConfig?.stagingSettings?.templateSettings;
   const enabledTemplateCategories = templateSettings?.enabledCategories?.length ? templateSettings.enabledCategories : TEMPLATE_CATEGORIES;
@@ -721,11 +881,27 @@ export default function CustomizerPrototype() {
         ? stagingConfig?.stagingSettings?.gangSheetMockupUrl || stagingConfig?.stagingSettings?.transferMockupUrl
         : stagingConfig?.stagingSettings?.transferMockupUrl;
   const safeMockupUrl = activeMockupUrl && !brokenMockupUrls.includes(activeMockupUrl) ? activeMockupUrl : "";
+  const fallbackMockupUrl =
+    state.mode === "apparel"
+      ? STAGING_APPAREL_MOCKUPS[selectedMockupColorKey][state.activeView].url
+      : safeTransferSize === "Gang Sheet"
+        ? STAGING_TRANSFER_MOCKUPS.gangSheet.url
+        : STAGING_TRANSFER_MOCKUPS.transferSheet.url;
+  const displayMockupUrl = safeMockupUrl || fallbackMockupUrl;
+  const displayMockupLabel =
+    state.mode === "apparel"
+      ? STAGING_APPAREL_MOCKUPS[selectedMockupColorKey][state.activeView].label
+      : safeTransferSize === "Gang Sheet"
+        ? STAGING_TRANSFER_MOCKUPS.gangSheet.label
+        : STAGING_TRANSFER_MOCKUPS.transferSheet.label;
+  const hasBakedPrintGuide = state.mode === "apparel" && displayMockupUrl.startsWith("/customizer-preview/mockups/");
   const mockupLoadFailed = Boolean(activeMockupUrl && brokenMockupUrls.includes(activeMockupUrl));
   const activeLayers = getActiveLayers(state);
   const selectedLayer = activeLayers.find((layer) => layer.id === state.selectedLayerId) || activeLayers[0] || null;
+  const selectedImageLayer = selectedLayer?.type === "image" ? selectedLayer : null;
+  const selectedTemplateConfig = STARTER_TEMPLATE_LIBRARY.find((template) => template.name === state.selectedTemplate);
   const safeZoom = safeNumber(state.zoom, 55, 110, 82);
-  const previewMaxHeight = Math.round(680 * (safeZoom / 100));
+  const previewMaxHeight = Math.round(760 * (safeZoom / 100));
   const safeScale = safeNumber(selectedLayer?.width ?? state.scale, 8, 100, 56);
   const safeX = safeNumber(selectedLayer?.x ?? state.x, 0, 100, 50);
   const safeY = safeNumber(selectedLayer?.y ?? state.y, 0, 100, 45);
@@ -753,6 +929,43 @@ export default function CustomizerPrototype() {
   );
   const selectedWidthInches = selectedLayer ? (selectedLayer.width / 100) * measurementReference.width : 0;
   const selectedHeightInches = selectedLayer ? (selectedLayer.height / 100) * measurementReference.height : 0;
+  const printReadyPlan = useMemo(() => {
+    const dpiTarget = safeNumber(stagingConfig?.fileRules?.recommendedDpi || stagingConfig?.fileRules?.minDpi || 300, 72, 1200, 300);
+    const printWidthInches = selectedLayer ? Math.max(0.1, Number(selectedWidthInches.toFixed(2))) : measurementReference.width;
+    const printHeightInches = selectedLayer ? Math.max(0.1, Number(selectedHeightInches.toFixed(2))) : measurementReference.height;
+    const warnings = [
+      !hostedArtworkUrl ? "Hosted artworkOriginalUrl is missing. Run Test Staging Upload before production handoff." : "",
+      !hostedPreviewImageUrl ? "Hosted previewImageUrl is pending. Run Test Generate Preview Image before production handoff." : "",
+      !hostedDesignJsonUrl ? "Hosted designJsonUrl is pending. Run Test Save Design JSON before production handoff." : "",
+      dpiTarget < 300 ? "DPI target is below the recommended 300 DPI print target." : "",
+      stagingConfig?.stagingSettings?.transparentBackgroundRecommended === false
+        ? "Transparent background recommendation is disabled in staging config."
+        : "",
+    ].filter(Boolean);
+
+    return {
+      stagingOnly: true,
+      status: "planned",
+      printWidthInches,
+      printHeightInches,
+      dpiTarget,
+      transparentBackgroundRequired: true,
+      warnings,
+      futurePrintReadyFileUrl: "",
+    };
+  }, [
+    hostedArtworkUrl,
+    hostedDesignJsonUrl,
+    hostedPreviewImageUrl,
+    measurementReference.height,
+    measurementReference.width,
+    selectedHeightInches,
+    selectedLayer,
+    selectedWidthInches,
+    stagingConfig?.fileRules?.minDpi,
+    stagingConfig?.fileRules?.recommendedDpi,
+    stagingConfig?.stagingSettings?.transparentBackgroundRecommended,
+  ]);
   const filteredTemplateLibrary = useMemo(() => {
     const query = templateSearch.trim().toLowerCase();
 
@@ -766,8 +979,9 @@ export default function CustomizerPrototype() {
       const categoryMatch = activeTemplateCategory === "All" || template.category === activeTemplateCategory;
       const queryMatch =
         !query ||
-        template.title.toLowerCase().includes(query) ||
+        template.name.toLowerCase().includes(query) ||
         template.description.toLowerCase().includes(query) ||
+        template.id.toLowerCase().includes(query) ||
         template.category.toLowerCase().includes(query);
 
       return modeMatch && templateModeEnabled && categoryEnabled && categoryMatch && queryMatch;
@@ -799,7 +1013,7 @@ export default function CustomizerPrototype() {
 
   const designJson = useMemo(() => {
     const selectedViewLabel = APPAREL_VIEWS.find((view) => view.id === state.activeView)?.label || "Front";
-    const selectedColorLabel = configuredColors[0]?.label || "Black";
+    const selectedColorLabel = selectedColor?.label || selectedColor?.hex || "Black";
     const selectedMaterial = configuredMaterials[0] || "Hot Peel Film";
     const selectedInkOption = stagingConfig?.stagingSettings?.inkOptions?.[0] || "CMYK";
 
@@ -815,6 +1029,7 @@ export default function CustomizerPrototype() {
       selectedInkOption: state.mode === "transfer" ? selectedInkOption : undefined,
       printArea: printAreaResult.area,
       canvasSize: measurementReference,
+      printReadyPlan,
       layers: activeLayers.map((layer) => ({
         ...layer,
         sourceUrl: layer.sourceUrl?.startsWith("blob:") ? undefined : layer.sourceUrl,
@@ -826,7 +1041,7 @@ export default function CustomizerPrototype() {
         inkOpacity: safeArtworkOpacity,
         textureOverlayEnabled,
       },
-      templateId: state.selectedTemplate.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+      templateId: selectedTemplateConfig?.id || state.selectedTemplate.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
       templateName: state.selectedTemplate,
       qualityStatus: "good_quality",
       createdAt: new Date().toISOString(),
@@ -834,15 +1049,18 @@ export default function CustomizerPrototype() {
     };
   }, [
     activeLayers,
-    configuredColors,
     configuredMaterials,
     effectiveBlendMode,
     fabricBlendEnabled,
     measurementReference,
+    printReadyPlan,
     printAreaResult.area,
     safeArtworkOpacity,
     safeTransferSize,
     selectedLayer?.id,
+    selectedTemplateConfig?.id,
+    selectedColor?.hex,
+    selectedColor?.label,
     stagingConfig?.label,
     stagingConfig?.productHandle,
     stagingConfig?.stagingSettings?.inkOptions,
@@ -855,7 +1073,7 @@ export default function CustomizerPrototype() {
   const stagingDesignPayload = useMemo(() => {
     const selectedViewLabel = APPAREL_VIEWS.find((view) => view.id === state.activeView)?.label || "Front";
     const selectedTarget = state.mode === "apparel" ? selectedViewLabel : safeTransferSize;
-    const selectedColorLabel = configuredColors[0]?.label || "Black";
+    const selectedColorLabel = selectedColor?.label || selectedColor?.hex || "Black";
 
     return {
       configId: "customizer-preview-staging",
@@ -874,6 +1092,7 @@ export default function CustomizerPrototype() {
       previewImageUrl: hostedPreviewImageUrl,
       designJsonUrl: hostedDesignJsonUrl,
       printReadyFileUrl: "",
+      printReadyPlan,
       layers: activeLayers.length > 0
         ? activeLayers.map((layer) => mapLayerToPayloadLayer(layer, state, safeTransferSize, hostedArtworkUrl))
         : [
@@ -901,11 +1120,13 @@ export default function CustomizerPrototype() {
   }, [
     currentArtwork?.name,
     activeLayers,
-    configuredColors,
     configuredMaterials,
     hostedDesignJsonUrl,
     hostedArtworkUrl,
     hostedPreviewImageUrl,
+    printReadyPlan,
+    selectedColor?.hex,
+    selectedColor?.label,
     safeRotation,
     safeScale,
     safeArtworkOpacity,
@@ -918,6 +1139,64 @@ export default function CustomizerPrototype() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Delete" && event.key !== "Backspace") return;
+
+      const target = event.target as HTMLElement | null;
+      const tagName = target?.tagName.toLowerCase();
+      const isTypingTarget =
+        tagName === "input" ||
+        tagName === "textarea" ||
+        tagName === "select" ||
+        Boolean(target?.isContentEditable);
+
+      if (isTypingTarget || !state.selectedLayerId) return;
+
+      event.preventDefault();
+      setState((current) => {
+        const layers =
+          current.mode === "apparel"
+            ? current.layersByView[current.activeView] || []
+            : current.transferLayersBySize[getSafeTransferSize(current.transferSize)] || [];
+        const selectedIndex = layers.findIndex((layer) => layer.id === current.selectedLayerId);
+
+        if (selectedIndex < 0) return current;
+
+        const selected = layers[selectedIndex];
+        const remainingLayers = layers.filter((layer) => layer.id !== selected.id);
+        const nextSelected = remainingLayers[Math.min(selectedIndex, remainingLayers.length - 1)] || null;
+        const status = event.key === "Backspace" ? "Selected layer deleted with Backspace." : "Selected layer deleted.";
+
+        if (current.mode === "apparel") {
+          return {
+            ...current,
+            layersByView: {
+              ...current.layersByView,
+              [current.activeView]: remainingLayers,
+            },
+            selectedLayerId: nextSelected?.id || null,
+            status,
+          };
+        }
+
+        const size = getSafeTransferSize(current.transferSize);
+        return {
+          ...current,
+          transferLayersBySize: {
+            ...current.transferLayersBySize,
+            [size]: remainingLayers,
+          },
+          selectedLayerId: nextSelected?.id || null,
+          status,
+        };
+      });
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [state.selectedLayerId]);
 
   if (!isMounted) {
     return (
@@ -972,7 +1251,7 @@ export default function CustomizerPrototype() {
         ...updateActiveLayers(current, (layers) =>
           layers.map((layer) =>
             layer.id === current.selectedLayerId && (!layer.locked || Object.prototype.hasOwnProperty.call(updates, "locked"))
-              ? { ...layer, ...updates }
+              ? clampLayerInsidePrintArea({ ...layer, ...updates })
               : layer
           )
         ),
@@ -981,19 +1260,86 @@ export default function CustomizerPrototype() {
     });
   };
 
-  const loadEditableTemplate = (template: string) => {
+  const deleteSelectedLayer = (status = "Selected layer deleted from the staging design.") => {
     setState((current) => {
-      const layers = createTemplateLayers(template, current.mode);
-      const targetView = current.mode === "apparel" ? getRecommendedViewForTemplate(template, current.activeView) : current.activeView;
+      const layers = getActiveLayers(current);
+      const selectedIndex = layers.findIndex((layer) => layer.id === current.selectedLayerId);
+
+      if (selectedIndex < 0) {
+        return { ...current, status: "Select a layer before deleting." };
+      }
+
+      const selected = layers[selectedIndex];
+      const remainingLayers = layers.filter((layer) => layer.id !== selected.id);
+      const nextSelected = remainingLayers[Math.min(selectedIndex, remainingLayers.length - 1)] || null;
+
+      return {
+        ...updateActiveLayers(current, () => remainingLayers),
+        selectedLayerId: nextSelected?.id || null,
+        status,
+      };
+    });
+  };
+
+  const updateSelectedImageFit = (mode: ImageFitMode) => {
+    setState((current) => {
+      const layers = getActiveLayers(current);
+      const selected = layers.find((layer) => layer.id === current.selectedLayerId);
+      if (!selected || selected.type !== "image") {
+        return { ...current, status: "Select an uploaded image layer before changing image fit." };
+      }
+
+      const proportionalSize = getProportionalFitSize(selected);
+      const updates: Partial<EditableTemplateLayer> =
+        mode === "stretch"
+          ? { fitMode: "stretch", x: 50, y: 50, width: 100, height: 100, cropX: 50, cropY: 50, cropZoom: 100, lockAspectRatio: false }
+        : mode === "cover"
+            ? { fitMode: "cover", x: 50, y: 50, width: 100, height: 100, cropX: 50, cropY: 50, cropZoom: Math.max(selected.cropZoom || 100, 100), lockAspectRatio: true }
+            : mode === "manual"
+              ? { fitMode: "manual", lockAspectRatio: false }
+              : { fitMode: "contain", x: 50, y: 50, width: proportionalSize.width, height: proportionalSize.height, cropX: 50, cropY: 50, cropZoom: 100, lockAspectRatio: true };
+
+      return {
+        ...updateActiveLayers(current, (currentLayers) =>
+          currentLayers.map((layer) => (layer.id === selected.id ? clampLayerInsidePrintArea({ ...layer, ...updates }) : layer))
+        ),
+        x: updates.x ?? current.x,
+        y: updates.y ?? current.y,
+        scale: updates.width ?? current.scale,
+        status:
+          mode === "stretch"
+            ? "Selected image stretched to the full print area."
+            : mode === "cover"
+              ? "Selected image set to fill/crop inside the print area."
+              : mode === "manual"
+                ? "Manual image sizing enabled."
+                : "Selected image fit proportionally inside the print area.",
+      };
+    });
+  };
+
+  const resetSelectedImageCrop = () => {
+    updateSelectedLayer(
+      { cropX: 50, cropY: 50, cropZoom: 100 },
+      "Image crop reset. Source artwork was not changed."
+    );
+  };
+
+  const loadEditableTemplate = (templateIdOrName: string) => {
+    setState((current) => {
+      const template = findTemplate(templateIdOrName, current.mode);
+      const templateName = template?.name || templateIdOrName;
+      const layers = createTemplateLayers(templateIdOrName, current.mode);
+      const targetView = current.mode === "apparel" ? getRecommendedViewForTemplate(templateIdOrName, current.activeView) : current.activeView;
       const targetTransferSize = current.mode === "transfer" ? getSafeTransferSize(current.transferSize) : current.transferSize;
       const nextState = { ...current, activeView: targetView, transferSize: targetTransferSize };
       return {
         ...updateActiveLayers(nextState, () => layers),
-        selectedTemplate: template,
+        selectedTemplate: templateName,
         selectedLayerId: layers[0]?.id || null,
         status: current.mode === "apparel"
-          ? `${template} editable starter template loaded for ${getCanvasLabel(nextState)}.`
-          : `${template} editable starter template loaded. Edit layers in the left panel.`,
+          ? `${templateName} editable starter template loaded for ${getCanvasLabel(nextState)}.`
+          : `${templateName} editable starter template loaded. Edit layers in the left panel.`,
       };
     });
   };
@@ -1081,6 +1427,11 @@ export default function CustomizerPrototype() {
           rotation: placeholderIndex >= 0 ? layers[placeholderIndex].rotation : 0,
           opacity: placeholderIndex >= 0 ? layers[placeholderIndex].opacity : 1,
           color: "#ffffff",
+          fitMode: "contain",
+          cropX: 50,
+          cropY: 50,
+          cropZoom: 100,
+          lockAspectRatio: true,
         });
 
         if (placeholderIndex >= 0) {
@@ -1129,20 +1480,7 @@ export default function CustomizerPrototype() {
   };
 
   const removeArtwork = () => {
-    setState((current) => {
-      const layers = getActiveLayers(current);
-      const selected = layers.find((layer) => layer.id === current.selectedLayerId);
-
-      if (!selected) {
-        return { ...current, status: "Select a layer before deleting." };
-      }
-
-      return {
-        ...updateActiveLayers(current, (currentLayers) => currentLayers.filter((layer) => layer.id !== selected.id)),
-        selectedLayerId: layers.find((layer) => layer.id !== selected.id)?.id || null,
-        status: `${selected.name} deleted from the staging design.`,
-      };
-    });
+    deleteSelectedLayer();
   };
 
   const testStagingUpload = async () => {
@@ -1510,50 +1848,8 @@ export default function CustomizerPrototype() {
     }
   };
 
-  const fitArtwork = () => {
-    setState((current) => ({
-      ...updateActiveLayers(current, (layers) =>
-        layers.map((layer) =>
-          layer.id === current.selectedLayerId && !layer.locked
-            ? { ...layer, x: 50, y: 50, ...getFitLayerSize(current), rotation: 0 }
-            : layer
-        )
-      ),
-      scale: getFitLayerSize(current).width,
-      x: 50,
-      y: 50,
-      rotation: 0,
-      status: current.selectedLayerId ? "Selected layer fit to the active print area." : "Artwork fit to the active preview area.",
-    }));
-  };
-
   const setStatusOnly = (status: string) => {
     setState((current) => ({ ...current, status }));
-  };
-
-  const centerDesign = () => {
-    setState((current) => ({
-      ...updateActiveLayers(current, (layers) =>
-        layers.map((layer) => (layer.id === current.selectedLayerId && !layer.locked ? { ...layer, x: 50, y: 50 } : layer))
-      ),
-      x: 50,
-      y: 50,
-      status: current.selectedLayerId ? "Selected layer centered in the print area." : "Design centered in the active preview area.",
-    }));
-  };
-
-  const rotateDesign = () => {
-    setState((current) => ({
-      ...updateActiveLayers(current, (layers) =>
-        layers.map((layer) =>
-          layer.id === current.selectedLayerId && !layer.locked
-            ? { ...layer, rotation: layer.rotation >= 30 ? -30 : layer.rotation + 15 }
-            : layer
-        )
-      ),
-      rotation: current.rotation >= 30 ? -30 : current.rotation + 15,
-      status: current.selectedLayerId ? "Selected layer rotated locally." : "Preview artwork rotated locally.",
-    }));
   };
 
   const duplicateDesign = () => {
@@ -1604,8 +1900,8 @@ export default function CustomizerPrototype() {
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-[1680px] gap-0 xl:h-[calc(100dvh-56px)] xl:overflow-hidden xl:grid-cols-[320px_minmax(0,1fr)_340px]">
-        <aside className={`${mobilePanel === "tools" ? "block" : "hidden"} bg-[#0b1519] p-3 pt-4 xl:block xl:h-full xl:min-h-0 xl:overflow-y-auto xl:border-r xl:border-[#18313a] xl:[scrollbar-color:#27515d_#081114] xl:[scrollbar-width:thin]`}>
+      <div className="mx-auto grid max-w-[1840px] gap-0 xl:h-[calc(100dvh-56px)] xl:overflow-hidden xl:grid-cols-[286px_minmax(0,1fr)_300px]">
+        <aside className={`${mobilePanel === "tools" ? "block" : "hidden"} bg-[#0b1519] p-2.5 pt-3 xl:block xl:h-full xl:min-h-0 xl:overflow-y-auto xl:border-r xl:border-[#18313a] xl:[scrollbar-color:#27515d_#081114] xl:[scrollbar-width:thin]`}>
           <div className="space-y-2.5">
             <PanelCard title="Layers">
               <div className="space-y-2 text-sm text-neutral-300">
@@ -1771,12 +2067,58 @@ export default function CustomizerPrototype() {
             </PanelCard>
 
             <PanelCard title="Image Tools">
-              <div className="grid grid-cols-2 gap-2">
-                {["Remove Background", "Clean Colors", "Upscale / Enhance", "Vectorize"].map((item) => (
-                  <ToolButton key={item} label={item} onClick={runAiPlaceholder} />
-                ))}
-                <ToolButton label="Opacity" onClick={() => setStatusOnly("Opacity control is staged.")} />
-                <ToolButton label="Flip" onClick={() => setStatusOnly("Flip control is staged.")} />
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  {["Remove Background", "Clean Colors", "Upscale / Enhance", "Vectorize"].map((item) => (
+                    <ToolButton key={item} label={item} onClick={runAiPlaceholder} />
+                  ))}
+                  <ToolButton label="Opacity" onClick={() => setStatusOnly("Opacity control is staged.")} />
+                  <ToolButton label="Flip" onClick={() => setStatusOnly("Flip control is staged.")} />
+                </div>
+                <div className="rounded-md border border-[#263d45] bg-[#081114] p-2">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-cyan-200">Image Fit</p>
+                    <span className="text-[10px] uppercase tracking-wide text-neutral-500">
+                      {selectedImageLayer?.fitMode || "select image"}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <ToolButton label="Fit Proportional" onClick={() => updateSelectedImageFit("contain")} />
+                    <ToolButton label="Fill / Crop" onClick={() => updateSelectedImageFit("cover")} />
+                    <ToolButton label="Stretch to Area" onClick={() => updateSelectedImageFit("stretch")} />
+                    <ToolButton label="Reset Crop" onClick={resetSelectedImageCrop} />
+                  </div>
+                  <label className="mt-2 flex items-center justify-between gap-3 rounded-md border border-[#2c424a] px-2 py-1.5 text-xs text-neutral-300">
+                    <span>Lock Aspect Ratio</span>
+                    <input
+                      type="checkbox"
+                      checked={selectedImageLayer?.lockAspectRatio !== false}
+                      onChange={(event) => updateSelectedLayer({ lockAspectRatio: event.target.checked, fitMode: event.target.checked ? selectedImageLayer?.fitMode || "contain" : "manual" }, "Image aspect ratio lock updated.")}
+                      disabled={!selectedImageLayer}
+                    />
+                  </label>
+                  <Slider
+                    label="Crop X"
+                    value={safeNumber(selectedImageLayer?.cropX || 50, 0, 100, 50)}
+                    min={0}
+                    max={100}
+                    onChange={(cropX) => updateSelectedLayer({ cropX, fitMode: selectedImageLayer?.fitMode === "stretch" ? "stretch" : "cover" }, "Image crop X updated.")}
+                  />
+                  <Slider
+                    label="Crop Y"
+                    value={safeNumber(selectedImageLayer?.cropY || 50, 0, 100, 50)}
+                    min={0}
+                    max={100}
+                    onChange={(cropY) => updateSelectedLayer({ cropY, fitMode: selectedImageLayer?.fitMode === "stretch" ? "stretch" : "cover" }, "Image crop Y updated.")}
+                  />
+                  <Slider
+                    label="Crop Zoom"
+                    value={safeNumber(selectedImageLayer?.cropZoom || 100, 60, 220, 100)}
+                    min={60}
+                    max={220}
+                    onChange={(cropZoom) => updateSelectedLayer({ cropZoom, fitMode: selectedImageLayer?.fitMode === "stretch" ? "stretch" : "cover" }, "Image crop zoom updated.")}
+                  />
+                </div>
               </div>
             </PanelCard>
 
@@ -1788,10 +2130,44 @@ export default function CustomizerPrototype() {
                   min={8}
                   max={100}
                   onChange={(scale) => {
-                    updateSelectedLayer({ width: scale, height: selectedLayer ? clamp(scale * (selectedLayer.height / Math.max(selectedLayer.width, 1)), 6, 100) : scale }, "Selected layer resized.");
+                    const nextHeight =
+                      selectedLayer?.type === "image" && selectedLayer.lockAspectRatio === false
+                        ? selectedLayer.height
+                        : selectedLayer
+                          ? clamp(scale * (selectedLayer.height / Math.max(selectedLayer.width, 1)), 6, 100)
+                          : scale;
+                    updateSelectedLayer({ width: scale, height: nextHeight, fitMode: selectedLayer?.type === "image" ? "manual" : selectedLayer?.fitMode }, "Selected layer resized.");
                     setState((current) => ({ ...current, scale }));
                   }}
                 />
+                {selectedImageLayer ? (
+                  <div className="rounded-md border border-[#263d45] bg-[#081114] p-2">
+                    <Slider
+                      label="Image Width"
+                      value={safeNumber(selectedImageLayer.width, 6, 100, 56)}
+                      min={6}
+                      max={100}
+                      onChange={(width) => {
+                        const height = selectedImageLayer.lockAspectRatio === false
+                          ? selectedImageLayer.height
+                          : clamp(width / getLayerAspectRatio(selectedImageLayer), 6, 100);
+                        updateSelectedLayer({ width, height, fitMode: "manual" }, "Image width updated.");
+                      }}
+                    />
+                    <Slider
+                      label="Image Height"
+                      value={safeNumber(selectedImageLayer.height, 6, 100, 42)}
+                      min={6}
+                      max={100}
+                      onChange={(height) => {
+                        const width = selectedImageLayer.lockAspectRatio === false
+                          ? selectedImageLayer.width
+                          : clamp(height * getLayerAspectRatio(selectedImageLayer), 6, 100);
+                        updateSelectedLayer({ width, height, fitMode: "manual" }, "Image height updated.");
+                      }}
+                    />
+                  </div>
+                ) : null}
                 <Slider
                   label="X Position"
                   value={safeX}
@@ -1822,12 +2198,6 @@ export default function CustomizerPrototype() {
                     setState((current) => ({ ...current, rotation }));
                   }}
                 />
-                <div className="grid grid-cols-3 gap-2">
-                  <ToolButton label="Resize" onClick={() => setStatusOnly("Resize mode is staged.")} />
-                  <ToolButton label="Position" onClick={() => setStatusOnly("Position mode is staged.")} />
-                  <ToolButton label="Align" onClick={() => setStatusOnly("Align controls are staged.")} />
-                  <ToolButton label="Center" onClick={centerDesign} />
-                </div>
               </div>
             </PanelCard>
 
@@ -1842,8 +2212,8 @@ export default function CustomizerPrototype() {
           </div>
         </aside>
 
-        <section className="flex min-h-[620px] flex-col bg-[#121a1f] p-2.5 xl:h-full xl:min-h-0 xl:overflow-hidden">
-          <div className="mb-1.5 grid shrink-0 grid-cols-2 gap-2 lg:grid-cols-4">
+        <section className="flex min-h-[620px] flex-col bg-[#121a1f] p-2 xl:h-full xl:min-h-0 xl:overflow-hidden">
+          <div className="mb-1 grid shrink-0 grid-cols-2 gap-2 lg:grid-cols-4">
             <label className="min-h-[58px] cursor-pointer rounded-lg border border-cyan-400/50 bg-cyan-300 p-2 text-left text-[#061015] shadow-[0_10px_24px_rgba(34,211,238,0.18)] transition hover:bg-cyan-200">
               <span className="flex items-center justify-between gap-2">
                 <span className="grid h-7 w-7 place-items-center rounded-md bg-[#061015] text-[10px] font-black text-cyan-200">UP</span>
@@ -1906,7 +2276,7 @@ export default function CustomizerPrototype() {
             </div>
           </div>
 
-          <div className="relative grid min-h-[390px] min-w-0 flex-1 place-items-center overflow-hidden rounded-xl border border-[#2d454f] bg-[radial-gradient(circle_at_50%_42%,rgba(86,166,188,0.34)_0%,rgba(22,36,43,0.88)_36%,#070d10_76%)] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_28px_90px_rgba(0,0,0,0.42)] xl:min-h-0">
+          <div className="relative grid min-h-[390px] min-w-0 flex-1 place-items-center overflow-hidden rounded-xl border border-[#2d454f] bg-[radial-gradient(circle_at_50%_42%,rgba(86,166,188,0.3)_0%,rgba(22,36,43,0.82)_34%,#070d10_75%)] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_28px_90px_rgba(0,0,0,0.42)] xl:min-h-0">
             {state.usingSafeDefaults ? (
               <div className="absolute left-3 top-3 z-30 rounded-full border border-yellow-400/40 bg-yellow-950/80 px-3 py-1 text-xs font-semibold text-yellow-100">
                 Using safe preview defaults.
@@ -1928,23 +2298,26 @@ export default function CustomizerPrototype() {
               </div>
             ) : null}
             <div
-              className="relative aspect-[5/6] min-h-[330px] max-w-full shrink-0 overflow-visible rounded-2xl border border-white/20 bg-[linear-gradient(145deg,#f8fbff_0%,#dce6ef_46%,#ffffff_100%)] shadow-[0_38px_100px_rgba(0,0,0,0.58),0_0_0_1px_rgba(103,232,249,0.12),inset_0_1px_0_rgba(255,255,255,0.85)]"
+              className="relative aspect-[5/6] min-h-[360px] max-w-full shrink-0 overflow-visible rounded-2xl border border-white/20 bg-[linear-gradient(145deg,#f8fbff_0%,#dce6ef_46%,#ffffff_100%)] shadow-[0_38px_100px_rgba(0,0,0,0.58),0_0_0_1px_rgba(103,232,249,0.12),inset_0_1px_0_rgba(255,255,255,0.85)]"
               style={{
                 height: `min(calc(100% - 2px), ${previewMaxHeight}px)`,
-                maxWidth: "min(100%, 760px)",
+                maxWidth: "min(100%, 900px)",
               }}
             >
-              {safeMockupUrl ? (
+              {displayMockupUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={safeMockupUrl}
-                  alt="Configured staging mockup"
+                  src={displayMockupUrl}
+                  alt={safeMockupUrl ? "Configured staging mockup" : displayMockupLabel}
                   className="absolute inset-0 z-0 h-full w-full rounded-2xl object-contain"
-                  onError={() => setBrokenMockupUrls((current) => current.includes(safeMockupUrl) ? current : [...current, safeMockupUrl])}
+                  onError={() => {
+                    if (!safeMockupUrl) return;
+                    setBrokenMockupUrls((current) => current.includes(safeMockupUrl) ? current : [...current, safeMockupUrl]);
+                  }}
                 />
               ) : null}
               {state.mode === "apparel" ? (
-                <div className={`absolute inset-0 grid place-items-center overflow-hidden ${safeMockupUrl ? "opacity-0" : ""}`}>
+                <div className={`absolute inset-0 grid place-items-center overflow-hidden ${displayMockupUrl ? "opacity-0" : ""}`}>
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_15%,rgba(255,255,255,0.82),transparent_24%),radial-gradient(circle_at_50%_74%,rgba(15,23,42,0.18),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.26),rgba(15,23,42,0.08))]" />
                   <div className="relative h-[90%] w-[72%] drop-shadow-[0_30px_48px_rgba(0,0,0,0.48)]">
                     <div className="absolute left-[21%] top-[3%] h-[15%] w-[58%] rounded-b-[46%] bg-[linear-gradient(180deg,#1b2024_0%,#080b0d_82%)] shadow-[inset_0_-10px_18px_rgba(0,0,0,0.55)]" />
@@ -1956,14 +2329,18 @@ export default function CustomizerPrototype() {
                   </div>
                 </div>
               ) : (
-                <div className={`absolute inset-0 grid place-items-center overflow-hidden bg-[linear-gradient(145deg,#eef6fb_0%,#dce6ef_100%)] ${safeMockupUrl ? "opacity-0" : ""}`}>
+                <div className={`absolute inset-0 grid place-items-center overflow-hidden bg-[linear-gradient(145deg,#eef6fb_0%,#dce6ef_100%)] ${displayMockupUrl ? "opacity-0" : ""}`}>
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.7),transparent_30%)]" />
                   <div className="h-[90%] w-[66%] rounded-md border border-slate-300 bg-[linear-gradient(180deg,#ffffff_0%,#f7fbff_100%)] shadow-[0_28px_60px_rgba(15,23,42,0.22),inset_0_0_0_1px_rgba(255,255,255,0.8)]" />
                 </div>
               )}
 
               <div
-                className="absolute z-20 -translate-x-1/2 -translate-y-1/2 border border-dashed border-cyan-300 bg-cyan-300/5 shadow-[0_0_0_1px_rgba(8,47,73,0.35),0_0_32px_rgba(34,211,238,0.16)]"
+                className={`absolute z-20 -translate-x-1/2 -translate-y-1/2 ${
+                  hasBakedPrintGuide
+                    ? "border border-transparent bg-transparent"
+                    : "border border-dashed border-cyan-300 bg-cyan-300/5 shadow-[0_0_0_1px_rgba(8,47,73,0.35),0_0_32px_rgba(34,211,238,0.16)]"
+                }`}
                 style={getPrintAreaStyle(printAreaResult.area)}
               >
                 <span className="absolute -right-1 -top-5 text-[10px] font-semibold uppercase tracking-wide text-cyan-100/80">
@@ -2009,20 +2386,38 @@ export default function CustomizerPrototype() {
                       };
 
                       if (layer.type === "image" && layer.sourceUrl) {
+                        const fitMode = layer.fitMode || "contain";
+                        const cropZoom = safeNumber(layer.cropZoom || 100, fitMode === "cover" ? 100 : 60, 220, 100);
+                        const cropX = safeNumber(layer.cropX || 50, 0, 100, 50);
+                        const cropY = safeNumber(layer.cropY || 50, 0, 100, 50);
+                        const imageObjectFit =
+                          fitMode === "contain" ? "contain" : fitMode === "cover" ? "cover" : "fill";
                         return (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
+                          <button
                             key={layer.id}
-                            src={layer.sourceUrl}
-                            alt={layer.sourceName || layer.name}
+                            type="button"
                             onClick={() => setState((current) => ({ ...current, selectedLayerId: layer.id, status: `${layer.name} selected.` }))}
-                            className={`absolute max-h-none max-w-none cursor-pointer rounded-sm object-contain shadow-[0_10px_18px_rgba(0,0,0,0.22)] ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
+                            className={`absolute cursor-pointer overflow-hidden rounded-sm border border-transparent shadow-[0_10px_18px_rgba(0,0,0,0.22)] ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
                             style={{
                               ...commonStyle,
                               mixBlendMode: state.mode === "apparel" ? effectiveBlendMode : "normal",
                             }}
-                            draggable={false}
-                          />
+                            aria-label={layer.sourceName || layer.name}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={layer.sourceUrl}
+                              alt={layer.sourceName || layer.name}
+                              className="pointer-events-none absolute inset-0 h-full w-full max-w-none"
+                              style={{
+                                transform: fitMode === "cover" ? `scale(${cropZoom / 100})` : "none",
+                                transformOrigin: `${cropX}% ${cropY}%`,
+                                objectFit: imageObjectFit,
+                                objectPosition: fitMode === "cover" ? `${cropX}% ${cropY}%` : "50% 50%",
+                              }}
+                              draggable={false}
+                            />
+                          </button>
                         );
                       }
 
@@ -2092,21 +2487,9 @@ export default function CustomizerPrototype() {
             </div>
           </div>
 
-          <div className="sticky bottom-0 z-30 mt-1.5 flex shrink-0 flex-wrap items-center justify-center gap-2 rounded-xl border border-cyan-300/30 bg-[#0b1215]/98 px-3 py-2 shadow-[0_-14px_30px_rgba(0,0,0,0.28)]">
-            <ToolbarButton label="Undo" onClick={() => setStatusOnly("Undo is staged for preview history.")} />
-            <ToolbarButton label="Redo" onClick={() => setStatusOnly("Redo is staged for preview history.")} />
-            <ToolbarButton label="Zoom Out" onClick={() => setState((current) => ({ ...current, zoom: clamp(current.zoom - 8, 55, 120), status: "Zoomed out locally." }))} />
-            <ToolbarButton label="Zoom In" onClick={() => setState((current) => ({ ...current, zoom: clamp(current.zoom + 8, 55, 120), status: "Zoomed in locally." }))} />
-            <ToolbarButton label="Rotate" onClick={rotateDesign} />
-            <ToolbarButton label="Duplicate" onClick={duplicateDesign} />
-            <ToolbarButton label="Delete" onClick={removeArtwork} />
-            <ToolbarButton label="Center Design" onClick={centerDesign} />
-            <ToolbarButton label="Fit to Area" onClick={fitArtwork} />
-            <ToolbarButton label="Save Design" onClick={saveDesign} />
-          </div>
         </section>
 
-        <section className={`${mobilePanel === "assistant" || mobilePanel === "order" ? "block" : "hidden"} border-t border-[#1e2a2f] bg-[#11181c] p-3 pt-4 lg:block lg:border-l lg:border-t-0 xl:h-full xl:min-h-0 xl:overflow-y-auto xl:[scrollbar-color:#27515d_#081114] xl:[scrollbar-width:thin]`}>
+        <section className={`${mobilePanel === "assistant" || mobilePanel === "order" ? "block" : "hidden"} border-t border-[#1e2a2f] bg-[#11181c] p-2.5 pt-3 lg:block lg:border-l lg:border-t-0 xl:h-full xl:min-h-0 xl:overflow-y-auto xl:[scrollbar-color:#27515d_#081114] xl:[scrollbar-width:thin]`}>
           <div className="space-y-3">
             {state.mode === "apparel" ? (
               <PanelCard title="Product Colors">
@@ -2115,9 +2498,17 @@ export default function CustomizerPrototype() {
                     <button
                       key={color.hex}
                       type="button"
-                      onClick={() => setStatusOnly(`Color ${color.label || color.hex} selected for preview.`)}
+                      onClick={() => {
+                        setState((current) => ({
+                          ...current,
+                          selectedColorHex: color.hex || current.selectedColorHex,
+                          status: `${color.label || color.hex} mockup selected for staging preview.`,
+                        }));
+                      }}
                       title={color.label || color.hex}
-                      className="h-9 rounded-full border border-white/20"
+                      className={`h-9 rounded-full border transition ${
+                        selectedColor?.hex === color.hex ? "border-cyan-200 ring-2 ring-cyan-300/70" : "border-white/20"
+                      }`}
                       style={{ backgroundColor: color.hex }}
                     />
                   ))}
@@ -2259,8 +2650,8 @@ export default function CustomizerPrototype() {
             <div className={`${mobilePanel === "order" ? "block" : "hidden"} lg:block`}>
               <PanelCard title="Preview Order">
                 <details open={isPreviewOrderOpen} onToggle={(event) => setIsPreviewOrderOpen(event.currentTarget.open)}>
-                  <summary className="cursor-pointer text-sm font-semibold text-cyan-100">Show local payload</summary>
-                  <dl className="mt-3 space-y-2 text-sm">
+                  <summary className="cursor-pointer text-sm font-semibold text-cyan-100">Preview order status</summary>
+                  <dl className="mt-3 space-y-1.5 text-xs">
                     <div className="flex justify-between gap-3">
                       <dt className="text-neutral-500">Mode</dt>
                       <dd className="text-neutral-200">{state.mode}</dd>
@@ -2288,33 +2679,60 @@ export default function CustomizerPrototype() {
                       <p className="mt-2 text-neutral-500">{stagingConfig.stagingSettings.pricingPreview.quantityBreaks || "Quantity breaks staged only."}</p>
                     </div>
                   ) : null}
-                  <div className="mt-3 rounded-md border border-[#263d45] bg-[#081114] p-3 text-xs text-neutral-300">
+                  <div className="mt-3 rounded-md border border-[#263d45] bg-[#081114] p-2.5 text-xs text-neutral-300">
                     <div className="font-semibold uppercase tracking-wide text-cyan-200">Staging Asset URLs</div>
-                    <dl className="mt-2 grid grid-cols-[1fr_auto] gap-x-3 gap-y-2">
+                    <dl className="mt-2 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1.5">
                       <dt className="text-neutral-500">Hosted Artwork URL</dt>
-                      <dd className={hostedArtworkStatus === "ready" ? "text-emerald-300" : "text-yellow-200"}>
+                      <dd className={getAssetStatusClass(hostedArtworkStatus)}>
                         {hostedArtworkStatus}
                       </dd>
                       <dt className="text-neutral-500">Preview Image URL</dt>
-                      <dd className={hostedPreviewImageStatus === "ready" ? "text-emerald-300" : hostedPreviewImageStatus === "pending" ? "text-cyan-200" : "text-yellow-200"}>
+                      <dd className={getAssetStatusClass(hostedPreviewImageStatus)}>
                         {hostedPreviewImageStatus}
                       </dd>
                       <dt className="text-neutral-500">Design JSON URL</dt>
-                      <dd className={hostedDesignJsonStatus === "ready" ? "text-emerald-300" : hostedDesignJsonStatus === "pending" ? "text-cyan-200" : "text-yellow-200"}>
+                      <dd className={getAssetStatusClass(hostedDesignJsonStatus)}>
                         {hostedDesignJsonStatus}
                       </dd>
                       <dt className="text-neutral-500">Print Ready File URL</dt>
-                      <dd className="text-neutral-400">future</dd>
+                      <dd className={getAssetStatusClass("future")}>future</dd>
                     </dl>
-                    {hostedArtworkUrl ? (
-                      <p className="mt-2 truncate text-cyan-200" title={hostedArtworkUrl}>{hostedArtworkUrl}</p>
-                    ) : (
-                      <p className="mt-2 text-yellow-100">Run Test Staging Upload with configured Cloudinary env vars to attach a hosted artwork URL.</p>
-                    )}
+                    <details className="mt-2">
+                      <summary className="cursor-pointer font-semibold text-cyan-100">Show hosted URL details</summary>
+                      <div className="mt-2 max-h-28 space-y-1 overflow-auto rounded-md bg-[#05090b] p-2 [scrollbar-color:#27515d_#081114] [scrollbar-width:thin]">
+                        <p className="break-all text-cyan-200">Artwork: {hostedArtworkUrl || "missing"}</p>
+                        <p className="break-all text-cyan-200">Preview: {hostedPreviewImageUrl || "pending"}</p>
+                        <p className="break-all text-cyan-200">Design JSON: {hostedDesignJsonUrl || "pending"}</p>
+                      </div>
+                    </details>
                   </div>
-                  <pre className="mt-3 max-h-32 overflow-auto rounded-md bg-[#080c0e] p-3 text-xs text-neutral-400">
-                    {JSON.stringify(previewPayload, null, 2)}
-                  </pre>
+                  <div className="mt-3 rounded-md border border-[#263d45] bg-[#081114] p-2.5 text-xs text-neutral-300">
+                    <div className="font-semibold uppercase tracking-wide text-cyan-200">Print-Ready Plan</div>
+                    <dl className="mt-2 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1.5">
+                      <dt className="text-neutral-500">Status</dt>
+                      <dd className="text-cyan-200">{printReadyPlan.status}</dd>
+                      <dt className="text-neutral-500">Print Size</dt>
+                      <dd className="text-neutral-200">
+                        {printReadyPlan.printWidthInches}&quot; x {printReadyPlan.printHeightInches}&quot;
+                      </dd>
+                      <dt className="text-neutral-500">DPI Target</dt>
+                      <dd className="text-neutral-200">{printReadyPlan.dpiTarget}</dd>
+                      <dt className="text-neutral-500">Transparent BG</dt>
+                      <dd className="text-neutral-200">{printReadyPlan.transparentBackgroundRequired ? "required" : "optional"}</dd>
+                      <dt className="text-neutral-500">Print Ready URL</dt>
+                      <dd className={getAssetStatusClass("future")}>future</dd>
+                    </dl>
+                    {printReadyPlan.warnings.length > 0 ? (
+                      <details className="mt-2">
+                        <summary className="cursor-pointer font-semibold text-yellow-100">Show print-ready warnings</summary>
+                        <ul className="mt-2 max-h-24 space-y-1 overflow-auto rounded-md bg-[#05090b] p-2 text-yellow-100 [scrollbar-color:#27515d_#081114] [scrollbar-width:thin]">
+                          {printReadyPlan.warnings.map((warning) => (
+                            <li key={warning}>{warning}</li>
+                          ))}
+                        </ul>
+                      </details>
+                    ) : null}
+                  </div>
                   <div className="mt-3 rounded-lg border border-[#20343b] bg-[#071015] p-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${getUploadStatusClass(designJsonStatus)}`}>
@@ -2355,23 +2773,30 @@ export default function CustomizerPrototype() {
                         {stagingSaveStatus === "saving" ? "Testing..." : "Test Save Payload"}
                       </button>
                     </div>
-                    {designJsonResult ? (
-                      <div className="mt-2 rounded-md border border-[#263d45] bg-[#081114] p-2 text-xs">
+                    <details className="mt-2">
+                      <summary className="cursor-pointer text-xs font-semibold text-cyan-100">Show local payload JSON</summary>
+                      <pre className="mt-2 max-h-28 overflow-auto rounded-md bg-[#080c0e] p-2 text-xs text-neutral-400 [scrollbar-color:#27515d_#081114] [scrollbar-width:thin]">
+                        {JSON.stringify(previewPayload, null, 2)}
+                      </pre>
+                    </details>
+                    <div className="mt-2 max-h-64 overflow-auto pr-1 [scrollbar-color:#27515d_#081114] [scrollbar-width:thin]">
+                      {designJsonResult ? (
+                      <div className="rounded-md border border-[#263d45] bg-[#081114] p-2 text-xs">
                         <div className="font-semibold text-cyan-100">Design JSON Asset</div>
-                        {designJsonResult.asset?.url ? <p className="mt-1 truncate text-emerald-200">{designJsonResult.asset.url}</p> : null}
+                        {designJsonResult.asset?.url ? <p className="mt-1 break-all text-emerald-200">{designJsonResult.asset.url}</p> : null}
                         {designJsonResult.warnings.length > 0 ? <p className="mt-1 text-yellow-100">{designJsonResult.warnings[0]}</p> : null}
                         {designJsonResult.errors.length > 0 ? <p className="mt-1 text-red-100">{designJsonResult.errors[0]}</p> : null}
                       </div>
-                    ) : null}
-                    {previewImageResult ? (
+                      ) : null}
+                      {previewImageResult ? (
                       <div className="mt-2 rounded-md border border-[#263d45] bg-[#081114] p-2 text-xs">
                         <div className="font-semibold text-cyan-100">Preview Image Asset</div>
-                        {previewImageResult.asset?.url ? <p className="mt-1 truncate text-emerald-200">{previewImageResult.asset.url}</p> : null}
+                        {previewImageResult.asset?.url ? <p className="mt-1 break-all text-emerald-200">{previewImageResult.asset.url}</p> : null}
                         {previewImageResult.warnings.length > 0 ? <p className="mt-1 text-yellow-100">{previewImageResult.warnings[0]}</p> : null}
                         {previewImageResult.errors.length > 0 ? <p className="mt-1 text-red-100">{previewImageResult.errors[0]}</p> : null}
                       </div>
-                    ) : null}
-                    {stagingSaveResult ? (
+                      ) : null}
+                      {stagingSaveResult ? (
                       <div className="mt-2 space-y-2 text-xs">
                         {stagingSaveResult.savedDesign ? (
                           <dl className="grid grid-cols-[92px_minmax(0,1fr)] gap-x-2 gap-y-1 text-neutral-400">
@@ -2406,7 +2831,8 @@ export default function CustomizerPrototype() {
                           </ul>
                         ) : null}
                       </div>
-                    ) : null}
+                      ) : null}
+                    </div>
                   </div>
                 </details>
               </PanelCard>
@@ -2455,18 +2881,21 @@ export default function CustomizerPrototype() {
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {filteredTemplateLibrary.map((template) => (
                   <article
-                    key={`${template.category}-${template.title}`}
+                    key={template.id}
                     className="rounded-xl border border-[#243b43] bg-[linear-gradient(145deg,#101b20,#071015)] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
                   >
-                    <div className="mb-3 aspect-[4/3] overflow-hidden rounded-lg border border-white/10 bg-[radial-gradient(circle_at_50%_35%,rgba(103,232,249,0.18),transparent_30%),linear-gradient(145deg,#14242a,#080d10)] p-3">
-                      <div className="grid h-full place-items-center rounded-md border border-dashed border-cyan-300/45 bg-cyan-300/5 text-center text-xs font-black uppercase tracking-wide text-cyan-100">
-                        {template.title}
-                      </div>
+                    <div className="mb-3 aspect-[4/3] overflow-hidden rounded-lg border border-white/10 bg-[radial-gradient(circle_at_50%_35%,rgba(103,232,249,0.18),transparent_30%),linear-gradient(145deg,#14242a,#080d10)]">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={template.thumbnail} alt={`${template.name} template thumbnail`} className="h-full w-full object-cover" />
                     </div>
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h3 className="font-semibold text-white">{template.title}</h3>
+                        <h3 className="font-semibold text-white">{template.name}</h3>
                         <p className="mt-1 text-xs leading-5 text-neutral-400">{template.description}</p>
+                        <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
+                          {template.layers.length} editable layers
+                          {template.targetView ? ` - ${APPAREL_VIEWS.find((view) => view.id === template.targetView)?.label || template.targetView}` : ""}
+                        </p>
                       </div>
                       <span className="shrink-0 rounded-full border border-cyan-300/30 px-2 py-1 text-[10px] font-semibold text-cyan-200">
                         {template.category}
@@ -2475,7 +2904,7 @@ export default function CustomizerPrototype() {
                     <button
                       type="button"
                       onClick={() => {
-                        loadEditableTemplate(template.title);
+                        loadEditableTemplate(template.id);
                         setIsTemplateLibraryOpen(false);
                       }}
                       className="mt-3 w-full rounded-md border border-cyan-300 bg-cyan-300 px-3 py-2 text-sm font-black text-neutral-950 transition hover:bg-cyan-200"
