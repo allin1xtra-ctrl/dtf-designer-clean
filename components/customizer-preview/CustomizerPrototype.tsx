@@ -1365,7 +1365,7 @@ export default function CustomizerPrototype() {
         layers.map((layer) => {
           if (layer.id !== current.selectedLayerId || layer.locked) return layer;
           didUpdate = true;
-          return clampLayerInsidePrintArea({ ...layer, ...getProportionalScaleSize(layer, scale) });
+          return { ...layer, ...getProportionalScaleSize(layer, scale) };
         })
       );
 
@@ -1378,53 +1378,23 @@ export default function CustomizerPrototype() {
   };
 
   const updateLayerWidth = (width: number) => {
-    if (!selectedImageLayer) {
-      updateSelectedLayerFields({ width }, "Selected layer width updated.");
-      return;
-    }
-
-    const height =
-      selectedImageLayer.lockAspectRatio === false
-        ? selectedImageLayer.height
-        : clamp(width / getLayerAspectRatio(selectedImageLayer), 1, 100);
-    updateSelectedLayerFields({ width, height, fitMode: "manual" }, "Image width updated.");
+    updateSelectedLayerFields({ width, fitMode: selectedImageLayer ? "manual" : selectedLayer?.fitMode }, "Image width updated.", false);
   };
 
   const updateLayerHeight = (height: number) => {
-    if (!selectedImageLayer) {
-      updateSelectedLayerFields({ height }, "Selected layer height updated.");
-      return;
-    }
-
-    const width =
-      selectedImageLayer.lockAspectRatio === false
-        ? selectedImageLayer.width
-        : clamp(height * getLayerAspectRatio(selectedImageLayer), 1, 100);
-    updateSelectedLayerFields({ width, height, fitMode: "manual" }, "Image height updated.");
+    updateSelectedLayerFields({ height, fitMode: selectedImageLayer ? "manual" : selectedLayer?.fitMode }, "Image height updated.", false);
   };
 
   const updateLayerX = (x: number) => {
-    updateSelectedLayerFields({ x }, "Selected layer moved horizontally.");
+    updateSelectedLayerFields({ x }, "Selected layer moved horizontally.", false);
   };
 
   const updateLayerY = (y: number) => {
-    updateSelectedLayerFields({ y }, "Selected layer moved vertically.");
+    updateSelectedLayerFields({ y }, "Selected layer moved vertically.", false);
   };
 
   const updateLayerRotation = (rotation: number) => {
-    updateSelectedLayerFields({ rotation }, "Selected layer rotation updated.");
-  };
-
-  const updateLayerCropX = (cropX: number) => {
-    updateSelectedLayerFields({ cropX }, "Image crop X updated.", false);
-  };
-
-  const updateLayerCropY = (cropY: number) => {
-    updateSelectedLayerFields({ cropY }, "Image crop Y updated.", false);
-  };
-
-  const updateLayerCropZoom = (cropZoom: number) => {
-    updateSelectedLayerFields({ cropZoom }, "Image crop zoom updated.", false);
+    updateSelectedLayerFields({ rotation }, "Selected layer rotation updated.", false);
   };
 
   const deleteSelectedLayer = (status = "Selected layer deleted from the staging design.") => {
@@ -2255,36 +2225,6 @@ export default function CustomizerPrototype() {
                     <ToolButton label="Stretch to Area" onClick={() => updateSelectedImageFit("stretch")} />
                     <ToolButton label="Reset Crop" onClick={resetSelectedImageCrop} />
                   </div>
-                  <label className="mt-2 flex items-center justify-between gap-3 rounded-md border border-[#2c424a] px-2 py-1.5 text-xs text-neutral-300">
-                    <span>Lock Aspect Ratio</span>
-                    <input
-                      type="checkbox"
-                      checked={selectedImageLayer?.lockAspectRatio !== false}
-                      onChange={(event) => updateSelectedLayerFields({ lockAspectRatio: event.target.checked }, "Image aspect ratio lock updated.", false)}
-                      disabled={!selectedImageLayer}
-                    />
-                  </label>
-                  <Slider
-                    label="Crop X"
-                    value={safeNumber(selectedImageLayer?.cropX || 50, 0, 100, 50)}
-                    min={0}
-                    max={100}
-                    onChange={updateLayerCropX}
-                  />
-                  <Slider
-                    label="Crop Y"
-                    value={safeNumber(selectedImageLayer?.cropY || 50, 0, 100, 50)}
-                    min={0}
-                    max={100}
-                    onChange={updateLayerCropY}
-                  />
-                  <Slider
-                    label="Crop Zoom"
-                    value={safeNumber(selectedImageLayer?.cropZoom || 100, 60, 220, 100)}
-                    min={60}
-                    max={220}
-                    onChange={updateLayerCropZoom}
-                  />
                 </div>
               </div>
             </PanelCard>
