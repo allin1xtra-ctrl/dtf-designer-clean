@@ -873,11 +873,15 @@ function Slider({
   max: number;
   onChange: (value: number) => void;
 }) {
+  const displayValue = Number.isFinite(value) ? Math.round(value) : value;
+
   return (
-    <label className="block">
-      <span className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-neutral-400">
-        {label}
-        <span>{value}</span>
+    <label className="block min-h-[44px]">
+      <span className="grid grid-cols-[minmax(0,1fr)_3.25rem] items-center gap-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
+        <span className="min-w-0 truncate">{label}</span>
+        <span className="inline-flex h-5 min-w-[3.25rem] justify-end text-right tabular-nums text-neutral-300">
+          {displayValue}
+        </span>
       </span>
       <input
         type="range"
@@ -885,7 +889,7 @@ function Slider({
         max={max}
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
-        className="mt-2 w-full accent-cyan-300"
+        className="mt-2 block h-5 w-full accent-cyan-300"
       />
     </label>
   );
@@ -2230,7 +2234,7 @@ export default function CustomizerPrototype() {
             </PanelCard>
 
             <PanelCard title="Positioning">
-              <div className="space-y-3">
+              <div className="min-h-[344px] space-y-3 [font-variant-numeric:tabular-nums]">
                 <Slider
                   label="Scale"
                   value={safeScale}
@@ -2239,7 +2243,7 @@ export default function CustomizerPrototype() {
                   onChange={updateLayerScale}
                 />
                 {selectedImageLayer ? (
-                  <div className="rounded-md border border-[#263d45] bg-[#081114] p-2">
+                  <div className="min-h-[104px] rounded-md border border-[#263d45] bg-[#081114] p-2">
                     <Slider
                       label="Image Width"
                       value={safeNumber(selectedImageLayer.width, 6, 100, 56)}
