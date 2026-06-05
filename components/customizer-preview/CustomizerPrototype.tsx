@@ -160,6 +160,14 @@ type StagingCustomizerConfig = {
 
 type MockupColorKey = "black" | "white" | "heatherGrey";
 
+type PreviewColorOption = {
+  id: string;
+  label: string;
+  hex: string;
+  mockupKey: MockupColorKey;
+  mockupUrl?: string;
+};
+
 type EditorState = {
   mode: PreviewMode;
   activeView: ViewId;
@@ -189,7 +197,15 @@ const APPAREL_VIEWS: Array<{ id: ViewId; label: string; short: string }> = [
 ];
 
 const TRANSFER_SIZES = ["3x3", "5x5", "8x10", "11x17", "12x24", "13x24", "13x60", "Gang Sheet"];
-const PRODUCT_COLORS = ["#101316", "#f4f7fb", "#334155", "#7f1d1d", "#075985", "#14532d"];
+const DEFAULT_PRODUCT_COLORS: PreviewColorOption[] = [
+  { id: "black", label: "Black", hex: "#101316", mockupKey: "black" },
+  { id: "white", label: "White", hex: "#f8fafc", mockupKey: "white" },
+  { id: "heather-grey", label: "Heather Grey", hex: "#9ca3af", mockupKey: "heatherGrey" },
+  { id: "regular-grey", label: "Regular Grey", hex: "#64748b", mockupKey: "heatherGrey" },
+  { id: "royal-blue", label: "Royal Blue", hex: "#075985", mockupKey: "black" },
+  { id: "red", label: "Red", hex: "#991b1b", mockupKey: "black" },
+  { id: "off-white", label: "Off White", hex: "#f5f1e8", mockupKey: "white" },
+];
 const MATERIAL_OPTIONS = ["Hot Peel Film", "Cold Peel Film", "Matte Finish", "Gloss Finish"];
 const FONT_OPTIONS = ["Inter", "Arial", "Impact", "Montserrat", "Oswald"];
 const MOCKUP_BLEND_MODES: MockupBlendMode[] = ["normal", "multiply", "overlay", "soft-light"];
@@ -535,9 +551,45 @@ function getAssetStatusClass(status: string) {
 
 function getMockupColorKey(hexOrLabel: string): MockupColorKey {
   const normalized = hexOrLabel.trim().toLowerCase();
-  if (normalized.includes("white") || normalized === "#fff" || normalized === "#ffffff" || normalized === "#f4f7fb") return "white";
-  if (normalized.includes("gray") || normalized.includes("grey") || normalized === "#334155" || normalized === "#64748b") return "heatherGrey";
+  if (
+    normalized.includes("off white") ||
+    normalized.includes("off-white") ||
+    normalized.includes("white") ||
+    normalized === "#fff" ||
+    normalized === "#ffffff" ||
+    normalized === "#f8fafc" ||
+    normalized === "#f4f7fb" ||
+    normalized === "#f5f1e8"
+  ) return "white";
+  if (
+    normalized.includes("heather") ||
+    normalized.includes("gray") ||
+    normalized.includes("grey") ||
+    normalized === "#334155" ||
+    normalized === "#64748b" ||
+    normalized === "#9ca3af"
+  ) return "heatherGrey";
   return "black";
+}
+
+function normalizePreviewColorOption(color: { id?: string; label?: string; hex?: string; enabled?: boolean; mockupUrl?: string }): PreviewColorOption | null {
+  if (color.enabled === false || !color.hex) return null;
+  const label = color.label || color.id || color.hex;
+  return {
+    id: color.id || label.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+    label,
+    hex: color.hex,
+    mockupKey: getMockupColorKey(`${label} ${color.hex}`),
+    mockupUrl: color.mockupUrl,
+  };
+}
+
+function getApparelMockupForColor(mockupKey: MockupColorKey, view: ViewId) {
+  return (
+    STAGING_APPAREL_MOCKUPS[mockupKey]?.[view] ||
+    STAGING_APPAREL_MOCKUPS.black?.[view] ||
+    { label: "Generated apparel staging mockup", url: createMockupSvg("Generated apparel staging mockup", view === "neckTag" ? "neck" : view.includes("Sleeve") ? "sleeve" : view === "back" ? "back" : "front") }
+  );
 }
 
 function getCurrentArtwork(state: EditorState) {
@@ -704,6 +756,17 @@ function getProportionalFitSize(layer: EditableTemplateLayer | null) {
   return { width: clamp(maxHeight * aspectRatio, 6, maxWidth), height: maxHeight };
 }
 
+function getProportionalScaleSize(layer: EditableTemplateLayer, nextScale: number) {
+  const width = safeNumber(layer.width, 1, 100, 54);
+  const height = safeNumber(layer.height, 1, 100, 32);
+  const currentLongEdge = Math.max(width, height, 1);
+  const factor = nextScale / currentLongEdge;
+  return {
+    width: clamp(width * factor, 1, 100),
+    height: clamp(height * factor, 1, 100),
+  };
+}
+
 function clampLayerInsidePrintArea(layer: EditableTemplateLayer) {
   const width = safeNumber(layer.width, 1, 100, 54);
   const height = safeNumber(layer.height, 1, 100, 32);
@@ -866,9 +929,15 @@ export default function CustomizerPrototype() {
   const safeTransferSize = getSafeTransferSize(state.transferSize);
   const configuredTransferSizes = getConfiguredTransferSizes(stagingConfig);
   const selectedTransferConfig = configuredTransferSizes.find((size) => size.id === safeTransferSize) || configuredTransferSizes[0];
-  const configuredColors = stagingConfig?.colors?.filter((color) => color.enabled !== false && color.hex) || PRODUCT_COLORS.map((hex) => ({ hex, label: hex }));
-  const selectedColor = configuredColors.find((color) => color.hex?.toLowerCase() === state.selectedColorHex.toLowerCase()) || configuredColors[0];
-  const selectedMockupColorKey = getMockupColorKey(`${selectedColor?.label || ""} ${selectedColor?.hex || state.selectedColorHex}`);
+  const configuredColors =
+    stagingConfig?.colors
+      ?.map(normalizePreviewColorOption)
+      .filter((color): color is PreviewColorOption => Boolean(color)) || DEFAULT_PRODUCT_COLORS;
+  const selectedColor =
+    configuredColors.find((color) => color.hex.toLowerCase() === state.selectedColorHex.toLowerCase()) ||
+    configuredColors[0] ||
+    DEFAULT_PRODUCT_COLORS[0];
+  const selectedMockupColorKey = selectedColor.mockupKey;
   const configuredMaterials = stagingConfig?.materialOptions?.filter((material) => material.enabled !== false).map((material) => material.label || material.id || "Material") || MATERIAL_OPTIONS;
   const templateSettings = stagingConfig?.stagingSettings?.templateSettings;
   const enabledTemplateCategories = templateSettings?.enabledCategories?.length ? templateSettings.enabledCategories : TEMPLATE_CATEGORIES;
@@ -876,21 +945,27 @@ export default function CustomizerPrototype() {
   const activePrintLocation = state.mode === "apparel" ? getActivePrintLocation(stagingConfig, state.activeView) : null;
   const activeMockupUrl =
     state.mode === "apparel"
-      ? activePrintLocation?.mockupUrl
+      ? selectedColor.mockupUrl
       : safeTransferSize === "Gang Sheet"
         ? stagingConfig?.stagingSettings?.gangSheetMockupUrl || stagingConfig?.stagingSettings?.transferMockupUrl
         : stagingConfig?.stagingSettings?.transferMockupUrl;
   const safeMockupUrl = activeMockupUrl && !brokenMockupUrls.includes(activeMockupUrl) ? activeMockupUrl : "";
+  const requestedColorMockup = getApparelMockupForColor(selectedMockupColorKey, state.activeView);
+  const blackFallbackMockup = getApparelMockupForColor("black", state.activeView);
+  const colorFallbackMockup =
+    brokenMockupUrls.includes(requestedColorMockup.url) && requestedColorMockup.url !== blackFallbackMockup.url
+      ? blackFallbackMockup
+      : requestedColorMockup;
   const fallbackMockupUrl =
     state.mode === "apparel"
-      ? STAGING_APPAREL_MOCKUPS[selectedMockupColorKey][state.activeView].url
+      ? colorFallbackMockup.url
       : safeTransferSize === "Gang Sheet"
         ? STAGING_TRANSFER_MOCKUPS.gangSheet.url
         : STAGING_TRANSFER_MOCKUPS.transferSheet.url;
   const displayMockupUrl = safeMockupUrl || fallbackMockupUrl;
   const displayMockupLabel =
     state.mode === "apparel"
-      ? STAGING_APPAREL_MOCKUPS[selectedMockupColorKey][state.activeView].label
+      ? colorFallbackMockup.label
       : safeTransferSize === "Gang Sheet"
         ? STAGING_TRANSFER_MOCKUPS.gangSheet.label
         : STAGING_TRANSFER_MOCKUPS.transferSheet.label;
@@ -902,7 +977,12 @@ export default function CustomizerPrototype() {
   const selectedTemplateConfig = STARTER_TEMPLATE_LIBRARY.find((template) => template.name === state.selectedTemplate);
   const safeZoom = safeNumber(state.zoom, 55, 110, 82);
   const previewMaxHeight = Math.round(760 * (safeZoom / 100));
-  const safeScale = safeNumber(selectedLayer?.width ?? state.scale, 8, 100, 56);
+  const safeScale = safeNumber(
+    selectedLayer ? Math.max(selectedLayer.width, selectedLayer.height) : state.scale,
+    8,
+    100,
+    56
+  );
   const safeX = safeNumber(selectedLayer?.x ?? state.x, 0, 100, 50);
   const safeY = safeNumber(selectedLayer?.y ?? state.y, 0, 100, 45);
   const safeRotation = safeNumber(selectedLayer?.rotation ?? state.rotation, -30, 30, 0);
@@ -2130,14 +2210,20 @@ export default function CustomizerPrototype() {
                   min={8}
                   max={100}
                   onChange={(scale) => {
-                    const nextHeight =
-                      selectedLayer?.type === "image" && selectedLayer.lockAspectRatio === false
-                        ? selectedLayer.height
-                        : selectedLayer
-                          ? clamp(scale * (selectedLayer.height / Math.max(selectedLayer.width, 1)), 6, 100)
-                          : scale;
-                    updateSelectedLayer({ width: scale, height: nextHeight, fitMode: selectedLayer?.type === "image" ? "manual" : selectedLayer?.fitMode }, "Selected layer resized.");
-                    setState((current) => ({ ...current, scale }));
+                    if (!selectedLayer) {
+                      setState((current) => ({ ...current, scale, status: "Scale staged for the next selected layer." }));
+                      return;
+                    }
+
+                    const nextSize = getProportionalScaleSize(selectedLayer, scale);
+                    updateSelectedLayer(
+                      {
+                        width: nextSize.width,
+                        height: nextSize.height,
+                        fitMode: selectedLayer.type === "image" ? "manual" : selectedLayer.fitMode,
+                      },
+                      "Selected layer scaled proportionally."
+                    );
                   }}
                 />
                 {selectedImageLayer ? (
@@ -2174,8 +2260,11 @@ export default function CustomizerPrototype() {
                   min={0}
                   max={100}
                   onChange={(x) => {
-                    updateSelectedLayer({ x }, "Selected layer moved horizontally.");
-                    setState((current) => ({ ...current, x }));
+                    if (selectedLayer) {
+                      updateSelectedLayer({ x }, "Selected layer moved horizontally.");
+                    } else {
+                      setState((current) => ({ ...current, x, status: "X position staged for the next selected layer." }));
+                    }
                   }}
                 />
                 <Slider
@@ -2184,8 +2273,11 @@ export default function CustomizerPrototype() {
                   min={0}
                   max={100}
                   onChange={(y) => {
-                    updateSelectedLayer({ y }, "Selected layer moved vertically.");
-                    setState((current) => ({ ...current, y }));
+                    if (selectedLayer) {
+                      updateSelectedLayer({ y }, "Selected layer moved vertically.");
+                    } else {
+                      setState((current) => ({ ...current, y, status: "Y position staged for the next selected layer." }));
+                    }
                   }}
                 />
                 <Slider
@@ -2194,8 +2286,11 @@ export default function CustomizerPrototype() {
                   min={-30}
                   max={30}
                   onChange={(rotation) => {
-                    updateSelectedLayer({ rotation }, "Selected layer rotation updated.");
-                    setState((current) => ({ ...current, rotation }));
+                    if (selectedLayer) {
+                      updateSelectedLayer({ rotation }, "Selected layer rotation updated.");
+                    } else {
+                      setState((current) => ({ ...current, rotation, status: "Rotation staged for the next selected layer." }));
+                    }
                   }}
                 />
               </div>
@@ -2226,7 +2321,7 @@ export default function CustomizerPrototype() {
             <QuickActionCard title={isCarting ? "Preparing..." : "Add to Cart"} detail="Preview payload only" icon="ATC" accent="bg-emerald-300" onClick={addToPreviewCart} />
             <QuickActionCard
               title={state.mode === "apparel" ? "Color Variants" : "Size Variants"}
-              detail={state.mode === "apparel" ? "6 staged colors" : safeTransferSize}
+              detail={state.mode === "apparel" ? `${configuredColors.length} staged colors` : safeTransferSize}
               icon={state.mode === "apparel" ? "CLR" : "SZ"}
               accent="bg-violet-300"
               onClick={() => setStatusOnly(state.mode === "apparel" ? "Color variants are preview-only." : "Transfer sizes are preview-only.")}
@@ -2311,8 +2406,7 @@ export default function CustomizerPrototype() {
                   alt={safeMockupUrl ? "Configured staging mockup" : displayMockupLabel}
                   className="absolute inset-0 z-0 h-full w-full rounded-2xl object-contain"
                   onError={() => {
-                    if (!safeMockupUrl) return;
-                    setBrokenMockupUrls((current) => current.includes(safeMockupUrl) ? current : [...current, safeMockupUrl]);
+                    setBrokenMockupUrls((current) => current.includes(displayMockupUrl) ? current : [...current, displayMockupUrl]);
                   }}
                 />
               ) : null}
