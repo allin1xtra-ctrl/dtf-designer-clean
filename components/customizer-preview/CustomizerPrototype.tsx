@@ -769,6 +769,21 @@ function getProportionalScaleSize(layer: EditableTemplateLayer, nextScale: numbe
   };
 }
 
+function getTextScaleUpdate(layer: EditableTemplateLayer, previousScale: number, nextScale: number) {
+  const width = safeNumber(layer.width, 1, 100, 54);
+  const height = safeNumber(layer.height, 1, 100, 14);
+  const fontSize = safeNumber(layer.fontSize, 8, 120, 24);
+  const factor = nextScale / Math.max(previousScale, 1);
+  const nextFontSize = clamp(Math.round(fontSize * factor), 8, 120);
+  const nextHeight = clamp(Math.max(height * factor, nextFontSize / 1.5), 4, 100);
+
+  return {
+    width: clamp(width * factor, 4, 100),
+    height: nextHeight,
+    fontSize: nextFontSize,
+  };
+}
+
 function clampLayerInsidePrintArea(layer: EditableTemplateLayer) {
   const width = safeNumber(layer.width, 1, 100, 54);
   const height = safeNumber(layer.height, 1, 100, 32);
@@ -1364,11 +1379,15 @@ export default function CustomizerPrototype() {
     setState((current) => {
       if (!current.selectedLayerId) return { ...current, scale, status: "Scale staged for the next selected layer." };
       let didUpdate = false;
+      const previousScale = safeNumber(current.scale, 8, 100, 56);
 
       const nextState = updateActiveLayers(current, (layers) =>
         layers.map((layer) => {
           if (layer.id !== current.selectedLayerId || layer.locked) return layer;
           didUpdate = true;
+          if (layer.type === "text") {
+            return { ...layer, ...getTextScaleUpdate(layer, previousScale, scale) };
+          }
           return { ...layer, ...getProportionalScaleSize(layer, scale) };
         })
       );
@@ -1376,7 +1395,7 @@ export default function CustomizerPrototype() {
       return {
         ...nextState,
         scale,
-        status: didUpdate ? "Selected layer scaled proportionally." : "Select an unlocked layer before scaling.",
+        status: didUpdate ? "Selected layer scaled." : "Select an unlocked layer before scaling.",
       };
     });
   };
@@ -2535,12 +2554,14 @@ export default function CustomizerPrototype() {
                           key={layer.id}
                           type="button"
                           onClick={() => setState((current) => ({ ...current, selectedLayerId: layer.id, status: `${layer.name} selected.` }))}
-                          className={`absolute grid cursor-pointer place-items-center px-1 text-center font-black leading-none drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)] ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
+                          className={`absolute grid cursor-pointer place-items-center overflow-visible px-1 text-center font-black leading-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)] ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
                           style={{
                             ...commonStyle,
                             color: layer.color,
                             fontFamily: layer.fontFamily,
                             fontSize: `${layer.fontSize}px`,
+                            lineHeight: 1.08,
+                            whiteSpace: "pre-wrap",
                           }}
                         >
                           {layer.text || "Edit Text"}
