@@ -709,7 +709,7 @@ function getDefaultPrintAreaForView(state: EditorState): StagingPrintArea {
 
   const defaults: Record<ViewId, StagingPrintArea> = {
     front: { x: 50, y: 56, width: 38, height: 50 },
-    back: { x: 50, y: 56, width: 42, height: 50 },
+    back: { x: 49, y: 48.5, width: 48, height: 59 },
     leftSleeve: { x: 51, y: 50, width: 30, height: 42 },
     rightSleeve: { x: 49, y: 50, width: 30, height: 42 },
     neckTag: { x: 50, y: 43, width: 28, height: 17 },
@@ -793,6 +793,18 @@ function clampLayerInsidePrintArea(layer: EditableTemplateLayer) {
     height,
     x: safeNumber(layer.x, width / 2, 100 - width / 2, 50),
     y: safeNumber(layer.y, height / 2, 100 - height / 2, 50),
+  };
+}
+
+function getLayerCenterBounds(layer: EditableTemplateLayer | null) {
+  const width = safeNumber(layer?.width ?? 54, 1, 100, 54);
+  const height = safeNumber(layer?.height ?? 32, 1, 100, 32);
+
+  return {
+    minX: width / 2,
+    maxX: 100 - width / 2,
+    minY: height / 2,
+    maxY: 100 - height / 2,
   };
 }
 
@@ -1000,8 +1012,9 @@ export default function CustomizerPrototype() {
   const safeZoom = safeNumber(state.zoom, 55, 110, 82);
   const previewMaxHeight = Math.round(760 * (safeZoom / 100));
   const safeScale = safeNumber(state.scale, 8, 100, 56);
-  const safeX = safeNumber(selectedLayer?.x ?? state.x, 0, 100, 50);
-  const safeY = safeNumber(selectedLayer?.y ?? state.y, 0, 100, 45);
+  const selectedLayerBounds = getLayerCenterBounds(selectedLayer);
+  const safeX = safeNumber(selectedLayer?.x ?? state.x, selectedLayerBounds.minX, selectedLayerBounds.maxX, 50);
+  const safeY = safeNumber(selectedLayer?.y ?? state.y, selectedLayerBounds.minY, selectedLayerBounds.maxY, 45);
   const safeRotation = safeNumber(selectedLayer?.rotation ?? state.rotation, -30, 30, 0);
   const safeArtworkOpacity = safeNumber(artworkOpacity, 45, 100, 95);
   const effectiveBlendMode = state.mode === "apparel" && fabricBlendEnabled ? mockupBlendMode : "normal";
@@ -1401,19 +1414,41 @@ export default function CustomizerPrototype() {
   };
 
   const updateLayerWidth = (width: number) => {
-    updateSelectedLayerFields({ width, fitMode: selectedImageLayer ? "manual" : selectedLayer?.fitMode }, "Image width updated.", false);
+    updateSelectedLayerFields({ width, fitMode: selectedImageLayer ? "manual" : selectedLayer?.fitMode }, "Image width updated.");
   };
 
   const updateLayerHeight = (height: number) => {
-    updateSelectedLayerFields({ height, fitMode: selectedImageLayer ? "manual" : selectedLayer?.fitMode }, "Image height updated.", false);
+    updateSelectedLayerFields({ height, fitMode: selectedImageLayer ? "manual" : selectedLayer?.fitMode }, "Image height updated.");
   };
 
   const updateLayerX = (x: number) => {
-    updateSelectedLayerFields({ x }, "Selected layer moved horizontally.", false);
+    setState((current) => {
+      const selected = getActiveLayers(current).find((layer) => layer.id === current.selectedLayerId);
+      if (!selected || selected.locked) return { ...current, status: "Select an unlocked layer before moving horizontally." };
+      const bounds = getLayerCenterBounds(selected);
+      return {
+        ...updateActiveLayers(current, (layers) =>
+          layers.map((layer) => (layer.id === selected.id ? { ...layer, x: clamp(x, bounds.minX, bounds.maxX) } : layer))
+        ),
+        x: clamp(x, bounds.minX, bounds.maxX),
+        status: "Selected layer moved horizontally.",
+      };
+    });
   };
 
   const updateLayerY = (y: number) => {
-    updateSelectedLayerFields({ y }, "Selected layer moved vertically.", false);
+    setState((current) => {
+      const selected = getActiveLayers(current).find((layer) => layer.id === current.selectedLayerId);
+      if (!selected || selected.locked) return { ...current, status: "Select an unlocked layer before moving vertically." };
+      const bounds = getLayerCenterBounds(selected);
+      return {
+        ...updateActiveLayers(current, (layers) =>
+          layers.map((layer) => (layer.id === selected.id ? { ...layer, y: clamp(y, bounds.minY, bounds.maxY) } : layer))
+        ),
+        y: clamp(y, bounds.minY, bounds.maxY),
+        status: "Selected layer moved vertically.",
+      };
+    });
   };
 
   const updateLayerRotation = (rotation: number) => {
@@ -2282,15 +2317,15 @@ export default function CustomizerPrototype() {
                 <Slider
                   label="X Position"
                   value={safeX}
-                  min={0}
-                  max={100}
+                  min={selectedLayerBounds.minX}
+                  max={selectedLayerBounds.maxX}
                   onChange={updateLayerX}
                 />
                 <Slider
                   label="Y Position"
                   value={safeY}
-                  min={0}
-                  max={100}
+                  min={selectedLayerBounds.minY}
+                  max={selectedLayerBounds.maxY}
                   onChange={updateLayerY}
                 />
                 <Slider
