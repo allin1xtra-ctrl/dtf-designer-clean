@@ -977,12 +977,7 @@ export default function CustomizerPrototype() {
   const selectedTemplateConfig = STARTER_TEMPLATE_LIBRARY.find((template) => template.name === state.selectedTemplate);
   const safeZoom = safeNumber(state.zoom, 55, 110, 82);
   const previewMaxHeight = Math.round(760 * (safeZoom / 100));
-  const safeScale = safeNumber(
-    selectedLayer ? Math.max(selectedLayer.width, selectedLayer.height) : state.scale,
-    8,
-    100,
-    56
-  );
+  const safeScale = safeNumber(state.scale, 8, 100, 56);
   const safeX = safeNumber(selectedLayer?.x ?? state.x, 0, 100, 50);
   const safeY = safeNumber(selectedLayer?.y ?? state.y, 0, 100, 45);
   const safeRotation = safeNumber(selectedLayer?.rotation ?? state.rotation, -30, 30, 0);
@@ -1338,6 +1333,95 @@ export default function CustomizerPrototype() {
         status: status || "Selected layer updated.",
       };
     });
+  };
+
+  const updateSelectedLayerFields = (updates: Partial<EditableTemplateLayer>, status: string, clampGeometry = true) => {
+    setState((current) => {
+      if (!current.selectedLayerId) return { ...current, status: "Select a layer before editing." };
+
+      return {
+        ...updateActiveLayers(current, (layers) =>
+          layers.map((layer) => {
+            if (layer.id !== current.selectedLayerId) return layer;
+            if (layer.locked && !Object.prototype.hasOwnProperty.call(updates, "locked")) return layer;
+            const nextLayer = { ...layer, ...updates };
+            return clampGeometry ? clampLayerInsidePrintArea(nextLayer) : nextLayer;
+          })
+        ),
+        status,
+      };
+    });
+  };
+
+  const updateLayerScale = (scale: number) => {
+    setState((current) => {
+      if (!current.selectedLayerId) return { ...current, scale, status: "Scale staged for the next selected layer." };
+      let didUpdate = false;
+
+      const nextState = updateActiveLayers(current, (layers) =>
+        layers.map((layer) => {
+          if (layer.id !== current.selectedLayerId || layer.locked) return layer;
+          didUpdate = true;
+          return clampLayerInsidePrintArea({ ...layer, ...getProportionalScaleSize(layer, scale), fitMode: layer.type === "image" ? "manual" : layer.fitMode });
+        })
+      );
+
+      return {
+        ...nextState,
+        scale,
+        status: didUpdate ? "Selected layer scaled proportionally." : "Select an unlocked layer before scaling.",
+      };
+    });
+  };
+
+  const updateLayerWidth = (width: number) => {
+    if (!selectedImageLayer) {
+      updateSelectedLayerFields({ width }, "Selected layer width updated.");
+      return;
+    }
+
+    const height =
+      selectedImageLayer.lockAspectRatio === false
+        ? selectedImageLayer.height
+        : clamp(width / getLayerAspectRatio(selectedImageLayer), 1, 100);
+    updateSelectedLayerFields({ width, height, fitMode: "manual" }, "Image width updated.");
+  };
+
+  const updateLayerHeight = (height: number) => {
+    if (!selectedImageLayer) {
+      updateSelectedLayerFields({ height }, "Selected layer height updated.");
+      return;
+    }
+
+    const width =
+      selectedImageLayer.lockAspectRatio === false
+        ? selectedImageLayer.width
+        : clamp(height * getLayerAspectRatio(selectedImageLayer), 1, 100);
+    updateSelectedLayerFields({ width, height, fitMode: "manual" }, "Image height updated.");
+  };
+
+  const updateLayerX = (x: number) => {
+    updateSelectedLayerFields({ x }, "Selected layer moved horizontally.");
+  };
+
+  const updateLayerY = (y: number) => {
+    updateSelectedLayerFields({ y }, "Selected layer moved vertically.");
+  };
+
+  const updateLayerRotation = (rotation: number) => {
+    updateSelectedLayerFields({ rotation }, "Selected layer rotation updated.");
+  };
+
+  const updateLayerCropX = (cropX: number) => {
+    updateSelectedLayerFields({ cropX, fitMode: selectedImageLayer?.fitMode === "stretch" ? "stretch" : "cover" }, "Image crop X updated.", false);
+  };
+
+  const updateLayerCropY = (cropY: number) => {
+    updateSelectedLayerFields({ cropY, fitMode: selectedImageLayer?.fitMode === "stretch" ? "stretch" : "cover" }, "Image crop Y updated.", false);
+  };
+
+  const updateLayerCropZoom = (cropZoom: number) => {
+    updateSelectedLayerFields({ cropZoom, fitMode: selectedImageLayer?.fitMode === "stretch" ? "stretch" : "cover" }, "Image crop zoom updated.", false);
   };
 
   const deleteSelectedLayer = (status = "Selected layer deleted from the staging design.") => {
@@ -2182,21 +2266,21 @@ export default function CustomizerPrototype() {
                     value={safeNumber(selectedImageLayer?.cropX || 50, 0, 100, 50)}
                     min={0}
                     max={100}
-                    onChange={(cropX) => updateSelectedLayer({ cropX, fitMode: selectedImageLayer?.fitMode === "stretch" ? "stretch" : "cover" }, "Image crop X updated.")}
+                    onChange={updateLayerCropX}
                   />
                   <Slider
                     label="Crop Y"
                     value={safeNumber(selectedImageLayer?.cropY || 50, 0, 100, 50)}
                     min={0}
                     max={100}
-                    onChange={(cropY) => updateSelectedLayer({ cropY, fitMode: selectedImageLayer?.fitMode === "stretch" ? "stretch" : "cover" }, "Image crop Y updated.")}
+                    onChange={updateLayerCropY}
                   />
                   <Slider
                     label="Crop Zoom"
                     value={safeNumber(selectedImageLayer?.cropZoom || 100, 60, 220, 100)}
                     min={60}
                     max={220}
-                    onChange={(cropZoom) => updateSelectedLayer({ cropZoom, fitMode: selectedImageLayer?.fitMode === "stretch" ? "stretch" : "cover" }, "Image crop zoom updated.")}
+                    onChange={updateLayerCropZoom}
                   />
                 </div>
               </div>
@@ -2209,22 +2293,7 @@ export default function CustomizerPrototype() {
                   value={safeScale}
                   min={8}
                   max={100}
-                  onChange={(scale) => {
-                    if (!selectedLayer) {
-                      setState((current) => ({ ...current, scale, status: "Scale staged for the next selected layer." }));
-                      return;
-                    }
-
-                    const nextSize = getProportionalScaleSize(selectedLayer, scale);
-                    updateSelectedLayer(
-                      {
-                        width: nextSize.width,
-                        height: nextSize.height,
-                        fitMode: selectedLayer.type === "image" ? "manual" : selectedLayer.fitMode,
-                      },
-                      "Selected layer scaled proportionally."
-                    );
-                  }}
+                  onChange={updateLayerScale}
                 />
                 {selectedImageLayer ? (
                   <div className="rounded-md border border-[#263d45] bg-[#081114] p-2">
@@ -2233,24 +2302,14 @@ export default function CustomizerPrototype() {
                       value={safeNumber(selectedImageLayer.width, 6, 100, 56)}
                       min={6}
                       max={100}
-                      onChange={(width) => {
-                        const height = selectedImageLayer.lockAspectRatio === false
-                          ? selectedImageLayer.height
-                          : clamp(width / getLayerAspectRatio(selectedImageLayer), 6, 100);
-                        updateSelectedLayer({ width, height, fitMode: "manual" }, "Image width updated.");
-                      }}
+                      onChange={updateLayerWidth}
                     />
                     <Slider
                       label="Image Height"
                       value={safeNumber(selectedImageLayer.height, 6, 100, 42)}
                       min={6}
                       max={100}
-                      onChange={(height) => {
-                        const width = selectedImageLayer.lockAspectRatio === false
-                          ? selectedImageLayer.width
-                          : clamp(height * getLayerAspectRatio(selectedImageLayer), 6, 100);
-                        updateSelectedLayer({ width, height, fitMode: "manual" }, "Image height updated.");
-                      }}
+                      onChange={updateLayerHeight}
                     />
                   </div>
                 ) : null}
@@ -2259,39 +2318,21 @@ export default function CustomizerPrototype() {
                   value={safeX}
                   min={0}
                   max={100}
-                  onChange={(x) => {
-                    if (selectedLayer) {
-                      updateSelectedLayer({ x }, "Selected layer moved horizontally.");
-                    } else {
-                      setState((current) => ({ ...current, x, status: "X position staged for the next selected layer." }));
-                    }
-                  }}
+                  onChange={updateLayerX}
                 />
                 <Slider
                   label="Y Position"
                   value={safeY}
                   min={0}
                   max={100}
-                  onChange={(y) => {
-                    if (selectedLayer) {
-                      updateSelectedLayer({ y }, "Selected layer moved vertically.");
-                    } else {
-                      setState((current) => ({ ...current, y, status: "Y position staged for the next selected layer." }));
-                    }
-                  }}
+                  onChange={updateLayerY}
                 />
                 <Slider
                   label="Rotation"
                   value={safeRotation}
                   min={-30}
                   max={30}
-                  onChange={(rotation) => {
-                    if (selectedLayer) {
-                      updateSelectedLayer({ rotation }, "Selected layer rotation updated.");
-                    } else {
-                      setState((current) => ({ ...current, rotation, status: "Rotation staged for the next selected layer." }));
-                    }
-                  }}
+                  onChange={updateLayerRotation}
                 />
               </div>
             </PanelCard>
