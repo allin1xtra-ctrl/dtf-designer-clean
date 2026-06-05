@@ -183,6 +183,7 @@ type EditorState = {
   layersByView: Record<ViewId, EditableTemplateLayer[]>;
   transferLayersBySize: Record<string, EditableTemplateLayer[]>;
   selectedLayerId: string | null;
+  selectedColorId: string;
   selectedColorHex: string;
   status: string;
   usingSafeDefaults: boolean;
@@ -462,6 +463,7 @@ const initialState: EditorState = {
   layersByView: emptyLayersByView,
   transferLayersBySize: emptyTransferLayersBySize,
   selectedLayerId: null,
+  selectedColorId: "black",
   selectedColorHex: "#101316",
   status: "Prototype ready. No live checkout connection.",
   usingSafeDefaults: false,
@@ -934,6 +936,7 @@ export default function CustomizerPrototype() {
       ?.map(normalizePreviewColorOption)
       .filter((color): color is PreviewColorOption => Boolean(color)) || DEFAULT_PRODUCT_COLORS;
   const selectedColor =
+    configuredColors.find((color) => color.id === state.selectedColorId) ||
     configuredColors.find((color) => color.hex.toLowerCase() === state.selectedColorHex.toLowerCase()) ||
     configuredColors[0] ||
     DEFAULT_PRODUCT_COLORS[0];
@@ -972,7 +975,7 @@ export default function CustomizerPrototype() {
   const hasBakedPrintGuide = state.mode === "apparel" && displayMockupUrl.startsWith("/customizer-preview/mockups/");
   const mockupLoadFailed = Boolean(activeMockupUrl && brokenMockupUrls.includes(activeMockupUrl));
   const activeLayers = getActiveLayers(state);
-  const selectedLayer = activeLayers.find((layer) => layer.id === state.selectedLayerId) || activeLayers[0] || null;
+  const selectedLayer = activeLayers.find((layer) => layer.id === state.selectedLayerId) || null;
   const selectedImageLayer = selectedLayer?.type === "image" ? selectedLayer : null;
   const selectedTemplateConfig = STARTER_TEMPLATE_LIBRARY.find((template) => template.name === state.selectedTemplate);
   const safeZoom = safeNumber(state.zoom, 55, 110, 82);
@@ -1362,7 +1365,7 @@ export default function CustomizerPrototype() {
         layers.map((layer) => {
           if (layer.id !== current.selectedLayerId || layer.locked) return layer;
           didUpdate = true;
-          return clampLayerInsidePrintArea({ ...layer, ...getProportionalScaleSize(layer, scale), fitMode: layer.type === "image" ? "manual" : layer.fitMode });
+          return clampLayerInsidePrintArea({ ...layer, ...getProportionalScaleSize(layer, scale) });
         })
       );
 
@@ -1413,15 +1416,15 @@ export default function CustomizerPrototype() {
   };
 
   const updateLayerCropX = (cropX: number) => {
-    updateSelectedLayerFields({ cropX, fitMode: selectedImageLayer?.fitMode === "stretch" ? "stretch" : "cover" }, "Image crop X updated.", false);
+    updateSelectedLayerFields({ cropX }, "Image crop X updated.", false);
   };
 
   const updateLayerCropY = (cropY: number) => {
-    updateSelectedLayerFields({ cropY, fitMode: selectedImageLayer?.fitMode === "stretch" ? "stretch" : "cover" }, "Image crop Y updated.", false);
+    updateSelectedLayerFields({ cropY }, "Image crop Y updated.", false);
   };
 
   const updateLayerCropZoom = (cropZoom: number) => {
-    updateSelectedLayerFields({ cropZoom, fitMode: selectedImageLayer?.fitMode === "stretch" ? "stretch" : "cover" }, "Image crop zoom updated.", false);
+    updateSelectedLayerFields({ cropZoom }, "Image crop zoom updated.", false);
   };
 
   const deleteSelectedLayer = (status = "Selected layer deleted from the staging design.") => {
@@ -2257,7 +2260,7 @@ export default function CustomizerPrototype() {
                     <input
                       type="checkbox"
                       checked={selectedImageLayer?.lockAspectRatio !== false}
-                      onChange={(event) => updateSelectedLayer({ lockAspectRatio: event.target.checked, fitMode: event.target.checked ? selectedImageLayer?.fitMode || "contain" : "manual" }, "Image aspect ratio lock updated.")}
+                      onChange={(event) => updateSelectedLayerFields({ lockAspectRatio: event.target.checked }, "Image aspect ratio lock updated.", false)}
                       disabled={!selectedImageLayer}
                     />
                   </label>
@@ -2636,7 +2639,8 @@ export default function CustomizerPrototype() {
                       onClick={() => {
                         setState((current) => ({
                           ...current,
-                          selectedColorHex: color.hex || current.selectedColorHex,
+                          selectedColorId: color.id,
+                          selectedColorHex: color.hex,
                           status: `${color.label || color.hex} mockup selected for staging preview.`,
                         }));
                       }}
