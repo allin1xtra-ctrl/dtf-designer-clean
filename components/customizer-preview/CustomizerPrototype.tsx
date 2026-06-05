@@ -288,8 +288,8 @@ const STAGING_APPAREL_MOCKUPS: Record<MockupColorKey, Record<ViewId, { label: st
     neckTag: { label: "Black T-Shirt Neck Tag Mockup", url: "/customizer-preview/mockups/black-neck-tag.png" },
   },
   white: {
-    front: { label: "White T-Shirt Front Mockup", url: "/customizer-preview/mockups/white-front.png" },
-    back: { label: "White T-Shirt Back Mockup", url: createMockupSvg("White back apparel staging mockup", "back") },
+    front: { label: "White T-Shirt Front Mockup", url: "/customizer-preview/mockups/white-front-alt.png" },
+    back: { label: "White T-Shirt Back Mockup", url: "/customizer-preview/mockups/white-front.png" },
     leftSleeve: { label: "White T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/white-left-sleeve.png" },
     rightSleeve: { label: "White T-Shirt Right Sleeve Mockup", url: "/customizer-preview/mockups/white-right-sleeve.png" },
     neckTag: { label: "White T-Shirt Neck Tag Mockup", url: "/customizer-preview/mockups/white-neck-tag.png" },
@@ -948,7 +948,7 @@ export default function CustomizerPrototype() {
   const activePrintLocation = state.mode === "apparel" ? getActivePrintLocation(stagingConfig, state.activeView) : null;
   const activeMockupUrl =
     state.mode === "apparel"
-      ? selectedColor.mockupUrl
+      ? ""
       : safeTransferSize === "Gang Sheet"
         ? stagingConfig?.stagingSettings?.gangSheetMockupUrl || stagingConfig?.stagingSettings?.transferMockupUrl
         : stagingConfig?.stagingSettings?.transferMockupUrl;
