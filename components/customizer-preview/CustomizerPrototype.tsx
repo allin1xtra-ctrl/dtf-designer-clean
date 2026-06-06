@@ -9,6 +9,7 @@ type StagingUploadStatus = "idle" | "uploading" | "success" | "warning" | "error
 type StagingSaveStatus = "idle" | "saving" | "success" | "warning" | "error";
 type MockupBlendMode = "normal" | "multiply" | "overlay" | "soft-light";
 type ImageFitMode = "contain" | "cover" | "stretch" | "manual";
+type FontCategory = "Serif" | "Sans Serif" | "Script" | "Display" | "Handwritten" | "Geometric / Modern";
 type TemplateCategory =
   | "Logos"
   | "Streetwear"
@@ -51,6 +52,7 @@ type EditableTemplateLayer = {
   rotation: number;
   opacity: number;
   color: string;
+  fontId?: string;
   fontFamily: string;
   fontSize: number;
   fitMode?: ImageFitMode;
@@ -220,7 +222,46 @@ const DEFAULT_PRODUCT_COLORS: PreviewColorOption[] = [
   { id: "off-white", label: "Off White", hex: "#f5f1e8", mockupKey: "offWhite" },
 ];
 const MATERIAL_OPTIONS = ["Hot Peel Film", "Cold Peel Film", "Matte Finish", "Gloss Finish"];
-const FONT_OPTIONS = ["Inter", "Arial", "Impact", "Montserrat", "Oswald"];
+// Production fonts must be license-reviewed before launch; do not bundle font files unless the open license file is included.
+const FONT_REGISTRY: Array<{
+  id: string;
+  label: string;
+  category: FontCategory;
+  cssFontFamily: string;
+  license: string;
+  source: string;
+}> = [
+  { id: "playfair-display", label: "Playfair Display", category: "Serif", cssFontFamily: "\"Playfair Display\", Georgia, serif", license: "SIL Open Font License 1.1", source: "Google Fonts / open source" },
+  { id: "cormorant-garamond", label: "Cormorant Garamond", category: "Serif", cssFontFamily: "\"Cormorant Garamond\", Garamond, serif", license: "SIL Open Font License 1.1", source: "Google Fonts / open source" },
+  { id: "libre-baskerville", label: "Libre Baskerville", category: "Serif", cssFontFamily: "\"Libre Baskerville\", Georgia, serif", license: "SIL Open Font License 1.1", source: "Google Fonts / open source" },
+  { id: "lora", label: "Lora", category: "Serif", cssFontFamily: "Lora, Georgia, serif", license: "SIL Open Font License 1.1", source: "Google Fonts / open source" },
+  { id: "merriweather", label: "Merriweather", category: "Serif", cssFontFamily: "Merriweather, Georgia, serif", license: "SIL Open Font License 1.1", source: "Google Fonts / open source" },
+  { id: "inter", label: "Inter", category: "Sans Serif", cssFontFamily: "Inter, Arial, sans-serif", license: "SIL Open Font License 1.1", source: "Google Fonts / open source" },
+  { id: "montserrat", label: "Montserrat", category: "Sans Serif", cssFontFamily: "Montserrat, Arial, sans-serif", license: "SIL Open Font License 1.1", source: "Google Fonts / open source" },
+  { id: "poppins", label: "Poppins", category: "Sans Serif", cssFontFamily: "Poppins, Arial, sans-serif", license: "SIL Open Font License 1.1", source: "Google Fonts / open source" },
+  { id: "open-sans", label: "Open Sans", category: "Sans Serif", cssFontFamily: "\"Open Sans\", Arial, sans-serif", license: "Apache License 2.0", source: "Google Fonts / open source" },
+  { id: "roboto", label: "Roboto", category: "Sans Serif", cssFontFamily: "Roboto, Arial, sans-serif", license: "Apache License 2.0", source: "Google Fonts / open source" },
+  { id: "great-vibes", label: "Great Vibes", category: "Script", cssFontFamily: "\"Great Vibes\", cursive", license: "SIL Open Font License 1.1", source: "Google Fonts / open source" },
+  { id: "dancing-script", label: "Dancing Script", category: "Script", cssFontFamily: "\"Dancing Script\", cursive", license: "SIL Open Font License 1.1", source: "Google Fonts / open source" },
+  { id: "pacifico", label: "Pacifico", category: "Script", cssFontFamily: "Pacifico, cursive", license: "SIL Open Font License 1.1", source: "Google Fonts / open source" },
+  { id: "allura", label: "Allura", category: "Script", cssFontFamily: "Allura, cursive", license: "SIL Open Font License 1.1", source: "Google Fonts / open source" },
+  { id: "sacramento", label: "Sacramento", category: "Script", cssFontFamily: "Sacramento, cursive", license: "SIL Open Font License 1.1", source: "Google Fonts / open source" },
+  { id: "bebas-neue", label: "Bebas Neue", category: "Display", cssFontFamily: "\"Bebas Neue\", Impact, sans-serif", license: "SIL Open Font License 1.1", source: "Google Fonts / open source" },
+  { id: "anton", label: "Anton", category: "Display", cssFontFamily: "Anton, Impact, sans-serif", license: "SIL Open Font License 1.1", source: "Google Fonts / open source" },
+  { id: "oswald", label: "Oswald", category: "Display", cssFontFamily: "Oswald, Arial, sans-serif", license: "SIL Open Font License 1.1", source: "Google Fonts / open source" },
+  { id: "abril-fatface", label: "Abril Fatface", category: "Display", cssFontFamily: "\"Abril Fatface\", Georgia, serif", license: "SIL Open Font License 1.1", source: "Google Fonts / open source" },
+  { id: "bungee", label: "Bungee", category: "Display", cssFontFamily: "Bungee, Impact, sans-serif", license: "SIL Open Font License 1.1", source: "Google Fonts / open source" },
+  { id: "caveat", label: "Caveat", category: "Handwritten", cssFontFamily: "Caveat, cursive", license: "SIL Open Font License 1.1", source: "Google Fonts / open source" },
+  { id: "permanent-marker", label: "Permanent Marker", category: "Handwritten", cssFontFamily: "\"Permanent Marker\", cursive", license: "Apache License 2.0", source: "Google Fonts / open source" },
+  { id: "indie-flower", label: "Indie Flower", category: "Handwritten", cssFontFamily: "\"Indie Flower\", cursive", license: "SIL Open Font License 1.1", source: "Google Fonts / open source" },
+  { id: "patrick-hand", label: "Patrick Hand", category: "Handwritten", cssFontFamily: "\"Patrick Hand\", cursive", license: "SIL Open Font License 1.1", source: "Google Fonts / open source" },
+  { id: "shadows-into-light", label: "Shadows Into Light", category: "Handwritten", cssFontFamily: "\"Shadows Into Light\", cursive", license: "SIL Open Font License 1.1", source: "Google Fonts / open source" },
+  { id: "raleway", label: "Raleway", category: "Geometric / Modern", cssFontFamily: "Raleway, Arial, sans-serif", license: "SIL Open Font License 1.1", source: "Google Fonts / open source" },
+  { id: "urbanist", label: "Urbanist", category: "Geometric / Modern", cssFontFamily: "Urbanist, Arial, sans-serif", license: "SIL Open Font License 1.1", source: "Google Fonts / open source" },
+  { id: "outfit", label: "Outfit", category: "Geometric / Modern", cssFontFamily: "Outfit, Arial, sans-serif", license: "SIL Open Font License 1.1", source: "Google Fonts / open source" },
+  { id: "quicksand", label: "Quicksand", category: "Geometric / Modern", cssFontFamily: "Quicksand, Arial, sans-serif", license: "SIL Open Font License 1.1", source: "Google Fonts / open source" },
+];
+const FONT_CATEGORIES: FontCategory[] = ["Serif", "Sans Serif", "Script", "Display", "Handwritten", "Geometric / Modern"];
 const MOCKUP_BLEND_MODES: MockupBlendMode[] = ["normal", "multiply", "overlay", "soft-light"];
 const TEMPLATE_CATEGORIES: TemplateCategory[] = [
   "Logos",
@@ -297,6 +338,19 @@ function createTemplateThumbnail(name: string, category: string, layers: Templat
     <text x="28" y="34" font-family="Inter, Arial" font-size="12" font-weight="900" fill="#67e8f9">${escapeSvgText(category)}</text>
     <text x="200" y="278" text-anchor="middle" font-family="Inter, Arial" font-size="18" font-weight="900" fill="#ffffff">${escapeSvgText(name)}</text>
   </svg>`);
+}
+
+function getFontById(fontId?: string) {
+  return FONT_REGISTRY.find((font) => font.id === fontId) || FONT_REGISTRY[0];
+}
+
+function getFontByFamily(fontFamily?: string) {
+  if (!fontFamily) return getFontById("inter");
+  const normalized = fontFamily.toLowerCase().replace(/["']/g, "");
+  return (
+    FONT_REGISTRY.find((font) => font.cssFontFamily.toLowerCase().includes(normalized) || font.label.toLowerCase() === normalized) ||
+    getFontById(normalized.includes("impact") ? "anton" : normalized.includes("oswald") ? "oswald" : normalized.includes("montserrat") ? "montserrat" : "inter")
+  );
 }
 
 const STAGING_APPAREL_MOCKUPS: Record<MockupColorKey, Record<ViewId, MockupAsset>> = {
@@ -676,6 +730,7 @@ function createLayerId(template: string, index: number) {
 }
 
 function layerDefaults(layer: Partial<EditableTemplateLayer>): EditableTemplateLayer {
+  const font = layer.fontId ? getFontById(layer.fontId) : getFontByFamily(layer.fontFamily);
   return {
     id: layer.id || createLayerId(layer.name || "layer", 0),
     type: layer.type || "text",
@@ -690,7 +745,8 @@ function layerDefaults(layer: Partial<EditableTemplateLayer>): EditableTemplateL
     rotation: layer.rotation ?? 0,
     opacity: layer.opacity ?? 1,
     color: layer.color || "#67e8f9",
-    fontFamily: layer.fontFamily || "Inter",
+    fontId: font.id,
+    fontFamily: font.cssFontFamily,
     fontSize: layer.fontSize ?? 28,
     fitMode: layer.fitMode || (layer.type === "image" ? "contain" : undefined),
     cropX: layer.cropX ?? 50,
@@ -842,6 +898,8 @@ function mapLayerToPayloadLayer(
     height: layer.height,
     rotation: layer.rotation,
     opacity: layer.opacity,
+    fontId: layer.fontId,
+    fontFamily: layer.fontFamily,
     fitMode: layer.fitMode,
     cropX: layer.cropX,
     cropY: layer.cropY,
@@ -1777,7 +1835,8 @@ export default function CustomizerPrototype() {
         height: 16,
         color: "#e5faff",
         fontSize: 24,
-        fontFamily: "Montserrat",
+        fontId: "montserrat",
+        fontFamily: getFontById("montserrat").cssFontFamily,
       });
 
       return {
@@ -2474,12 +2533,19 @@ export default function CustomizerPrototype() {
                 <div className="grid grid-cols-[1fr_76px] gap-2">
                   <select
                     aria-label="Font"
-                    value={selectedLayer?.fontFamily || "Inter"}
-                    onChange={(event) => updateSelectedLayer({ fontFamily: event.target.value }, `${event.target.value} applied to selected layer.`)}
+                    value={selectedLayer?.fontId || getFontByFamily(selectedLayer?.fontFamily).id}
+                    onChange={(event) => {
+                      const font = getFontById(event.target.value);
+                      updateSelectedLayer({ fontId: font.id, fontFamily: font.cssFontFamily }, `${font.label} applied to selected layer.`);
+                    }}
                     className="min-w-0 rounded-md border border-[#2c424a] bg-[#081114] px-2 py-1.5 text-xs text-neutral-200"
                   >
-                    {FONT_OPTIONS.map((font) => (
-                      <option key={font}>{font}</option>
+                    {FONT_CATEGORIES.map((category) => (
+                      <optgroup key={category} label={category}>
+                        {FONT_REGISTRY.filter((font) => font.category === category).map((font) => (
+                          <option key={font.id} value={font.id}>{font.label}</option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
                   <input
