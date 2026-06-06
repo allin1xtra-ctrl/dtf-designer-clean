@@ -35,7 +35,7 @@ type ArtworkState = {
   file: File;
 };
 
-type EditableLayerType = "text" | "image" | "shape" | "placeholder";
+type EditableLayerType = "text" | "image" | "shape" | "placeholder" | "image-placeholder";
 
 type EditableTemplateLayer = {
   id: string;
@@ -107,6 +107,7 @@ type StarterTemplateCard = {
   mode: PreviewMode | "both";
   targetView?: ViewId;
   tags: string[];
+  previewImage?: string;
   thumbnail: string;
   description: string;
   layers: TemplateLayerSeed[];
@@ -359,6 +360,7 @@ function templateDefinition(input: Omit<StarterTemplateCard, "thumbnail" | "tags
   return {
     ...input,
     tags: input.tags || [],
+    previewImage: input.previewImage || `/customizer-preview/templates/thumbs/${input.id}.png`,
     thumbnail: createTemplateThumbnail(input.name, input.category, input.layers),
   };
 }
@@ -803,6 +805,12 @@ function getApparelMockupForColor(mockupKey: MockupColorKey, view: ViewId) {
   );
 }
 
+function getTemplateCardImage(template: StarterTemplateCard, brokenPreviewImages: string[]) {
+  return template.previewImage && !brokenPreviewImages.includes(template.previewImage)
+    ? template.previewImage
+    : template.thumbnail;
+}
+
 function getCurrentArtwork(state: EditorState) {
   return state.mode === "apparel" ? state.artworkByView[state.activeView] : state.transferArtwork;
 }
@@ -1155,6 +1163,7 @@ export default function CustomizerPrototype() {
   const [isTemplateLibraryOpen, setIsTemplateLibraryOpen] = useState(false);
   const [templateSearch, setTemplateSearch] = useState("");
   const [activeTemplateCategory, setActiveTemplateCategory] = useState<TemplateCategory | "All">("All");
+  const [brokenTemplatePreviewImages, setBrokenTemplatePreviewImages] = useState<string[]>([]);
   const [stagingConfig, setStagingConfig] = useState<StagingCustomizerConfig | null>(null);
   const [stagingConfigWarning, setStagingConfigWarning] = useState("");
   const [brokenMockupUrls, setBrokenMockupUrls] = useState<string[]>([]);
@@ -1732,6 +1741,7 @@ export default function CustomizerPrototype() {
       "Image crop reset. Source artwork was not changed."
     );
   };
+  void resetSelectedImageCrop;
 
   const loadEditableTemplate = (templateIdOrName: string) => {
     setState((current) => {
@@ -1822,7 +1832,7 @@ export default function CustomizerPrototype() {
 
     setState((current) => {
       const replaceOrAddArtworkLayer = (layers: EditableTemplateLayer[]) => {
-        const placeholderIndex = layers.findIndex((layer) => layer.type === "placeholder" && !layer.locked);
+        const placeholderIndex = layers.findIndex((layer) => (layer.type === "placeholder" || layer.type === "image-placeholder") && !layer.locked);
         const uploadedLayer = layerDefaults({
           id: placeholderIndex >= 0 ? layers[placeholderIndex].id : createLayerId("customer-artwork", layers.length),
           type: "image",
@@ -2512,7 +2522,6 @@ export default function CustomizerPrototype() {
                     <ToolButton label="Fit Proportional" onClick={() => updateSelectedImageFit("contain")} />
                     <ToolButton label="Fill / Crop" onClick={() => updateSelectedImageFit("cover")} />
                     <ToolButton label="Stretch to Area" onClick={() => updateSelectedImageFit("stretch")} />
-                    <ToolButton label="Reset Crop" onClick={resetSelectedImageCrop} />
                   </div>
                 </div>
               </div>
@@ -2807,7 +2816,7 @@ export default function CustomizerPrototype() {
                         );
                       }
 
-                      if (layer.type === "placeholder") {
+                      if (layer.type === "placeholder" || layer.type === "image-placeholder") {
                         return (
                           <button
                             key={layer.id}
@@ -3235,14 +3244,26 @@ export default function CustomizerPrototype() {
             </div>
             <div className="flex-1 overflow-y-auto p-4 [scrollbar-color:#27515d_#081114] [scrollbar-width:thin]">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {filteredTemplateLibrary.map((template) => (
+                {filteredTemplateLibrary.map((template) => {
+                  const templateCardImage = getTemplateCardImage(template, brokenTemplatePreviewImages);
+                  return (
                   <article
                     key={template.id}
                     className="rounded-xl border border-[#243b43] bg-[linear-gradient(145deg,#101b20,#071015)] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
                   >
                     <div className="mb-3 aspect-[4/3] overflow-hidden rounded-lg border border-white/10 bg-[radial-gradient(circle_at_50%_35%,rgba(103,232,249,0.18),transparent_30%),linear-gradient(145deg,#14242a,#080d10)]">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={template.thumbnail} alt={`${template.name} template thumbnail`} className="h-full w-full object-cover" />
+                      <img
+                        src={templateCardImage}
+                        alt={`${template.name} template thumbnail`}
+                        className="h-full w-full object-cover"
+                        onError={() => {
+                          if (!template.previewImage || templateCardImage !== template.previewImage) return;
+                          setBrokenTemplatePreviewImages((current) =>
+                            current.includes(template.previewImage || "") ? current : [...current, template.previewImage || ""]
+                          );
+                        }}
+                      />
                     </div>
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -3268,7 +3289,8 @@ export default function CustomizerPrototype() {
                       Use Template
                     </button>
                   </article>
-                ))}
+                  );
+                })}
               </div>
               {filteredTemplateLibrary.length === 0 ? (
                 <div className="grid min-h-48 place-items-center rounded-xl border border-[#243b43] bg-[#071015] p-6 text-center text-sm text-neutral-400">
