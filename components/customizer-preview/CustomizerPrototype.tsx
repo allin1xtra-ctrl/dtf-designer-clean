@@ -990,11 +990,13 @@ function getActivePrintLocation(config: StagingCustomizerConfig | null, view: Vi
   return config?.printLocations?.find((location) => location.id === view && location.enabled !== false) || null;
 }
 
+const FRONT_ALIGNED_PRINT_AREA: StagingPrintArea = { x: 50, y: 50.5, width: 38, height: 61 };
+
 function getDefaultPrintAreaForView(state: EditorState): StagingPrintArea {
   if (state.mode === "transfer") return { x: 50, y: 50, width: 44, height: 66 };
 
   const defaults: Record<ViewId, StagingPrintArea> = {
-    front: { x: 50, y: 56, width: 38, height: 50 },
+    front: FRONT_ALIGNED_PRINT_AREA,
     back: { x: 49, y: 48.5, width: 48, height: 59 },
     leftSleeve: { x: 51, y: 50, width: 30, height: 42 },
     rightSleeve: { x: 49, y: 50, width: 30, height: 42 },
@@ -1002,6 +1004,11 @@ function getDefaultPrintAreaForView(state: EditorState): StagingPrintArea {
   };
 
   return defaults[state.activeView];
+}
+
+function getFrontAlignedPrintArea(area: StagingPrintArea) {
+  const isLegacyFrontArea = area.x === 50 && area.y === 56 && area.width === 38 && area.height === 50;
+  return isLegacyFrontArea ? FRONT_ALIGNED_PRINT_AREA : area;
 }
 
 function getSafePrintArea(config: StagingCustomizerConfig | null, state: EditorState) {
@@ -1017,7 +1024,8 @@ function getSafePrintArea(config: StagingCustomizerConfig | null, state: EditorS
   const y = safeNumber(area.y, height / 2, 100 - height / 2, fallback.y);
   const invalid = x !== area.x || y !== area.y || width !== area.width || height !== area.height;
 
-  return { area: { x, y, width, height }, usingFallback: invalid };
+  const safeArea = { x, y, width, height };
+  return { area: state.mode === "apparel" && state.activeView === "front" ? getFrontAlignedPrintArea(safeArea) : safeArea, usingFallback: invalid };
 }
 
 function getPrintAreaStyle(area: StagingPrintArea) {
