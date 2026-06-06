@@ -109,6 +109,7 @@ type StarterTemplateCard = {
   mode: PreviewMode | "both";
   targetView?: ViewId;
   tags: string[];
+  thumbnailUrl?: string;
   previewImage?: string;
   thumbnail: string;
   description: string;
@@ -414,6 +415,7 @@ function templateDefinition(input: Omit<StarterTemplateCard, "thumbnail" | "tags
   return {
     ...input,
     tags: input.tags || [],
+    thumbnailUrl: input.thumbnailUrl,
     previewImage: input.previewImage || `/customizer-preview/templates/thumbs/${input.id}.png`,
     thumbnail: createTemplateThumbnail(input.name, input.category, input.layers),
   };
@@ -862,8 +864,9 @@ function getApparelMockupForColor(mockupKey: MockupColorKey, view: ViewId) {
 }
 
 function getTemplateCardImage(template: StarterTemplateCard, brokenPreviewImages: string[]) {
-  return template.previewImage && !brokenPreviewImages.includes(template.previewImage)
-    ? template.previewImage
+  const hostedThumbnail = template.thumbnailUrl || template.previewImage;
+  return hostedThumbnail && !brokenPreviewImages.includes(hostedThumbnail)
+    ? hostedThumbnail
     : template.thumbnail;
 }
 
@@ -1472,6 +1475,8 @@ export default function CustomizerPrototype() {
       productHandle: "custom-t-shirt-upload-customize",
       productTitle: "Customizer Preview Product",
       quantity: 1,
+      templateId: selectedTemplateConfig?.id || state.selectedTemplate.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+      templateName: state.selectedTemplate,
       selectedColor: state.mode === "apparel" ? selectedColorLabel : undefined,
       selectedSize: state.mode === "apparel" ? "Custom" : undefined,
       selectedView: state.mode === "apparel" ? selectedTarget : undefined,
@@ -1515,6 +1520,7 @@ export default function CustomizerPrototype() {
     hostedArtworkUrl,
     hostedPreviewImageUrl,
     printReadyPlan,
+    selectedTemplateConfig?.id,
     selectedColor?.hex,
     selectedColor?.label,
     safeRotation,
@@ -3324,9 +3330,10 @@ export default function CustomizerPrototype() {
                         alt={`${template.name} template thumbnail`}
                         className="h-full w-full object-cover"
                         onError={() => {
-                          if (!template.previewImage || templateCardImage !== template.previewImage) return;
+                          const hostedThumbnail = template.thumbnailUrl || template.previewImage;
+                          if (!hostedThumbnail || templateCardImage !== hostedThumbnail) return;
                           setBrokenTemplatePreviewImages((current) =>
-                            current.includes(template.previewImage || "") ? current : [...current, template.previewImage || ""]
+                            current.includes(hostedThumbnail) ? current : [...current, hostedThumbnail]
                           );
                         }}
                       />
