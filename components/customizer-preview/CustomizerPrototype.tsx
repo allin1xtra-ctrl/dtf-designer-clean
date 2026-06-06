@@ -312,21 +312,21 @@ const STAGING_APPAREL_MOCKUPS: Record<MockupColorKey, Record<ViewId, MockupAsset
   royalBlue: {
     front: { label: "Royal Blue T-Shirt Front Mockup", url: "/customizer-preview/mockups/royal-blue-front.png", hasBakedPrintGuide: false },
     back: { label: "Royal Blue T-Shirt Back Mockup", url: "/customizer-preview/mockups/royal-blue-back.png", hasBakedPrintGuide: false },
-    leftSleeve: { label: "Royal Blue T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/royal-blue-left-sleeve.png", hasBakedPrintGuide: true },
-    rightSleeve: { label: "Royal Blue T-Shirt Right Sleeve Mockup", url: "/customizer-preview/mockups/royal-blue-right-sleeve.png", hasBakedPrintGuide: true },
+    leftSleeve: { label: "Royal Blue T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/royal-blue-left-sleeve.png", hasBakedPrintGuide: false },
+    rightSleeve: { label: "Royal Blue T-Shirt Right Sleeve Mockup", url: "/customizer-preview/mockups/royal-blue-right-sleeve.png", hasBakedPrintGuide: false },
     neckTag: { label: "Royal Blue T-Shirt Neck Tag Mockup", url: "/customizer-preview/mockups/royal-blue-neck-tag.png", hasBakedPrintGuide: false },
   },
   red: {
     front: { label: "Red T-Shirt Front Mockup", url: "/customizer-preview/mockups/red-front.png", hasBakedPrintGuide: false },
     back: { label: "Red T-Shirt Back Mockup", url: "/customizer-preview/mockups/red-back.png", hasBakedPrintGuide: false },
     leftSleeve: { label: "Red T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/red-left-sleeve.png", hasBakedPrintGuide: false },
-    rightSleeve: { label: "Red T-Shirt Right Sleeve Mockup", url: "/customizer-preview/mockups/red-right-sleeve.png", hasBakedPrintGuide: true },
+    rightSleeve: { label: "Red T-Shirt Right Sleeve Mockup", url: "/customizer-preview/mockups/red-right-sleeve.png", hasBakedPrintGuide: false },
     neckTag: { label: "Red T-Shirt Neck Tag Mockup", url: "/customizer-preview/mockups/red-neck-tag.png", hasBakedPrintGuide: false },
   },
   offWhite: {
     front: { label: "Off White T-Shirt Front Mockup", url: "/customizer-preview/mockups/off-white-front.png", hasBakedPrintGuide: false },
     back: { label: "Off White T-Shirt Back Mockup", url: "/customizer-preview/mockups/off-white-back.png", hasBakedPrintGuide: false },
-    leftSleeve: { label: "Off White T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/off-white-left-sleeve.png", hasBakedPrintGuide: true },
+    leftSleeve: { label: "Off White T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/off-white-left-sleeve.png", hasBakedPrintGuide: false },
     rightSleeve: { label: "Off White T-Shirt Right Sleeve Mockup", url: "/customizer-preview/mockups/off-white-right-sleeve.png", hasBakedPrintGuide: false },
     neckTag: { label: "Off White T-Shirt Neck Tag Mockup", url: "/customizer-preview/mockups/off-white-neck-tag.png", hasBakedPrintGuide: false },
   },
@@ -2010,15 +2010,25 @@ export default function CustomizerPrototype() {
     }
   };
 
-  const runAiPlaceholder = () => {
+  const runAiPlaceholder = (action: "Background Remover" | "Image Enhancer" | "Vectorizer" | "Generate Idea") => {
+    const artworkRequired = action !== "Generate Idea";
+    if (artworkRequired && !currentArtwork?.file) {
+      setStatusOnly("Upload artwork first.");
+      return;
+    }
+
+    const statusByAction = {
+      "Background Remover": "Staging only: background remover queued / no production endpoint connected.",
+      "Image Enhancer": "Staging only: image enhancer queued / no production endpoint connected.",
+      Vectorizer: "Staging only: vectorizer queued / no production endpoint connected.",
+      "Generate Idea": "Staging only: design idea generated / no production endpoint connected.",
+    };
+
     setIsAiLoading(true);
     window.setTimeout(() => {
       setIsAiLoading(false);
-      setState((current) => ({
-        ...current,
-        status: "AI placeholder checked. No AI output generated until a staging endpoint is approved.",
-      }));
-    }, 500);
+      setStatusOnly(statusByAction[action]);
+    }, 300);
   };
 
   const loadStagingConfig = () => {
@@ -2241,6 +2251,24 @@ export default function CustomizerPrototype() {
               </div>
             </PanelCard>
 
+            <PanelCard title="AI Tools">
+              <div className="grid grid-cols-2 gap-2">
+                {(["Background Remover", "Image Enhancer", "Vectorizer", "Generate Idea"] as const).map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => runAiPlaceholder(item)}
+                    className="rounded-md border border-cyan-500/60 px-2.5 py-1.5 text-left text-xs font-semibold text-cyan-100"
+                  >
+                    {isAiLoading ? "Checking..." : item}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-xs leading-5 text-neutral-400">
+                AI actions are staging placeholders only. No production endpoints are called.
+              </p>
+            </PanelCard>
+
             <PanelCard title="Add Content">
               <div className="grid grid-cols-2 gap-2">
                 <ToolButton label="Add Text" onClick={addTextLayer} />
@@ -2292,29 +2320,17 @@ export default function CustomizerPrototype() {
                     onChange={(event) => updateSelectedLayer({ color: event.target.value }, "Selected layer color updated.")}
                     className="h-8 w-10 rounded-md border border-cyan-300 bg-cyan-300 p-0.5"
                   />
-                  <div className="grid flex-1 grid-cols-4 gap-2">
-                    {["Bold", "Italic", "Underline", "Align"].map((item) => (
+                  <div className="grid flex-1 grid-cols-2 gap-2">
+                    {["Bold", "Italic"].map((item) => (
                       <ToolButton key={item} label={item} onClick={() => setStatusOnly(`${item} text control is staged.`)} />
                     ))}
                   </div>
-                </div>
-                <div className="grid grid-cols-4 gap-2">
-                  {["Outline", "Shadow", "Arch", "Wave", "Distort"].map((item) => (
-                    <ToolButton key={item} label={item} onClick={() => setStatusOnly(`${item} text effect is staged.`)} />
-                  ))}
                 </div>
               </div>
             </PanelCard>
 
             <PanelCard title="Image Tools">
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  {["Remove Background", "Clean Colors", "Upscale / Enhance", "Vectorize"].map((item) => (
-                    <ToolButton key={item} label={item} onClick={runAiPlaceholder} />
-                  ))}
-                  <ToolButton label="Opacity" onClick={() => setStatusOnly("Opacity control is staged.")} />
-                  <ToolButton label="Flip" onClick={() => setStatusOnly("Flip control is staged.")} />
-                </div>
                 <div className="rounded-md border border-[#263d45] bg-[#081114] p-2">
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-cyan-200">Image Fit</p>
@@ -2712,26 +2728,6 @@ export default function CustomizerPrototype() {
                 </ol>
               </PanelCard>
             )}
-
-            <div className={`${mobilePanel === "assistant" ? "block" : "hidden"} lg:block`}>
-              <PanelCard title="AI Tools">
-                <div className="grid grid-cols-2 gap-2">
-                  {["Background Remover", "Image Enhancer", "Vectorizer", "Generate Idea"].map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={runAiPlaceholder}
-                      className="rounded-md border border-cyan-500/60 px-2.5 py-1.5 text-left text-xs font-semibold text-cyan-100"
-                    >
-                      {isAiLoading ? "Checking..." : item}
-                    </button>
-                  ))}
-                </div>
-                <p className="mt-2 text-xs leading-5 text-neutral-400">
-                  AI actions are staging placeholders only. No production endpoints are called.
-                </p>
-              </PanelCard>
-            </div>
 
             <div className={`${mobilePanel === "assistant" ? "block" : "hidden"} lg:block`}>
               <PanelCard title="Editable Templates">
