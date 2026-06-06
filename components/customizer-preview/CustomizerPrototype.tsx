@@ -2790,7 +2790,13 @@ export default function CustomizerPrototype() {
             </div>
           </div>
 
-          <div className="relative grid min-h-[390px] min-w-0 flex-1 place-items-center overflow-hidden rounded-xl border border-[#2d454f] bg-[radial-gradient(circle_at_50%_42%,rgba(86,166,188,0.3)_0%,rgba(22,36,43,0.82)_34%,#070d10_75%)] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_28px_90px_rgba(0,0,0,0.42)] xl:min-h-0">
+          <div
+            className={`relative grid min-h-[390px] min-w-0 flex-1 place-items-center overflow-hidden rounded-xl border border-[#2d454f] p-1.5 xl:min-h-0 ${
+              state.mode === "apparel"
+                ? "bg-[#070d10]"
+                : "bg-[radial-gradient(circle_at_50%_42%,rgba(86,166,188,0.3)_0%,rgba(22,36,43,0.82)_34%,#070d10_75%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_28px_90px_rgba(0,0,0,0.42)]"
+            }`}
+          >
             {state.usingSafeDefaults ? (
               <div className="absolute left-3 top-3 z-30 rounded-full border border-yellow-400/40 bg-yellow-950/80 px-3 py-1 text-xs font-semibold text-yellow-100">
                 Using safe preview defaults.
@@ -2812,7 +2818,11 @@ export default function CustomizerPrototype() {
               </div>
             ) : null}
             <div
-              className="relative aspect-[5/6] min-h-[360px] max-w-full shrink-0 overflow-visible rounded-2xl border border-white/20 bg-[linear-gradient(145deg,#f8fbff_0%,#dce6ef_46%,#ffffff_100%)] shadow-[0_38px_100px_rgba(0,0,0,0.58),0_0_0_1px_rgba(103,232,249,0.12),inset_0_1px_0_rgba(255,255,255,0.85)]"
+              className={`relative aspect-[5/6] min-h-[360px] max-w-full shrink-0 overflow-visible rounded-2xl ${
+                state.mode === "apparel"
+                  ? "border border-transparent bg-transparent shadow-none"
+                  : "border border-white/20 bg-[linear-gradient(145deg,#f8fbff_0%,#dce6ef_46%,#ffffff_100%)] shadow-[0_38px_100px_rgba(0,0,0,0.58),0_0_0_1px_rgba(103,232,249,0.12),inset_0_1px_0_rgba(255,255,255,0.85)]"
+              }`}
               style={{
                 height: `min(calc(100% - 2px), ${previewMaxHeight}px)`,
                 maxWidth: "min(100%, 900px)",
