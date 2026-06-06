@@ -158,7 +158,8 @@ type StagingCustomizerConfig = {
   };
 };
 
-type MockupColorKey = "black" | "white" | "heatherGrey";
+type MockupColorKey = "black" | "white" | "heatherGrey" | "regularGrey" | "royalBlue" | "red" | "offWhite";
+type MockupAsset = { label: string; url: string; hasBakedPrintGuide: boolean };
 
 type PreviewColorOption = {
   id: string;
@@ -202,10 +203,10 @@ const DEFAULT_PRODUCT_COLORS: PreviewColorOption[] = [
   { id: "black", label: "Black", hex: "#101316", mockupKey: "black" },
   { id: "white", label: "White", hex: "#f8fafc", mockupKey: "white" },
   { id: "heather-grey", label: "Heather Grey", hex: "#9ca3af", mockupKey: "heatherGrey" },
-  { id: "regular-grey", label: "Regular Grey", hex: "#64748b", mockupKey: "heatherGrey" },
-  { id: "royal-blue", label: "Royal Blue", hex: "#075985", mockupKey: "black" },
-  { id: "red", label: "Red", hex: "#991b1b", mockupKey: "black" },
-  { id: "off-white", label: "Off White", hex: "#f5f1e8", mockupKey: "white" },
+  { id: "regular-grey", label: "Regular Grey", hex: "#64748b", mockupKey: "regularGrey" },
+  { id: "royal-blue", label: "Royal Blue", hex: "#075985", mockupKey: "royalBlue" },
+  { id: "red", label: "Red", hex: "#991b1b", mockupKey: "red" },
+  { id: "off-white", label: "Off White", hex: "#f5f1e8", mockupKey: "offWhite" },
 ];
 const MATERIAL_OPTIONS = ["Hot Peel Film", "Cold Peel Film", "Matte Finish", "Gloss Finish"];
 const FONT_OPTIONS = ["Inter", "Arial", "Impact", "Montserrat", "Oswald"];
@@ -279,27 +280,55 @@ function createTemplateThumbnail(name: string, category: string, layers: Templat
   </svg>`);
 }
 
-const STAGING_APPAREL_MOCKUPS: Record<MockupColorKey, Record<ViewId, { label: string; url: string }>> = {
+const STAGING_APPAREL_MOCKUPS: Record<MockupColorKey, Record<ViewId, MockupAsset>> = {
   black: {
-    front: { label: "Black T-Shirt Front Mockup", url: "/customizer-preview/mockups/black-front.png" },
-    back: { label: "Black T-Shirt Back Mockup", url: "/customizer-preview/mockups/black-back.png" },
-    leftSleeve: { label: "Black T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/black-left-sleeve.png" },
-    rightSleeve: { label: "Black T-Shirt Right Sleeve Mockup", url: "/customizer-preview/mockups/black-right-sleeve.png" },
-    neckTag: { label: "Black T-Shirt Neck Tag Mockup", url: "/customizer-preview/mockups/black-neck-tag.png" },
+    front: { label: "Black T-Shirt Front Mockup", url: "/customizer-preview/mockups/black-front.png", hasBakedPrintGuide: false },
+    back: { label: "Black T-Shirt Back Mockup", url: "/customizer-preview/mockups/black-back.png", hasBakedPrintGuide: false },
+    leftSleeve: { label: "Black T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/black-left-sleeve.png", hasBakedPrintGuide: true },
+    rightSleeve: { label: "Black T-Shirt Right Sleeve Mockup", url: "/customizer-preview/mockups/black-right-sleeve.png", hasBakedPrintGuide: true },
+    neckTag: { label: "Black T-Shirt Neck Tag Mockup", url: "/customizer-preview/mockups/black-neck-tag.png", hasBakedPrintGuide: false },
   },
   white: {
-    front: { label: "White T-Shirt Front Mockup", url: "/customizer-preview/mockups/white-front-alt.png" },
-    back: { label: "White T-Shirt Back Mockup", url: "/customizer-preview/mockups/white-front.png" },
-    leftSleeve: { label: "White T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/white-left-sleeve.png" },
-    rightSleeve: { label: "White T-Shirt Right Sleeve Mockup", url: "/customizer-preview/mockups/white-right-sleeve.png" },
-    neckTag: { label: "White T-Shirt Neck Tag Mockup", url: "/customizer-preview/mockups/white-neck-tag.png" },
+    front: { label: "White T-Shirt Front Mockup", url: "/customizer-preview/mockups/white-front.png", hasBakedPrintGuide: false },
+    back: { label: "White T-Shirt Back Mockup", url: "/customizer-preview/mockups/white-back.png", hasBakedPrintGuide: false },
+    leftSleeve: { label: "White T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/white-left-sleeve.png", hasBakedPrintGuide: true },
+    rightSleeve: { label: "White T-Shirt Right Sleeve Mockup", url: "/customizer-preview/mockups/white-right-sleeve.png", hasBakedPrintGuide: false },
+    neckTag: { label: "White T-Shirt Neck Tag Mockup", url: "/customizer-preview/mockups/white-neck-tag.png", hasBakedPrintGuide: false },
   },
   heatherGrey: {
-    front: { label: "Heather Gray T-Shirt Front Mockup", url: "/customizer-preview/mockups/heather-grey-front.png" },
-    back: { label: "Heather Gray T-Shirt Back Mockup", url: "/customizer-preview/mockups/heather-grey-back.png" },
-    leftSleeve: { label: "Heather Gray T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/heather-grey-left-sleeve.png" },
-    rightSleeve: { label: "Heather Gray T-Shirt Right Sleeve Mockup", url: "/customizer-preview/mockups/heather-grey-right-sleeve.png" },
-    neckTag: { label: "Heather Gray T-Shirt Neck Tag Mockup", url: "/customizer-preview/mockups/heather-grey-neck-tag.png" },
+    front: { label: "Heather Gray T-Shirt Front Mockup", url: "/customizer-preview/mockups/heather-grey-front.png", hasBakedPrintGuide: false },
+    back: { label: "Heather Gray T-Shirt Back Mockup", url: "/customizer-preview/mockups/heather-grey-back.png", hasBakedPrintGuide: false },
+    leftSleeve: { label: "Heather Gray T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/heather-grey-left-sleeve.png", hasBakedPrintGuide: true },
+    rightSleeve: { label: "Heather Gray T-Shirt Right Sleeve Mockup", url: "/customizer-preview/mockups/heather-grey-right-sleeve.png", hasBakedPrintGuide: true },
+    neckTag: { label: "Heather Gray T-Shirt Neck Tag Mockup", url: "/customizer-preview/mockups/heather-grey-neck-tag.png", hasBakedPrintGuide: false },
+  },
+  regularGrey: {
+    front: { label: "Regular Grey T-Shirt Front Mockup", url: "/customizer-preview/mockups/regular-grey-front.png", hasBakedPrintGuide: false },
+    back: { label: "Regular Grey T-Shirt Back Mockup", url: "/customizer-preview/mockups/regular-grey-back.png", hasBakedPrintGuide: false },
+    leftSleeve: { label: "Regular Grey T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/regular-grey-left-sleeve.png", hasBakedPrintGuide: true },
+    rightSleeve: { label: "Regular Grey T-Shirt Right Sleeve Mockup", url: "/customizer-preview/mockups/regular-grey-right-sleeve.png", hasBakedPrintGuide: true },
+    neckTag: { label: "Regular Grey T-Shirt Neck Tag Mockup", url: "/customizer-preview/mockups/regular-grey-neck-tag.png", hasBakedPrintGuide: false },
+  },
+  royalBlue: {
+    front: { label: "Royal Blue T-Shirt Front Mockup", url: "/customizer-preview/mockups/royal-blue-front.png", hasBakedPrintGuide: false },
+    back: { label: "Royal Blue T-Shirt Back Mockup", url: "/customizer-preview/mockups/royal-blue-back.png", hasBakedPrintGuide: false },
+    leftSleeve: { label: "Royal Blue T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/royal-blue-left-sleeve.png", hasBakedPrintGuide: true },
+    rightSleeve: { label: "Royal Blue T-Shirt Right Sleeve Mockup", url: "/customizer-preview/mockups/royal-blue-right-sleeve.png", hasBakedPrintGuide: true },
+    neckTag: { label: "Royal Blue T-Shirt Neck Tag Mockup", url: "/customizer-preview/mockups/royal-blue-neck-tag.png", hasBakedPrintGuide: false },
+  },
+  red: {
+    front: { label: "Red T-Shirt Front Mockup", url: "/customizer-preview/mockups/red-front.png", hasBakedPrintGuide: false },
+    back: { label: "Red T-Shirt Back Mockup", url: "/customizer-preview/mockups/red-back.png", hasBakedPrintGuide: false },
+    leftSleeve: { label: "Red T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/red-left-sleeve.png", hasBakedPrintGuide: false },
+    rightSleeve: { label: "Red T-Shirt Right Sleeve Mockup", url: "/customizer-preview/mockups/red-right-sleeve.png", hasBakedPrintGuide: true },
+    neckTag: { label: "Red T-Shirt Neck Tag Mockup", url: "/customizer-preview/mockups/red-neck-tag.png", hasBakedPrintGuide: false },
+  },
+  offWhite: {
+    front: { label: "Off White T-Shirt Front Mockup", url: "/customizer-preview/mockups/off-white-front.png", hasBakedPrintGuide: false },
+    back: { label: "Off White T-Shirt Back Mockup", url: "/customizer-preview/mockups/off-white-back.png", hasBakedPrintGuide: false },
+    leftSleeve: { label: "Off White T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/off-white-left-sleeve.png", hasBakedPrintGuide: true },
+    rightSleeve: { label: "Off White T-Shirt Right Sleeve Mockup", url: "/customizer-preview/mockups/off-white-right-sleeve.png", hasBakedPrintGuide: false },
+    neckTag: { label: "Off White T-Shirt Neck Tag Mockup", url: "/customizer-preview/mockups/off-white-neck-tag.png", hasBakedPrintGuide: false },
   },
 };
 
@@ -556,19 +585,34 @@ function getMockupColorKey(hexOrLabel: string): MockupColorKey {
   if (
     normalized.includes("off white") ||
     normalized.includes("off-white") ||
+    normalized === "#f5f1e8"
+  ) return "offWhite";
+  if (
+    normalized.includes("royal") ||
+    normalized.includes("blue") ||
+    normalized === "#075985"
+  ) return "royalBlue";
+  if (
+    normalized.includes("red") ||
+    normalized === "#991b1b"
+  ) return "red";
+  if (
+    normalized.includes("regular grey") ||
+    normalized.includes("regular gray") ||
+    normalized === "#64748b"
+  ) return "regularGrey";
+  if (
     normalized.includes("white") ||
     normalized === "#fff" ||
     normalized === "#ffffff" ||
     normalized === "#f8fafc" ||
-    normalized === "#f4f7fb" ||
-    normalized === "#f5f1e8"
+    normalized === "#f4f7fb"
   ) return "white";
   if (
     normalized.includes("heather") ||
     normalized.includes("gray") ||
     normalized.includes("grey") ||
     normalized === "#334155" ||
-    normalized === "#64748b" ||
     normalized === "#9ca3af"
   ) return "heatherGrey";
   return "black";
@@ -971,6 +1015,7 @@ export default function CustomizerPrototype() {
     configuredColors.find((color) => color.hex.toLowerCase() === state.selectedColorHex.toLowerCase()) ||
     configuredColors[0] ||
     DEFAULT_PRODUCT_COLORS[0];
+  const printAreaGuideColor = state.mode === "apparel" ? selectedColor.hex : "#67e8f9";
   const selectedMockupColorKey = selectedColor.mockupKey;
   const configuredMaterials = stagingConfig?.materialOptions?.filter((material) => material.enabled !== false).map((material) => material.label || material.id || "Material") || MATERIAL_OPTIONS;
   const templateSettings = stagingConfig?.stagingSettings?.templateSettings;
@@ -1003,7 +1048,7 @@ export default function CustomizerPrototype() {
       : safeTransferSize === "Gang Sheet"
         ? STAGING_TRANSFER_MOCKUPS.gangSheet.label
         : STAGING_TRANSFER_MOCKUPS.transferSheet.label;
-  const hasBakedPrintGuide = state.mode === "apparel" && displayMockupUrl.startsWith("/customizer-preview/mockups/");
+  const hasBakedPrintGuide = state.mode === "apparel" ? colorFallbackMockup.hasBakedPrintGuide : false;
   const mockupLoadFailed = Boolean(activeMockupUrl && brokenMockupUrls.includes(activeMockupUrl));
   const activeLayers = getActiveLayers(state);
   const selectedLayer = activeLayers.find((layer) => layer.id === state.selectedLayerId) || null;
@@ -2475,9 +2520,14 @@ export default function CustomizerPrototype() {
                 className={`absolute z-20 -translate-x-1/2 -translate-y-1/2 ${
                   hasBakedPrintGuide
                     ? "border border-transparent bg-transparent"
-                    : "border border-dashed border-cyan-300 bg-cyan-300/5 shadow-[0_0_0_1px_rgba(8,47,73,0.35),0_0_32px_rgba(34,211,238,0.16)]"
+                    : "border border-dashed bg-transparent"
                 }`}
-                style={getPrintAreaStyle(printAreaResult.area)}
+                style={{
+                  ...getPrintAreaStyle(printAreaResult.area),
+                  borderColor: printAreaGuideColor,
+                  boxShadow: state.mode === "apparel" ? "none" : "0 0 0 1px rgba(8,47,73,0.35), 0 0 32px rgba(34,211,238,0.16)",
+                  opacity: state.mode === "apparel" ? 0.72 : 1,
+                }}
               >
                 <span className="absolute -right-1 -top-5 text-[10px] font-semibold uppercase tracking-wide text-cyan-100/80">
                   {state.mode === "apparel"
