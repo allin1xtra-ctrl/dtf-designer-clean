@@ -16,6 +16,14 @@ type TemplateCategory =
   | "Business"
   | "Events"
   | "Family Reunion"
+  | "Memorial"
+  | "Sports"
+  | "Boutique"
+  | "Food / Restaurant"
+  | "Barber / Beauty"
+  | "Church / Ministry"
+  | "School / Spirit"
+  | "Birthday"
   | "Stickers"
   | "Gang Sheets"
   | "Labels"
@@ -52,6 +60,7 @@ type EditableTemplateLayer = {
   lockAspectRatio?: boolean;
   locked: boolean;
   hidden: boolean;
+  zIndex: number;
 };
 
 type StagingUploadAsset = {
@@ -97,6 +106,7 @@ type StarterTemplateCard = {
   category: TemplateCategory;
   mode: PreviewMode | "both";
   targetView?: ViewId;
+  tags: string[];
   thumbnail: string;
   description: string;
   layers: TemplateLayerSeed[];
@@ -218,6 +228,14 @@ const TEMPLATE_CATEGORIES: TemplateCategory[] = [
   "Business",
   "Events",
   "Family Reunion",
+  "Memorial",
+  "Sports",
+  "Boutique",
+  "Food / Restaurant",
+  "Barber / Beauty",
+  "Church / Ministry",
+  "School / Spirit",
+  "Birthday",
   "Stickers",
   "Gang Sheets",
   "Labels",
@@ -337,14 +355,157 @@ const STAGING_TRANSFER_MOCKUPS = {
   gangSheet: { label: "Gang Sheet Staging Mockup", url: createMockupSvg("Gang sheet staging mockup", "gang") },
 };
 
-function templateDefinition(input: Omit<StarterTemplateCard, "thumbnail">): StarterTemplateCard {
+function templateDefinition(input: Omit<StarterTemplateCard, "thumbnail" | "tags"> & { tags?: string[] }): StarterTemplateCard {
   return {
     ...input,
+    tags: input.tags || [],
     thumbnail: createTemplateThumbnail(input.name, input.category, input.layers),
   };
 }
 
-const STARTER_TEMPLATE_LIBRARY: StarterTemplateCard[] = [
+type TemplateSpec = {
+  name: string;
+  category: TemplateCategory;
+  mode: PreviewMode;
+  targetView?: ViewId;
+  tags: string[];
+};
+
+const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+const textSeed = (name: string, text: string, x: number, y: number, width: number, height: number, color: string, fontSize: number, fontFamily = "Montserrat", zIndex = 2): TemplateLayerSeed =>
+  ({ type: "text", name, text, x, y, width, height, color, fontSize, fontFamily, zIndex });
+const placeholderSeed = (name: string, text: string, x: number, y: number, width: number, height: number, zIndex = 1): TemplateLayerSeed =>
+  ({ type: "placeholder", name, text, x, y, width, height, color: "#0f172a", zIndex });
+const shapeSeed = (name: string, x: number, y: number, width: number, height: number, color: string, opacity = 0.88, zIndex = 0): TemplateLayerSeed =>
+  ({ type: "shape", name, x, y, width, height, color, opacity, zIndex });
+
+function createPremiumTemplateLayers(spec: TemplateSpec): TemplateLayerSeed[] {
+  const upperName = spec.name.toUpperCase();
+  if (spec.targetView === "neckTag") {
+    return [
+      shapeSeed("Label Background", 50, 50, 86, 58, "#111827", 0.94, 0),
+      textSeed("Brand Text", spec.category === "Labels" ? "YOUR BRAND" : upperName, 50, 45, 78, 16, "#ffffff", 12, "Montserrat", 2),
+      textSeed("Detail Text", spec.category === "Labels" ? "DTF / WASH COLD" : "SIZE / CARE", 50, 61, 68, 10, "#67e8f9", 8, "Inter", 3),
+    ];
+  }
+  if (spec.targetView === "leftSleeve" || spec.targetView === "rightSleeve") {
+    return [
+      placeholderSeed("Sleeve Mark", "Upload Logo", 50, 42, 58, 28, 1),
+      textSeed("Sleeve Text", spec.category === "Sports" ? "TEAM" : "EST. 2026", 50, 68, 72, 12, "#67e8f9", 10, "Oswald", 2),
+    ];
+  }
+  if (spec.targetView === "back") {
+    return [
+      textSeed("Top Statement", upperName, 50, 28, 86, 16, "#ffffff", 22, "Impact", 2),
+      placeholderSeed("Back Artwork", "Your Design Here", 50, 52, 62, 32, 1),
+      textSeed("Bottom Text", spec.category === "Memorial" ? "FOREVER IN OUR HEARTS" : spec.category === "Family Reunion" ? "EST. FAMILY LEGACY" : "CUSTOM BACK PRINT", 50, 74, 78, 11, "#67e8f9", 11, "Montserrat", 3),
+    ];
+  }
+  if (spec.mode === "transfer") {
+    if (spec.category === "Gang Sheets" || upperName.includes("SHEET")) {
+      return [
+        placeholderSeed("Artwork Slot 1", "Upload Art", 30, 28, 30, 18, 1),
+        placeholderSeed("Artwork Slot 2", "Upload Art", 70, 28, 30, 18, 2),
+        placeholderSeed("Artwork Slot 3", "Upload Art", 30, 57, 30, 18, 3),
+        placeholderSeed("Artwork Slot 4", "Upload Art", 70, 57, 30, 18, 4),
+        textSeed("Sheet Label", upperName, 50, 82, 82, 10, "#111827", 12, "Montserrat", 5),
+      ];
+    }
+    if (spec.category === "Labels") {
+      return [
+        shapeSeed("Transfer Label", 50, 42, 78, 24, "#111827", 0.94, 0),
+        textSeed("Label Text", upperName, 50, 42, 70, 12, "#ffffff", 14, "Montserrat", 2),
+        textSeed("Small Detail", "WASH COLD / DTF", 50, 61, 70, 9, "#111827", 9, "Inter", 3),
+      ];
+    }
+    return [
+      placeholderSeed("Transfer Artwork", "Upload Logo", 50, 38, 54, 26, 1),
+      textSeed("Transfer Text", upperName, 50, 62, 80, 14, "#111827", 18, spec.category === "Jerseys" ? "Impact" : "Montserrat", 2),
+      textSeed("Detail Text", spec.category === "Jerseys" ? "NAME / NUMBER" : "READY TO PRESS", 50, 74, 66, 8, "#111827", 9, "Inter", 3),
+    ];
+  }
+
+  const categoryText = spec.category === "Business" || spec.category === "Food / Restaurant" || spec.category === "Barber / Beauty"
+    ? "LOCAL BUSINESS"
+    : spec.category === "Church / Ministry"
+      ? "SERVE TEAM"
+      : spec.category === "School / Spirit" || spec.category === "Sports" || spec.category === "Jerseys"
+        ? "TEAM SPIRIT"
+        : spec.category === "Birthday"
+          ? "CELEBRATION"
+          : spec.category === "Memorial"
+            ? "IN LOVING MEMORY"
+            : "CUSTOM DESIGN";
+
+  return [
+    textSeed("Headline", upperName, 50, 32, 84, 16, "#ffffff", spec.category === "Jerseys" ? 26 : 20, spec.category === "Jerseys" ? "Impact" : "Montserrat", 2),
+    placeholderSeed("Main Artwork", "Your Design Here", 50, 52, 54, 28, 1),
+    textSeed("Support Text", categoryText, 50, 72, 76, 10, "#67e8f9", 10, "Inter", 3),
+  ];
+}
+
+const PREMIUM_TEMPLATE_SPECS: TemplateSpec[] = [
+  { name: "Premium Brand Logo", category: "Logos", mode: "apparel", targetView: "front", tags: ["brand", "logo", "premium"] },
+  { name: "Minimal Chest Logo", category: "Logos", mode: "apparel", targetView: "front", tags: ["minimal", "chest", "logo"] },
+  { name: "Oversized Streetwear Front", category: "Streetwear", mode: "apparel", targetView: "front", tags: ["oversized", "streetwear", "front"] },
+  { name: "Vintage Wash Tee", category: "Streetwear", mode: "apparel", targetView: "front", tags: ["vintage", "wash", "tee"] },
+  { name: "Back Neck Drop", category: "Streetwear", mode: "apparel", targetView: "back", tags: ["back", "neck", "drop"] },
+  { name: "Left Chest + Back Print", category: "Streetwear", mode: "apparel", targetView: "back", tags: ["left chest", "back print", "streetwear"] },
+  { name: "Construction Crew", category: "Business", mode: "apparel", targetView: "front", tags: ["construction", "crew", "business"] },
+  { name: "Landscaping Business Tee", category: "Business", mode: "apparel", targetView: "front", tags: ["landscaping", "business", "tee"] },
+  { name: "Cleaning Service Tee", category: "Business", mode: "apparel", targetView: "front", tags: ["cleaning", "service", "business"] },
+  { name: "Barber Logo Tee", category: "Barber / Beauty", mode: "apparel", targetView: "front", tags: ["barber", "logo", "beauty"] },
+  { name: "Beauty Salon Tee", category: "Barber / Beauty", mode: "apparel", targetView: "front", tags: ["beauty", "salon", "tee"] },
+  { name: "Food Truck Promo", category: "Food / Restaurant", mode: "apparel", targetView: "front", tags: ["food truck", "promo", "restaurant"] },
+  { name: "Restaurant Staff Tee", category: "Food / Restaurant", mode: "apparel", targetView: "front", tags: ["restaurant", "staff", "tee"] },
+  { name: "Church Volunteer", category: "Church / Ministry", mode: "apparel", targetView: "front", tags: ["church", "volunteer", "ministry"] },
+  { name: "Youth Ministry", category: "Church / Ministry", mode: "apparel", targetView: "front", tags: ["youth", "ministry", "church"] },
+  { name: "School Spirit", category: "School / Spirit", mode: "apparel", targetView: "front", tags: ["school", "spirit", "team"] },
+  { name: "Senior Class", category: "School / Spirit", mode: "apparel", targetView: "back", tags: ["senior", "class", "school"] },
+  { name: "Football Team", category: "Sports", mode: "apparel", targetView: "front", tags: ["football", "team", "sports"] },
+  { name: "Basketball Team", category: "Sports", mode: "apparel", targetView: "front", tags: ["basketball", "team", "sports"] },
+  { name: "Baseball Jersey", category: "Jerseys", mode: "apparel", targetView: "front", tags: ["baseball", "jersey", "sports"] },
+  { name: "Soccer Club", category: "Sports", mode: "apparel", targetView: "front", tags: ["soccer", "club", "sports"] },
+  { name: "Birthday Squad", category: "Birthday", mode: "apparel", targetView: "front", tags: ["birthday", "squad", "party"] },
+  { name: "Birthday Queen", category: "Birthday", mode: "apparel", targetView: "front", tags: ["birthday", "queen", "party"] },
+  { name: "Family Reunion Classic", category: "Family Reunion", mode: "apparel", targetView: "front", tags: ["family", "reunion", "classic"] },
+  { name: "Family Reunion Script", category: "Family Reunion", mode: "apparel", targetView: "front", tags: ["family", "reunion", "script"] },
+  { name: "Memorial Wings", category: "Memorial", mode: "apparel", targetView: "front", tags: ["memorial", "wings", "portrait"] },
+  { name: "Rest In Peace Portrait Placeholder", category: "Memorial", mode: "apparel", targetView: "front", tags: ["rest in peace", "portrait", "memorial"] },
+  { name: "Car Club Tee", category: "Streetwear", mode: "apparel", targetView: "back", tags: ["car club", "automotive", "tee"] },
+  { name: "Motorcycle Club Tee", category: "Streetwear", mode: "apparel", targetView: "back", tags: ["motorcycle", "club", "tee"] },
+  { name: "Music Artist Merch", category: "Streetwear", mode: "apparel", targetView: "front", tags: ["music", "artist", "merch"] },
+  { name: "DJ Event Tee", category: "Events", mode: "apparel", targetView: "front", tags: ["dj", "event", "music"] },
+  { name: "Pop-Up Shop Tee", category: "Boutique", mode: "apparel", targetView: "front", tags: ["pop up", "shop", "boutique"] },
+  { name: "Boutique Hang Tag", category: "Boutique", mode: "transfer", tags: ["boutique", "hang tag", "label"] },
+  { name: "Neck Label Brand", category: "Labels", mode: "apparel", targetView: "neckTag", tags: ["neck label", "brand", "care"] },
+  { name: "Sleeve Logo Mark", category: "Logos", mode: "apparel", targetView: "leftSleeve", tags: ["sleeve", "logo", "mark"] },
+  { name: "Pocket Logo", category: "Logos", mode: "apparel", targetView: "front", tags: ["pocket", "left chest", "logo"] },
+  { name: "Full Back Statement", category: "Streetwear", mode: "apparel", targetView: "back", tags: ["full back", "statement", "streetwear"] },
+  { name: "Full Front Transfer", category: "Transfers", mode: "transfer", tags: ["full front", "transfer", "press"] },
+  { name: "Small Chest Transfer", category: "Transfers", mode: "transfer", tags: ["small chest", "transfer", "logo"] },
+  { name: "Gang Sheet Starter Premium", category: "Gang Sheets", mode: "transfer", tags: ["gang sheet", "starter", "multi"] },
+  { name: "Sticker Sheet Layout", category: "Stickers", mode: "transfer", tags: ["sticker", "sheet", "layout"] },
+  { name: "Product Label Sheet", category: "Labels", mode: "transfer", tags: ["product", "label", "sheet"] },
+  { name: "DTF Care Label", category: "Labels", mode: "transfer", tags: ["dtf", "care", "label"] },
+  { name: "Name Drop Transfer", category: "Transfers", mode: "transfer", tags: ["name", "drop", "transfer"] },
+  { name: "Number Transfer", category: "Transfers", mode: "transfer", tags: ["number", "jersey", "transfer"] },
+];
+
+const PREMIUM_TEMPLATE_LIBRARY = PREMIUM_TEMPLATE_SPECS.map((spec) =>
+  templateDefinition({
+    id: slugify(spec.name),
+    name: spec.name,
+    category: spec.category,
+    mode: spec.mode,
+    targetView: spec.targetView,
+    tags: spec.tags,
+    description: `${spec.category} editable ${spec.mode} starter with replaceable artwork and live text layers.`,
+    layers: createPremiumTemplateLayers(spec),
+  })
+);
+
+const BASE_TEMPLATE_LIBRARY: StarterTemplateCard[] = [
   templateDefinition({ id: "centered-logo", name: "Centered Logo", category: "Logos", mode: "apparel", targetView: "front", description: "Simple logo and text layout.", layers: [
     { type: "placeholder", name: "Upload Logo", text: "Upload Logo", x: 50, y: 42, width: 48, height: 28, color: "#0f172a" },
     { type: "text", name: "Main Text", text: "YOUR LOGO", x: 50, y: 65, width: 62, height: 13, color: "#e5faff", fontSize: 18, fontFamily: "Montserrat" },
@@ -453,6 +614,8 @@ const STARTER_TEMPLATE_LIBRARY: StarterTemplateCard[] = [
     { type: "text", name: "Contact Text", text: "@YOURHANDLE", x: 50, y: 72, width: 60, height: 9, color: "#111827", fontSize: 9 },
   ] }),
 ];
+
+const STARTER_TEMPLATE_LIBRARY: StarterTemplateCard[] = [...BASE_TEMPLATE_LIBRARY, ...PREMIUM_TEMPLATE_LIBRARY];
 const STAGING_CUSTOMIZER_CONFIG_STORAGE_KEY = "dtf-staging-customizer-config";
 const SAFE_TRANSFER_SIZE = "3x3";
 
@@ -534,15 +697,17 @@ function layerDefaults(layer: Partial<EditableTemplateLayer>): EditableTemplateL
     lockAspectRatio: layer.lockAspectRatio ?? true,
     locked: layer.locked ?? false,
     hidden: layer.hidden ?? false,
+    zIndex: layer.zIndex ?? 0,
   };
 }
 
 function findTemplate(templateIdOrName: string, mode: PreviewMode) {
-  return STARTER_TEMPLATE_LIBRARY.find(
+  const modeMatch = STARTER_TEMPLATE_LIBRARY.find(
     (template) =>
       (template.id === templateIdOrName || template.name === templateIdOrName) &&
       (template.mode === mode || template.mode === "both")
   );
+  return modeMatch || STARTER_TEMPLATE_LIBRARY.find((template) => template.id === templateIdOrName || template.name === templateIdOrName);
 }
 
 function createTemplateLayers(templateIdOrName: string, mode: PreviewMode): EditableTemplateLayer[] {
@@ -550,7 +715,7 @@ function createTemplateLayers(templateIdOrName: string, mode: PreviewMode): Edit
   const templateKey = template?.id || templateIdOrName;
   const layers = template?.layers || [];
 
-  return layers.map((layer, index) => layerDefaults({ ...layer, id: createLayerId(templateKey, index) }));
+  return layers.map((layer, index) => layerDefaults({ ...layer, id: createLayerId(templateKey, index), zIndex: layer.zIndex ?? index }));
 }
 
 function getRecommendedViewForTemplate(template: string, currentView: ViewId): ViewId {
@@ -674,6 +839,7 @@ function mapLayerToPayloadLayer(
     cropY: layer.cropY,
     cropZoom: layer.cropZoom,
     lockAspectRatio: layer.lockAspectRatio,
+    zIndex: layer.zIndex,
     printLocationId: state.mode === "apparel" ? state.activeView : undefined,
     transferSizeId: state.mode === "transfer" ? safeTransferSize : undefined,
     qualityStatus: "good_quality",
@@ -1125,23 +1291,25 @@ export default function CustomizerPrototype() {
     const query = templateSearch.trim().toLowerCase();
 
     return STARTER_TEMPLATE_LIBRARY.filter((template) => {
-      const modeMatch = template.mode === "both" || template.mode === state.mode;
       const categoryEnabled = enabledTemplateCategories.includes(template.category);
       const templateModeEnabled =
-        state.mode === "apparel"
-          ? templateSettings?.enabledForApparel !== false
-          : templateSettings?.enabledForTransfer !== false;
+        template.mode === "both"
+          ? templateSettings?.enabledForApparel !== false || templateSettings?.enabledForTransfer !== false
+          : template.mode === "apparel"
+            ? templateSettings?.enabledForApparel !== false
+            : templateSettings?.enabledForTransfer !== false;
       const categoryMatch = activeTemplateCategory === "All" || template.category === activeTemplateCategory;
       const queryMatch =
         !query ||
         template.name.toLowerCase().includes(query) ||
         template.description.toLowerCase().includes(query) ||
         template.id.toLowerCase().includes(query) ||
-        template.category.toLowerCase().includes(query);
+        template.category.toLowerCase().includes(query) ||
+        template.tags.some((tag) => tag.toLowerCase().includes(query));
 
-      return modeMatch && templateModeEnabled && categoryEnabled && categoryMatch && queryMatch;
+      return templateModeEnabled && categoryEnabled && categoryMatch && queryMatch;
     });
-  }, [activeTemplateCategory, enabledTemplateCategories, state.mode, templateSearch, templateSettings?.enabledForApparel, templateSettings?.enabledForTransfer]);
+  }, [activeTemplateCategory, enabledTemplateCategories, templateSearch, templateSettings?.enabledForApparel, templateSettings?.enabledForTransfer]);
 
   const previewPayload = useMemo(
     () => ({
@@ -1569,15 +1737,16 @@ export default function CustomizerPrototype() {
     setState((current) => {
       const template = findTemplate(templateIdOrName, current.mode);
       const templateName = template?.name || templateIdOrName;
-      const layers = createTemplateLayers(templateIdOrName, current.mode);
-      const targetView = current.mode === "apparel" ? getRecommendedViewForTemplate(templateIdOrName, current.activeView) : current.activeView;
-      const targetTransferSize = current.mode === "transfer" ? getSafeTransferSize(current.transferSize) : current.transferSize;
-      const nextState = { ...current, activeView: targetView, transferSize: targetTransferSize };
+      const nextMode: PreviewMode = template?.mode === "transfer" ? "transfer" : template?.mode === "apparel" ? "apparel" : current.mode;
+      const layers = createTemplateLayers(templateIdOrName, nextMode);
+      const targetView = nextMode === "apparel" ? getRecommendedViewForTemplate(templateIdOrName, current.activeView) : current.activeView;
+      const targetTransferSize = nextMode === "transfer" ? getSafeTransferSize(current.transferSize) : current.transferSize;
+      const nextState = { ...current, mode: nextMode, activeView: targetView, transferSize: targetTransferSize };
       return {
         ...updateActiveLayers(nextState, () => layers),
         selectedTemplate: templateName,
         selectedLayerId: layers[0]?.id || null,
-        status: current.mode === "apparel"
+        status: nextMode === "apparel"
           ? `${templateName} editable starter template loaded for ${getCanvasLabel(nextState)}.`
           : `${templateName} editable starter template loaded. Edit layers in the left panel.`,
       };
@@ -1672,6 +1841,7 @@ export default function CustomizerPrototype() {
           cropY: 50,
           cropZoom: 100,
           lockAspectRatio: true,
+          zIndex: placeholderIndex >= 0 ? layers[placeholderIndex].zIndex : layers.length,
         });
 
         if (placeholderIndex >= 0) {
@@ -1890,7 +2060,7 @@ export default function CustomizerPrototype() {
   };
 
   const createPreviewSvg = () => {
-    const visibleLayers = activeLayers.filter((layer) => !layer.hidden);
+    const visibleLayers = activeLayers.filter((layer) => !layer.hidden).sort((a, b) => a.zIndex - b.zIndex);
     const layerMarkup = visibleLayers.map((layer) => {
       const x = 120 + layer.x * 3.6;
       const y = 120 + layer.y * 4.8;
@@ -2576,7 +2746,7 @@ export default function CustomizerPrototype() {
                 ) : null}
                 <div className="absolute inset-0 overflow-hidden">
                   {activeLayers.length > 0 ? (
-                    activeLayers.filter((layer) => !layer.hidden).map((layer) => {
+                    activeLayers.filter((layer) => !layer.hidden).sort((a, b) => a.zIndex - b.zIndex).map((layer) => {
                       const isSelected = layer.id === selectedLayer?.id;
                       const commonStyle = {
                         left: `${layer.x}%`,
@@ -2585,6 +2755,7 @@ export default function CustomizerPrototype() {
                         height: `${layer.height}%`,
                         transform: `translate(-50%, -50%) rotate(${layer.rotation}deg)`,
                         opacity: layer.opacity,
+                        zIndex: layer.zIndex,
                       };
 
                       if (layer.type === "image" && layer.sourceUrl) {
