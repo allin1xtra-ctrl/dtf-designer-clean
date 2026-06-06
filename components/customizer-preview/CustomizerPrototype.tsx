@@ -411,11 +411,18 @@ const STAGING_TRANSFER_MOCKUPS = {
   gangSheet: { label: "Gang Sheet Staging Mockup", url: createMockupSvg("Gang sheet staging mockup", "gang") },
 };
 
+const CLOUDINARY_TEMPLATE_THUMBNAIL_BASE =
+  "https://res.cloudinary.com/dzh8appfs/image/upload/dtf-designer-pro/staging/customizer/templates/thumbs";
+
+function getCloudinaryTemplateThumbnailUrl(templateId: string) {
+  return `${CLOUDINARY_TEMPLATE_THUMBNAIL_BASE}/${templateId}.png`;
+}
+
 function templateDefinition(input: Omit<StarterTemplateCard, "thumbnail" | "tags"> & { tags?: string[] }): StarterTemplateCard {
   return {
     ...input,
     tags: input.tags || [],
-    thumbnailUrl: input.thumbnailUrl,
+    thumbnailUrl: input.thumbnailUrl || getCloudinaryTemplateThumbnailUrl(input.id),
     previewImage: input.previewImage || `/customizer-preview/templates/thumbs/${input.id}.png`,
     thumbnail: createTemplateThumbnail(input.name, input.category, input.layers),
   };
