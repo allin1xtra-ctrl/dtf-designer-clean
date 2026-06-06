@@ -1237,6 +1237,7 @@ export default function CustomizerPrototype() {
   const [artworkOpacity, setArtworkOpacity] = useState(95);
   const [textureOverlayEnabled, setTextureOverlayEnabled] = useState(true);
   const [isTemplateLibraryOpen, setIsTemplateLibraryOpen] = useState(false);
+  const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
   const [templateSearch, setTemplateSearch] = useState("");
   const [activeTemplateCategory, setActiveTemplateCategory] = useState<TemplateCategory | "All">("All");
   const [brokenTemplatePreviewImages, setBrokenTemplatePreviewImages] = useState<string[]>([]);
@@ -1821,6 +1822,16 @@ export default function CustomizerPrototype() {
     );
   };
   void resetSelectedImageCrop;
+
+  const selectProductColor = (color: PreviewColorOption) => {
+    setState((current) => ({
+      ...current,
+      selectedColorId: color.id,
+      selectedColorHex: color.hex,
+      status: `${color.label || color.hex} mockup selected for staging preview.`,
+    }));
+    setIsColorPickerOpen(false);
+  };
 
   const loadEditableTemplate = (templateIdOrName: string) => {
     setState((current) => {
@@ -2688,13 +2699,52 @@ export default function CustomizerPrototype() {
               <input type="file" accept="image/*" onChange={handleUpload} className="hidden" />
             </label>
             <QuickActionCard title={isCarting ? "Preparing..." : "Add to Cart"} detail="Preview payload only" icon="ATC" accent="bg-emerald-300" onClick={addToPreviewCart} />
-            <QuickActionCard
-              title={state.mode === "apparel" ? "Color Variants" : "Size Variants"}
-              detail={state.mode === "apparel" ? `${configuredColors.length} staged colors` : safeTransferSize}
-              icon={state.mode === "apparel" ? "CLR" : "SZ"}
-              accent="bg-violet-300"
-              onClick={() => setStatusOnly(state.mode === "apparel" ? "Color variants are preview-only." : "Transfer sizes are preview-only.")}
-            />
+            <div className="relative">
+              <QuickActionCard
+                title={state.mode === "apparel" ? "Color Variants" : "Size Variants"}
+                detail={state.mode === "apparel" ? `${selectedColor.label || selectedColor.hex} / ${configuredColors.length} colors` : safeTransferSize}
+                icon={state.mode === "apparel" ? "CLR" : "SZ"}
+                accent="bg-violet-300"
+                onClick={() => {
+                  if (state.mode !== "apparel") {
+                    setStatusOnly("Transfer sizes are selected in the transfer size controls.");
+                    return;
+                  }
+                  setIsColorPickerOpen((open) => !open);
+                }}
+              />
+              {state.mode === "apparel" && isColorPickerOpen ? (
+                <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 rounded-lg border border-cyan-300/40 bg-[#071015] p-2 shadow-[0_18px_48px_rgba(0,0,0,0.5)]">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200">Product Color</p>
+                    <button
+                      type="button"
+                      onClick={() => setIsColorPickerOpen(false)}
+                      className="rounded border border-[#2c424a] px-1.5 py-0.5 text-[10px] font-semibold text-neutral-300 transition hover:border-cyan-300"
+                    >
+                      Close
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {configuredColors.map((color) => (
+                      <button
+                        key={color.id}
+                        type="button"
+                        onClick={() => selectProductColor(color)}
+                        title={color.label || color.hex}
+                        className={`grid h-8 place-items-center rounded-full border transition ${
+                          selectedColor?.hex === color.hex ? "border-cyan-200 ring-2 ring-cyan-300/70" : "border-white/20 hover:border-cyan-300/70"
+                        }`}
+                        style={{ backgroundColor: color.hex }}
+                      >
+                        <span className="sr-only">{color.label || color.hex}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-2 truncate text-xs font-semibold text-neutral-300">{selectedColor.label || selectedColor.hex}</p>
+                </div>
+              ) : null}
+            </div>
             <QuickActionCard title={isSaving ? "Saving..." : "Save Design"} detail="Local staging save" icon="SV" accent="bg-yellow-300" onClick={saveDesign} />
           </div>
 
@@ -2962,31 +3012,7 @@ export default function CustomizerPrototype() {
 
         <section className={`${mobilePanel === "assistant" || mobilePanel === "order" ? "block" : "hidden"} border-t border-[#1e2a2f] bg-[#11181c] p-2.5 pt-3 lg:block lg:border-l lg:border-t-0 xl:h-full xl:min-h-0 xl:overflow-y-auto xl:[scrollbar-color:#27515d_#081114] xl:[scrollbar-width:thin]`}>
           <div className="space-y-3">
-            {state.mode === "apparel" ? (
-              <PanelCard title="Product Colors">
-                <div className="grid grid-cols-6 gap-2">
-                  {configuredColors.map((color) => (
-                    <button
-                      key={color.hex}
-                      type="button"
-                      onClick={() => {
-                        setState((current) => ({
-                          ...current,
-                          selectedColorId: color.id,
-                          selectedColorHex: color.hex,
-                          status: `${color.label || color.hex} mockup selected for staging preview.`,
-                        }));
-                      }}
-                      title={color.label || color.hex}
-                      className={`h-9 rounded-full border transition ${
-                        selectedColor?.hex === color.hex ? "border-cyan-200 ring-2 ring-cyan-300/70" : "border-white/20"
-                      }`}
-                      style={{ backgroundColor: color.hex }}
-                    />
-                  ))}
-                </div>
-              </PanelCard>
-            ) : (
+            {state.mode === "transfer" ? (
               <PanelCard title="How It Works">
                 <ol className="space-y-2 text-sm text-neutral-400">
                   <li>1. Choose a transfer size.</li>
@@ -2994,7 +3020,7 @@ export default function CustomizerPrototype() {
                   <li>3. Save or prepare a preview cart payload.</li>
                 </ol>
               </PanelCard>
-            )}
+            ) : null}
 
             <div className={`${mobilePanel === "assistant" ? "block" : "hidden"} lg:block`}>
               <PanelCard title="Editable Templates">
