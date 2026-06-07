@@ -182,6 +182,14 @@ type StagingCustomizerConfig = {
   };
 };
 
+type ShopifyEmbedContext = {
+  source: string;
+  product: string;
+  productId: string;
+  variant: string;
+  title: string;
+};
+
 type MockupColorKey = "black" | "white" | "heatherGrey" | "regularGrey" | "royalBlue" | "red" | "offWhite";
 type MockupAsset = { label: string; url: string; hasBakedPrintGuide: boolean };
 type ApparelMockupOverrides = Partial<Record<MockupColorKey, Partial<Record<ViewId, MockupAsset>>>>;
@@ -222,6 +230,35 @@ const APPAREL_VIEWS: Array<{ id: ViewId; label: string; short: string }> = [
   { id: "rightSleeve", label: "Right Sleeve", short: "RS" },
   { id: "neckTag", label: "Neck Tag", short: "N" },
 ];
+
+function getShopifyEmbedContext(): ShopifyEmbedContext {
+  if (typeof window === "undefined") {
+    return { source: "", product: "", productId: "", variant: "", title: "" };
+  }
+
+  const params = new URLSearchParams(window.location.search);
+
+  return {
+    source: params.get("source") || "",
+    product: params.get("product") || "",
+    productId: params.get("product_id") || params.get("productId") || "",
+    variant: params.get("variant") || params.get("variant_id") || params.get("variantId") || "",
+    title: params.get("title") || "",
+  };
+}
+
+function normalizeShopifyVariantId(value: string) {
+  const normalized = String(value || "").trim();
+  if (!normalized || normalized === "undefined" || normalized === "null" || normalized === "NaN") return "";
+  const match = normalized.match(/(?:^|\/)(\d+)(?:\D*)$/);
+  return match ? match[1] : /^\d+$/.test(normalized) ? normalized : "";
+}
+
+function isEmbeddedInShopify() {
+  if (typeof window === "undefined") return false;
+  const source = new URLSearchParams(window.location.search).get("source") || "";
+  return window.parent !== window && source.toLowerCase().includes("shopify");
+}
 
 const TRANSFER_SIZES = ["3x3", "5x5", "8x10", "11x17", "12x24", "13x24", "13x60", "Gang Sheet"];
 const DEFAULT_PRODUCT_COLORS: PreviewColorOption[] = [
@@ -2378,12 +2415,43 @@ export default function CustomizerPrototype() {
   const addToPreviewCart = () => {
     setIsCarting(true);
     window.setTimeout(() => {
+      const embedContext = getShopifyEmbedContext();
+      const variantId = normalizeShopifyVariantId(embedContext.variant);
+      const canPostToShopify = isEmbeddedInShopify() && Boolean(variantId);
+
+      if (canPostToShopify) {
+        const selectedViewLabel = APPAREL_VIEWS.find((view) => view.id === state.activeView)?.label || "Front";
+        const selectedColorLabel = selectedColor?.label || selectedColor?.hex || "Black";
+        const properties = {
+          "Customizer": "Clean Custom Design Studio",
+          "Product": embedContext.product || stagingDesignPayload.productHandle,
+          "Mode": state.mode === "apparel" ? "Apparel" : "Transfer",
+          "Template": state.selectedTemplate,
+          "Print location": state.mode === "apparel" ? selectedViewLabel : safeTransferSize,
+          "Color": state.mode === "apparel" ? selectedColorLabel : "",
+          "Artwork": currentArtwork?.name || "Customer customization",
+          "Design payload": JSON.stringify(previewPayload).slice(0, 255),
+        };
+        const payload = {
+          id: variantId,
+          variantId,
+          quantity: Math.max(1, Number(stagingDesignPayload.quantity) || 1),
+          properties,
+          redirect: "/cart",
+        };
+
+        window.parent.postMessage({ type: "DTF_ADD_TO_CART", data: payload }, "*");
+        window.parent.postMessage({ type: "dtf:add-to-cart", payload }, "*");
+      }
+
       setIsCarting(false);
       setMobilePanel("order");
       setIsPreviewOrderOpen(true);
       setState((current) => ({
         ...current,
-        status: "Test cart payload prepared locally and shown in Preview Order. Live checkout is not connected.",
+        status: canPostToShopify
+          ? "Design sent to Shopify cart."
+          : "Preview cart payload prepared locally. Shopify cart requires the product-page embed with a valid variant.",
       }));
     }, 450);
   };
@@ -2699,7 +2767,7 @@ export default function CustomizerPrototype() {
             </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Preview / Staging</p>
-              <h1 className="text-base font-semibold text-white">DTF Designer Pro</h1>
+              <h1 className="text-base font-semibold text-white">Custom Design Studio</h1>
             </div>
           </div>
           <nav className="flex flex-wrap items-center gap-2 text-sm text-neutral-300">

@@ -1,7 +1,7 @@
 import CustomizerPrototype from "@/components/customizer-preview/CustomizerPrototype";
 
 export const metadata = {
-  title: "Customizer Preview | DTF Designer Pro",
+  title: "Custom Design Studio Preview",
   robots: {
     index: false,
     follow: false,
