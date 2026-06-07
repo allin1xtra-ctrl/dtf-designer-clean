@@ -379,8 +379,8 @@ const STAGING_APPAREL_MOCKUPS: Record<MockupColorKey, Record<ViewId, MockupAsset
   regularGrey: {
     front: { label: "Regular Grey T-Shirt Front Mockup", url: "/customizer-preview/mockups/regular-grey-front.png", hasBakedPrintGuide: false },
     back: { label: "Regular Grey T-Shirt Back Mockup", url: "/customizer-preview/mockups/regular-grey-back.png", hasBakedPrintGuide: false },
-    leftSleeve: { label: "Regular Grey T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/regular-grey-left-sleeve.png", hasBakedPrintGuide: true },
-    rightSleeve: { label: "Regular Grey T-Shirt Right Sleeve Mockup", url: "/customizer-preview/mockups/regular-grey-right-sleeve.png", hasBakedPrintGuide: true },
+    leftSleeve: { label: "Regular Grey T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/regular-grey-left-sleeve.png", hasBakedPrintGuide: false },
+    rightSleeve: { label: "Regular Grey T-Shirt Right Sleeve Mockup", url: "/customizer-preview/mockups/regular-grey-right-sleeve.png", hasBakedPrintGuide: false },
     neckTag: { label: "Regular Grey T-Shirt Neck Tag Mockup", url: "/customizer-preview/mockups/regular-grey-neck-tag.png", hasBakedPrintGuide: false },
   },
   royalBlue: {
