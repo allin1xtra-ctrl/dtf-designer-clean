@@ -184,6 +184,7 @@ type StagingCustomizerConfig = {
 
 type MockupColorKey = "black" | "white" | "heatherGrey" | "regularGrey" | "royalBlue" | "red" | "offWhite";
 type MockupAsset = { label: string; url: string; hasBakedPrintGuide: boolean };
+type ApparelMockupOverrides = Partial<Record<MockupColorKey, Partial<Record<ViewId, MockupAsset>>>>;
 
 type PreviewColorOption = {
   id: string;
@@ -778,25 +779,25 @@ function layerDefaults(layer: Partial<EditableTemplateLayer>): EditableTemplateL
   };
 }
 
-function findTemplate(templateIdOrName: string, mode: PreviewMode) {
-  const modeMatch = STARTER_TEMPLATE_LIBRARY.find(
+function findTemplate(templateIdOrName: string, mode: PreviewMode, library: StarterTemplateCard[] = STARTER_TEMPLATE_LIBRARY) {
+  const modeMatch = library.find(
     (template) =>
       (template.id === templateIdOrName || template.name === templateIdOrName) &&
       (template.mode === mode || template.mode === "both")
   );
-  return modeMatch || STARTER_TEMPLATE_LIBRARY.find((template) => template.id === templateIdOrName || template.name === templateIdOrName);
+  return modeMatch || library.find((template) => template.id === templateIdOrName || template.name === templateIdOrName);
 }
 
-function createTemplateLayers(templateIdOrName: string, mode: PreviewMode): EditableTemplateLayer[] {
-  const template = findTemplate(templateIdOrName, mode) || findTemplate(mode === "transfer" ? "logo-transfer" : "centered-logo", mode);
+function createTemplateLayers(templateIdOrName: string, mode: PreviewMode, library: StarterTemplateCard[] = STARTER_TEMPLATE_LIBRARY): EditableTemplateLayer[] {
+  const template = findTemplate(templateIdOrName, mode, library) || findTemplate(mode === "transfer" ? "logo-transfer" : "centered-logo", mode, library);
   const templateKey = template?.id || templateIdOrName;
   const layers = template?.layers || [];
 
   return layers.map((layer, index) => layerDefaults({ ...layer, id: createLayerId(templateKey, index), zIndex: layer.zIndex ?? index }));
 }
 
-function getRecommendedViewForTemplate(template: string, currentView: ViewId): ViewId {
-  const templateConfig = STARTER_TEMPLATE_LIBRARY.find((item) => item.id === template || item.name === template);
+function getRecommendedViewForTemplate(template: string, currentView: ViewId, library: StarterTemplateCard[] = STARTER_TEMPLATE_LIBRARY): ViewId {
+  const templateConfig = library.find((item) => item.id === template || item.name === template);
   if (templateConfig?.targetView) return templateConfig.targetView;
   return currentView;
 }
@@ -872,8 +873,9 @@ function normalizePreviewColorOption(color: { id?: string; label?: string; hex?:
   };
 }
 
-function getApparelMockupForColor(mockupKey: MockupColorKey, view: ViewId) {
+function getApparelMockupForColor(mockupKey: MockupColorKey, view: ViewId, overrides: ApparelMockupOverrides = {}) {
   return (
+    overrides[mockupKey]?.[view] ||
     STAGING_APPAREL_MOCKUPS[mockupKey]?.[view] ||
     STAGING_APPAREL_MOCKUPS.black?.[view] ||
     { label: "Generated apparel staging mockup", url: createMockupSvg("Generated apparel staging mockup", view === "neckTag" ? "neck" : view.includes("Sleeve") ? "sleeve" : view === "back" ? "back" : "front") }
@@ -1252,6 +1254,8 @@ export default function CustomizerPrototype() {
   const [activeTemplateCategory, setActiveTemplateCategory] = useState<TemplateCategory | "All">("All");
   const [brokenTemplatePreviewImages, setBrokenTemplatePreviewImages] = useState<string[]>([]);
   const [templateDraft, setTemplateDraft] = useState<TemplateDraftState | null>(null);
+  const [adminTemplateLibrary, setAdminTemplateLibrary] = useState<StarterTemplateCard[]>([]);
+  const [adminMockupOverrides, setAdminMockupOverrides] = useState<ApparelMockupOverrides>({});
   const [stagingConfig, setStagingConfig] = useState<StagingCustomizerConfig | null>(null);
   const [stagingConfigWarning, setStagingConfigWarning] = useState("");
   const [brokenMockupUrls, setBrokenMockupUrls] = useState<string[]>([]);
@@ -1283,6 +1287,7 @@ export default function CustomizerPrototype() {
   const configuredMaterials = stagingConfig?.materialOptions?.filter((material) => material.enabled !== false).map((material) => material.label || material.id || "Material") || MATERIAL_OPTIONS;
   const templateSettings = stagingConfig?.stagingSettings?.templateSettings;
   const enabledTemplateCategories = templateSettings?.enabledCategories?.length ? templateSettings.enabledCategories : TEMPLATE_CATEGORIES;
+  const templateLibrary = adminTemplateLibrary.length ? adminTemplateLibrary : STARTER_TEMPLATE_LIBRARY;
   const printAreaResult = getSafePrintArea(stagingConfig, state);
   const activePrintLocation = state.mode === "apparel" ? getActivePrintLocation(stagingConfig, state.activeView) : null;
   const activeMockupUrl =
@@ -1292,8 +1297,8 @@ export default function CustomizerPrototype() {
         ? stagingConfig?.stagingSettings?.gangSheetMockupUrl || stagingConfig?.stagingSettings?.transferMockupUrl
         : stagingConfig?.stagingSettings?.transferMockupUrl;
   const safeMockupUrl = activeMockupUrl && !brokenMockupUrls.includes(activeMockupUrl) ? activeMockupUrl : "";
-  const requestedColorMockup = getApparelMockupForColor(selectedMockupColorKey, state.activeView);
-  const blackFallbackMockup = getApparelMockupForColor("black", state.activeView);
+  const requestedColorMockup = getApparelMockupForColor(selectedMockupColorKey, state.activeView, adminMockupOverrides);
+  const blackFallbackMockup = getApparelMockupForColor("black", state.activeView, adminMockupOverrides);
   const colorFallbackMockup =
     brokenMockupUrls.includes(requestedColorMockup.url) && requestedColorMockup.url !== blackFallbackMockup.url
       ? blackFallbackMockup
@@ -1318,7 +1323,7 @@ export default function CustomizerPrototype() {
   const selectedImageLayer = selectedLayer?.type === "image" ? selectedLayer : null;
   const templateDraftSelectedLayer = templateDraft?.layers.find((layer) => layer.id === templateDraft.selectedLayerId) || null;
   const templateDraftSelectedBounds = getLayerCenterBounds(templateDraftSelectedLayer);
-  const selectedTemplateConfig = STARTER_TEMPLATE_LIBRARY.find((template) => template.name === state.selectedTemplate);
+  const selectedTemplateConfig = templateLibrary.find((template) => template.name === state.selectedTemplate);
   const safeZoom = safeNumber(state.zoom, 55, 110, 82);
   const previewMaxHeight = Math.round(760 * (safeZoom / 100));
   const safeScale = safeNumber(state.scale, 8, 100, 56);
@@ -1389,7 +1394,7 @@ export default function CustomizerPrototype() {
   const filteredTemplateLibrary = useMemo(() => {
     const query = templateSearch.trim().toLowerCase();
 
-    return STARTER_TEMPLATE_LIBRARY.filter((template) => {
+    return templateLibrary.filter((template) => {
       const categoryEnabled = enabledTemplateCategories.includes(template.category);
       const templateModeEnabled =
         template.mode === "both"
@@ -1408,7 +1413,7 @@ export default function CustomizerPrototype() {
 
       return templateModeEnabled && categoryEnabled && categoryMatch && queryMatch;
     });
-  }, [activeTemplateCategory, enabledTemplateCategories, templateSearch, templateSettings?.enabledForApparel, templateSettings?.enabledForTransfer]);
+  }, [activeTemplateCategory, enabledTemplateCategories, templateLibrary, templateSearch, templateSettings?.enabledForApparel, templateSettings?.enabledForTransfer]);
 
   const previewPayload = useMemo(
     () => ({
@@ -1563,6 +1568,104 @@ export default function CustomizerPrototype() {
 
   useEffect(() => {
     setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadAdminTemplates() {
+      try {
+        const response = await fetch("/api/customizer/templates", { cache: "no-store" });
+        const result = await response.json().catch(() => ({}));
+        const templates: Array<Partial<StarterTemplateCard> & { productType?: string; previewImageUrl?: string; active?: boolean }> =
+          Array.isArray(result.templates) ? result.templates : [];
+        if (!isActive || !response.ok || templates.length === 0) return;
+        const normalizedTemplates = templates
+          .filter((template) => template && typeof template === "object" && template.active !== false)
+          .map((template) => {
+            const item = template;
+            return templateDefinition({
+              id: String(item.id || item.name || "admin-template"),
+              name: String(item.name || "Admin Template"),
+              category: TEMPLATE_CATEGORIES.includes(item.category as TemplateCategory) ? item.category as TemplateCategory : "Logos",
+              mode: item.mode === "transfer" || item.mode === "both" ? item.mode : "apparel",
+              targetView: item.targetView,
+              description: String(item.description || "Admin-managed editable template."),
+              thumbnailUrl: item.thumbnailUrl || item.previewImageUrl,
+              previewImage: item.previewImage || item.previewImageUrl,
+              tags: Array.isArray(item.tags) ? item.tags.map(String) : [String(item.productType || "customizer")],
+              layers: Array.isArray(item.layers) ? item.layers : [],
+            });
+          })
+          .filter((template) => template.layers.length > 0);
+        if (normalizedTemplates.length) setAdminTemplateLibrary(normalizedTemplates);
+      } catch {
+        if (isActive) setAdminTemplateLibrary([]);
+      }
+    }
+
+    void loadAdminTemplates();
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadAdminMockups() {
+      try {
+        const response = await fetch("/api/customizer/mockups", { cache: "no-store" });
+        const result = await response.json().catch(() => ({}));
+        const variants: Array<{
+          colorName?: string;
+          colorSlug?: string;
+          frontImageUrl?: string;
+          backImageUrl?: string;
+          leftSleeveImageUrl?: string;
+          rightSleeveImageUrl?: string;
+          neckTagImageUrl?: string;
+          hasBakedPrintGuide?: Partial<Record<ViewId, boolean>>;
+          active?: boolean;
+        }> = Array.isArray(result.variants) ? result.variants : [];
+        if (!isActive || !response.ok || variants.length === 0) return;
+
+        const nextOverrides: ApparelMockupOverrides = {};
+        variants
+          .filter((variant) => variant.active !== false)
+          .forEach((variant) => {
+            const mockupKey = getMockupColorKey(`${variant.colorName || ""} ${variant.colorSlug || ""}`);
+            const viewUrls: Partial<Record<ViewId, string | undefined>> = {
+              front: variant.frontImageUrl,
+              back: variant.backImageUrl,
+              leftSleeve: variant.leftSleeveImageUrl,
+              rightSleeve: variant.rightSleeveImageUrl,
+              neckTag: variant.neckTagImageUrl,
+            };
+            APPAREL_VIEWS.forEach(({ id }) => {
+              const url = viewUrls[id];
+              if (!url) return;
+              nextOverrides[mockupKey] = {
+                ...nextOverrides[mockupKey],
+                [id]: {
+                  label: `${variant.colorName || mockupKey} admin ${id} mockup`,
+                  url,
+                  hasBakedPrintGuide: Boolean(variant.hasBakedPrintGuide?.[id]),
+                },
+              };
+            });
+          });
+
+        if (Object.keys(nextOverrides).length) setAdminMockupOverrides(nextOverrides);
+      } catch {
+        if (isActive) setAdminMockupOverrides({});
+      }
+    }
+
+    void loadAdminMockups();
+    return () => {
+      isActive = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -1848,11 +1951,11 @@ export default function CustomizerPrototype() {
 
   const loadEditableTemplate = (templateIdOrName: string) => {
     setState((current) => {
-      const template = findTemplate(templateIdOrName, current.mode);
+      const template = findTemplate(templateIdOrName, current.mode, templateLibrary);
       const templateName = template?.name || templateIdOrName;
       const nextMode: PreviewMode = template?.mode === "transfer" ? "transfer" : template?.mode === "apparel" ? "apparel" : current.mode;
-      const layers = createTemplateLayers(templateIdOrName, nextMode);
-      const targetView = nextMode === "apparel" ? getRecommendedViewForTemplate(templateIdOrName, current.activeView) : current.activeView;
+      const layers = createTemplateLayers(templateIdOrName, nextMode, templateLibrary);
+      const targetView = nextMode === "apparel" ? getRecommendedViewForTemplate(templateIdOrName, current.activeView, templateLibrary) : current.activeView;
       const targetTransferSize = nextMode === "transfer" ? getSafeTransferSize(current.transferSize) : current.transferSize;
       const nextState = { ...current, mode: nextMode, activeView: targetView, transferSize: targetTransferSize };
       return {
@@ -1869,8 +1972,8 @@ export default function CustomizerPrototype() {
 
   const openTemplateDraft = (template: StarterTemplateCard) => {
     const nextMode: PreviewMode = template.mode === "transfer" ? "transfer" : template.mode === "apparel" ? "apparel" : state.mode;
-    const layers = createTemplateLayers(template.id, nextMode);
-    const targetView = nextMode === "apparel" ? getRecommendedViewForTemplate(template.id, state.activeView) : state.activeView;
+    const layers = createTemplateLayers(template.id, nextMode, templateLibrary);
+    const targetView = nextMode === "apparel" ? getRecommendedViewForTemplate(template.id, state.activeView, templateLibrary) : state.activeView;
     const transferSize = nextMode === "transfer" ? getSafeTransferSize(state.transferSize) : state.transferSize;
     setTemplateDraft({
       template,
