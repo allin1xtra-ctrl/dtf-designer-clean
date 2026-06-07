@@ -116,6 +116,16 @@ type StarterTemplateCard = {
   layers: TemplateLayerSeed[];
 };
 
+type TemplateDraftState = {
+  template: StarterTemplateCard;
+  mode: PreviewMode;
+  targetView: ViewId;
+  transferSize: string;
+  layers: EditableTemplateLayer[];
+  selectedLayerId: string | null;
+  status: string;
+};
+
 type StagingPrintArea = { x: number; y: number; width: number; height: number };
 type StagingPrintLocation = {
   id: string;
@@ -1241,6 +1251,7 @@ export default function CustomizerPrototype() {
   const [templateSearch, setTemplateSearch] = useState("");
   const [activeTemplateCategory, setActiveTemplateCategory] = useState<TemplateCategory | "All">("All");
   const [brokenTemplatePreviewImages, setBrokenTemplatePreviewImages] = useState<string[]>([]);
+  const [templateDraft, setTemplateDraft] = useState<TemplateDraftState | null>(null);
   const [stagingConfig, setStagingConfig] = useState<StagingCustomizerConfig | null>(null);
   const [stagingConfigWarning, setStagingConfigWarning] = useState("");
   const [brokenMockupUrls, setBrokenMockupUrls] = useState<string[]>([]);
@@ -1305,6 +1316,8 @@ export default function CustomizerPrototype() {
   const activeLayers = getActiveLayers(state);
   const selectedLayer = activeLayers.find((layer) => layer.id === state.selectedLayerId) || null;
   const selectedImageLayer = selectedLayer?.type === "image" ? selectedLayer : null;
+  const templateDraftSelectedLayer = templateDraft?.layers.find((layer) => layer.id === templateDraft.selectedLayerId) || null;
+  const templateDraftSelectedBounds = getLayerCenterBounds(templateDraftSelectedLayer);
   const selectedTemplateConfig = STARTER_TEMPLATE_LIBRARY.find((template) => template.name === state.selectedTemplate);
   const safeZoom = safeNumber(state.zoom, 55, 110, 82);
   const previewMaxHeight = Math.round(760 * (safeZoom / 100));
@@ -1851,6 +1864,183 @@ export default function CustomizerPrototype() {
           : `${templateName} editable starter template loaded. Edit layers in the left panel.`,
       };
     });
+  };
+  void loadEditableTemplate;
+
+  const openTemplateDraft = (template: StarterTemplateCard) => {
+    const nextMode: PreviewMode = template.mode === "transfer" ? "transfer" : template.mode === "apparel" ? "apparel" : state.mode;
+    const layers = createTemplateLayers(template.id, nextMode);
+    const targetView = nextMode === "apparel" ? getRecommendedViewForTemplate(template.id, state.activeView) : state.activeView;
+    const transferSize = nextMode === "transfer" ? getSafeTransferSize(state.transferSize) : state.transferSize;
+    setTemplateDraft({
+      template,
+      mode: nextMode,
+      targetView,
+      transferSize,
+      layers,
+      selectedLayerId: layers[0]?.id || null,
+      status: `${template.name} opened as a draft. Main design is unchanged.`,
+    });
+  };
+
+  const closeTemplateLibrary = () => {
+    setTemplateDraft(null);
+    setIsTemplateLibraryOpen(false);
+  };
+
+  const backToTemplateGrid = () => {
+    setTemplateDraft(null);
+  };
+
+  const updateTemplateDraftLayer = (updates: Partial<EditableTemplateLayer>, status: string, clampGeometry = true) => {
+    setTemplateDraft((current) => {
+      if (!current?.selectedLayerId) return current ? { ...current, status: "Select a layer in the template preview first." } : current;
+      let didUpdate = false;
+      const nextLayers = current.layers.map((layer) => {
+        if (layer.id !== current.selectedLayerId || layer.locked) return layer;
+        didUpdate = true;
+        const nextLayer = { ...layer, ...updates };
+        return clampGeometry ? clampLayerInsidePrintArea(nextLayer) : nextLayer;
+      });
+
+      return {
+        ...current,
+        layers: nextLayers,
+        status: didUpdate ? status : "Select an unlocked layer in the template preview first.",
+      };
+    });
+  };
+
+  const updateTemplateDraftLayerScale = (scale: number) => {
+    setTemplateDraft((current) => {
+      const selected = current?.layers.find((layer) => layer.id === current.selectedLayerId);
+      if (!current || !selected || selected.locked) {
+        return current ? { ...current, status: "Select an unlocked layer in the template preview first." } : current;
+      }
+      const previousScale = Math.max(selected.width, selected.height, 1);
+      const updates = selected.type === "text" ? getTextScaleUpdate(selected, previousScale, scale) : getProportionalScaleSize(selected, scale);
+      return {
+        ...current,
+        layers: current.layers.map((layer) => (layer.id === selected.id ? clampLayerInsidePrintArea({ ...layer, ...updates }) : layer)),
+        status: "Draft template layer resized.",
+      };
+    });
+  };
+
+  const updateTemplateDraftLayerX = (x: number) => {
+    setTemplateDraft((current) => {
+      const selected = current?.layers.find((layer) => layer.id === current.selectedLayerId);
+      if (!current || !selected || selected.locked) {
+        return current ? { ...current, status: "Select an unlocked layer in the template preview first." } : current;
+      }
+      const bounds = getLayerCenterBounds(selected);
+      return {
+        ...current,
+        layers: current.layers.map((layer) => (layer.id === selected.id ? { ...layer, x: clamp(x, bounds.minX, bounds.maxX) } : layer)),
+        status: "Draft template layer moved horizontally.",
+      };
+    });
+  };
+
+  const updateTemplateDraftLayerY = (y: number) => {
+    setTemplateDraft((current) => {
+      const selected = current?.layers.find((layer) => layer.id === current.selectedLayerId);
+      if (!current || !selected || selected.locked) {
+        return current ? { ...current, status: "Select an unlocked layer in the template preview first." } : current;
+      }
+      const bounds = getLayerCenterBounds(selected);
+      return {
+        ...current,
+        layers: current.layers.map((layer) => (layer.id === selected.id ? { ...layer, y: clamp(y, bounds.minY, bounds.maxY) } : layer)),
+        status: "Draft template layer moved vertically.",
+      };
+    });
+  };
+
+  const deleteTemplateDraftLayer = () => {
+    setTemplateDraft((current) => {
+      if (!current?.selectedLayerId) return current ? { ...current, status: "Select a layer before deleting." } : current;
+      const selectedIndex = current.layers.findIndex((layer) => layer.id === current.selectedLayerId);
+      const selected = current.layers[selectedIndex];
+      if (!selected || selected.locked) return { ...current, status: "Locked draft layers cannot be deleted." };
+      const nextLayers = current.layers.filter((layer) => layer.id !== selected.id);
+      const nextSelected = nextLayers[Math.min(selectedIndex, nextLayers.length - 1)] || null;
+      return {
+        ...current,
+        layers: nextLayers,
+        selectedLayerId: nextSelected?.id || null,
+        status: "Draft template layer deleted.",
+      };
+    });
+  };
+
+  const handleTemplateDraftUpload = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      event.target.value = "";
+      setTemplateDraft((current) => current ? { ...current, status: "Choose an image file for the draft template placeholder." } : current);
+      return;
+    }
+
+    const artwork = {
+      url: URL.createObjectURL(file),
+      name: file.name,
+    };
+
+    setTemplateDraft((current) => {
+      if (!current) return current;
+      const selectedIndex = current.layers.findIndex((layer) => layer.id === current.selectedLayerId);
+      const placeholderIndex =
+        selectedIndex >= 0 && ["placeholder", "image-placeholder", "image"].includes(current.layers[selectedIndex].type)
+          ? selectedIndex
+          : current.layers.findIndex((layer) => (layer.type === "placeholder" || layer.type === "image-placeholder") && !layer.locked);
+      if (placeholderIndex < 0 || current.layers[placeholderIndex].locked) {
+        return { ...current, status: "Select an unlocked logo/image placeholder before uploading." };
+      }
+      const target = current.layers[placeholderIndex];
+      const uploadedLayer = layerDefaults({
+        ...target,
+        type: "image",
+        sourceUrl: artwork.url,
+        sourceName: artwork.name,
+        fitMode: "contain",
+        cropX: 50,
+        cropY: 50,
+        cropZoom: 100,
+        lockAspectRatio: true,
+      });
+      return {
+        ...current,
+        layers: current.layers.map((layer, index) => (index === placeholderIndex ? uploadedLayer : layer)),
+        selectedLayerId: uploadedLayer.id,
+        status: `${artwork.name} replaced the draft template placeholder.`,
+      };
+    });
+    event.target.value = "";
+  };
+
+  const applyTemplateDraft = () => {
+    if (!templateDraft) return;
+    setState((current) => {
+      const targetTransferSize = templateDraft.mode === "transfer" ? getSafeTransferSize(templateDraft.transferSize) : current.transferSize;
+      const nextState = {
+        ...current,
+        mode: templateDraft.mode,
+        activeView: templateDraft.targetView,
+        transferSize: targetTransferSize,
+      };
+      return {
+        ...updateActiveLayers(nextState, () => templateDraft.layers),
+        selectedTemplate: templateDraft.template.name,
+        selectedLayerId: templateDraft.selectedLayerId || templateDraft.layers[0]?.id || null,
+        status:
+          templateDraft.mode === "apparel"
+            ? `${templateDraft.template.name} customized template applied to ${APPAREL_VIEWS.find((view) => view.id === templateDraft.targetView)?.label || templateDraft.targetView}.`
+            : `${templateDraft.template.name} customized template applied to ${targetTransferSize}.`,
+      };
+    });
+    closeTemplateLibrary();
   };
 
   const addTextLayer = () => {
@@ -3330,97 +3520,354 @@ export default function CustomizerPrototype() {
 
       {isTemplateLibraryOpen ? (
         <div className="fixed inset-0 z-[80] bg-black/70 p-4 backdrop-blur-sm">
-          <div className="mx-auto flex h-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-cyan-300/25 bg-[#0b1519] shadow-[0_30px_120px_rgba(0,0,0,0.65)]">
+          <div className="mx-auto flex h-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-cyan-300/25 bg-[#0b1519] shadow-[0_30px_120px_rgba(0,0,0,0.65)]">
             <div className="flex shrink-0 flex-col gap-3 border-b border-[#1e343c] p-4 md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Editable Templates</p>
-                <h2 className="text-xl font-black text-white">Template Library</h2>
-                <p className="mt-1 text-sm text-neutral-400">Choose a starter layout, then edit layers, text, artwork, and placement.</p>
+                <h2 className="text-xl font-black text-white">{templateDraft ? templateDraft.template.name : "Template Library"}</h2>
+                <p className="mt-1 text-sm text-neutral-400">
+                  {templateDraft
+                    ? "Customize this draft template here. The main customizer will not change until you apply it."
+                    : "Choose a starter layout, then customize it before applying it to the main customizer."}
+                </p>
               </div>
               <button
                 type="button"
-                onClick={() => setIsTemplateLibraryOpen(false)}
+                onClick={closeTemplateLibrary}
                 className="rounded-md border border-[#2c424a] bg-[#081114] px-3 py-2 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300"
               >
-                Close
+                {templateDraft ? "Cancel" : "Close"}
               </button>
             </div>
-            <div className="grid shrink-0 gap-3 border-b border-[#1e343c] p-4 md:grid-cols-[minmax(0,1fr)_220px]">
-              <input
-                type="search"
-                value={templateSearch}
-                onChange={(event) => setTemplateSearch(event.target.value)}
-                placeholder="Search logos, jerseys, labels, transfers..."
-                className="rounded-lg border border-[#2c424a] bg-[#071015] px-3 py-2 text-sm text-neutral-100 outline-none transition placeholder:text-neutral-600 focus:border-cyan-300"
-              />
-              <select
-                value={activeTemplateCategory}
-                onChange={(event) => setActiveTemplateCategory(event.target.value as TemplateCategory | "All")}
-                className="rounded-lg border border-[#2c424a] bg-[#071015] px-3 py-2 text-sm text-neutral-100 outline-none transition focus:border-cyan-300"
-              >
-                <option value="All">All Categories</option>
-                {TEMPLATE_CATEGORIES.filter((category) => enabledTemplateCategories.includes(category)).map((category) => (
-                  <option key={category} value={category}>{category}</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4 [scrollbar-color:#27515d_#081114] [scrollbar-width:thin]">
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {filteredTemplateLibrary.map((template) => {
-                  const templateCardImage = getTemplateCardImage(template, brokenTemplatePreviewImages);
-                  return (
-                  <article
-                    key={template.id}
-                    className="rounded-xl border border-[#243b43] bg-[linear-gradient(145deg,#101b20,#071015)] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+            {!templateDraft ? (
+              <>
+                <div className="grid shrink-0 gap-3 border-b border-[#1e343c] p-4 md:grid-cols-[minmax(0,1fr)_220px]">
+                  <input
+                    type="search"
+                    value={templateSearch}
+                    onChange={(event) => setTemplateSearch(event.target.value)}
+                    placeholder="Search logos, jerseys, labels, transfers..."
+                    className="rounded-lg border border-[#2c424a] bg-[#071015] px-3 py-2 text-sm text-neutral-100 outline-none transition placeholder:text-neutral-600 focus:border-cyan-300"
+                  />
+                  <select
+                    value={activeTemplateCategory}
+                    onChange={(event) => setActiveTemplateCategory(event.target.value as TemplateCategory | "All")}
+                    className="rounded-lg border border-[#2c424a] bg-[#071015] px-3 py-2 text-sm text-neutral-100 outline-none transition focus:border-cyan-300"
                   >
-                    <div className="mb-3 aspect-[4/3] overflow-hidden rounded-lg border border-white/10 bg-[radial-gradient(circle_at_50%_35%,rgba(103,232,249,0.18),transparent_30%),linear-gradient(145deg,#14242a,#080d10)]">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={templateCardImage}
-                        alt={`${template.name} template thumbnail`}
-                        className="h-full w-full object-cover"
-                        onError={() => {
-                          const hostedThumbnail = template.thumbnailUrl || template.previewImage;
-                          if (!hostedThumbnail || templateCardImage !== hostedThumbnail) return;
-                          setBrokenTemplatePreviewImages((current) =>
-                            current.includes(hostedThumbnail) ? current : [...current, hostedThumbnail]
-                          );
-                        }}
-                      />
+                    <option value="All">All Categories</option>
+                    {TEMPLATE_CATEGORIES.filter((category) => enabledTemplateCategories.includes(category)).map((category) => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 [scrollbar-color:#27515d_#081114] [scrollbar-width:thin]">
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {filteredTemplateLibrary.map((template) => {
+                      const templateCardImage = getTemplateCardImage(template, brokenTemplatePreviewImages);
+                      return (
+                      <article
+                        key={template.id}
+                        className="rounded-xl border border-[#243b43] bg-[linear-gradient(145deg,#101b20,#071015)] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                      >
+                        <div className="mb-3 aspect-[4/3] overflow-hidden rounded-lg border border-white/10 bg-[radial-gradient(circle_at_50%_35%,rgba(103,232,249,0.18),transparent_30%),linear-gradient(145deg,#14242a,#080d10)]">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={templateCardImage}
+                            alt={`${template.name} template thumbnail`}
+                            className="h-full w-full object-cover"
+                            onError={() => {
+                              const hostedThumbnail = template.thumbnailUrl || template.previewImage;
+                              if (!hostedThumbnail || templateCardImage !== hostedThumbnail) return;
+                              setBrokenTemplatePreviewImages((current) =>
+                                current.includes(hostedThumbnail) ? current : [...current, hostedThumbnail]
+                              );
+                            }}
+                          />
+                        </div>
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <h3 className="font-semibold text-white">{template.name}</h3>
+                            <p className="mt-1 text-xs leading-5 text-neutral-400">{template.description}</p>
+                            <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
+                              {template.layers.length} editable layers
+                              {template.targetView ? ` - ${APPAREL_VIEWS.find((view) => view.id === template.targetView)?.label || template.targetView}` : ""}
+                            </p>
+                          </div>
+                          <span className="shrink-0 rounded-full border border-cyan-300/30 px-2 py-1 text-[10px] font-semibold text-cyan-200">
+                            {template.category}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => openTemplateDraft(template)}
+                          className="mt-3 w-full rounded-md border border-cyan-300 bg-cyan-300 px-3 py-2 text-sm font-black text-neutral-950 transition hover:bg-cyan-200"
+                        >
+                          Customize Template
+                        </button>
+                      </article>
+                      );
+                    })}
+                  </div>
+                  {filteredTemplateLibrary.length === 0 ? (
+                    <div className="grid min-h-48 place-items-center rounded-xl border border-[#243b43] bg-[#071015] p-6 text-center text-sm text-neutral-400">
+                      No templates found for this search. Try another category or keyword.
                     </div>
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="font-semibold text-white">{template.name}</h3>
-                        <p className="mt-1 text-xs leading-5 text-neutral-400">{template.description}</p>
-                        <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
-                          {template.layers.length} editable layers
-                          {template.targetView ? ` - ${APPAREL_VIEWS.find((view) => view.id === template.targetView)?.label || template.targetView}` : ""}
-                        </p>
+                  ) : null}
+                </div>
+              </>
+            ) : (
+              <div className="grid min-h-0 flex-1 gap-4 overflow-hidden p-4 lg:grid-cols-[260px_minmax(0,1fr)_280px]">
+                <aside className="min-h-0 overflow-y-auto rounded-xl border border-[#243b43] bg-[#071015] p-3 [scrollbar-color:#27515d_#081114] [scrollbar-width:thin]">
+                  <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-cyan-200">Layers</p>
+                  <div className="space-y-2">
+                    {templateDraft.layers.map((layer) => (
+                      <button
+                        key={layer.id}
+                        type="button"
+                        onClick={() => setTemplateDraft((current) => current ? { ...current, selectedLayerId: layer.id, status: `${layer.name} selected in draft.` } : current)}
+                        className={`w-full rounded-lg border px-3 py-2 text-left text-xs transition ${
+                          layer.id === templateDraft.selectedLayerId
+                            ? "border-cyan-300 bg-cyan-300 text-neutral-950"
+                            : "border-[#2c424a] bg-[#0b1519] text-neutral-200 hover:border-cyan-300"
+                        }`}
+                      >
+                        <span className="block font-black">{layer.name}</span>
+                        <span className="block text-[10px] uppercase tracking-wide opacity-70">{layer.type}{layer.locked ? " - locked" : ""}</span>
+                      </button>
+                    ))}
+                  </div>
+                </aside>
+
+                <section className="min-h-0 rounded-xl border border-[#243b43] bg-[#050b0d] p-4">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">
+                        {templateDraft.mode === "apparel"
+                          ? APPAREL_VIEWS.find((view) => view.id === templateDraft.targetView)?.label || templateDraft.targetView
+                          : templateDraft.transferSize}
+                      </p>
+                      <p className="text-sm text-neutral-400">{templateDraft.layers.length} editable draft layers</p>
+                    </div>
+                    <span className="rounded-full border border-cyan-300/25 px-3 py-1 text-xs font-semibold text-cyan-100">{templateDraft.template.category}</span>
+                  </div>
+                  <div className="mx-auto grid aspect-[5/6] max-h-full min-h-[420px] max-w-[680px] place-items-center rounded-xl border border-[#1e343c] bg-[#0b1519] p-5">
+                    <div className="relative h-full w-full max-w-[520px]">
+                      <div className="absolute left-1/2 top-1/2 h-[82%] w-[72%] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-dashed border-cyan-200/45 bg-[#061015]">
+                        <span className="absolute -right-1 -top-5 text-[10px] font-semibold uppercase tracking-wide text-cyan-100/80">
+                          Draft print area
+                        </span>
+                        <div className="absolute inset-0 overflow-hidden">
+                          {templateDraft.layers.filter((layer) => !layer.hidden).sort((a, b) => a.zIndex - b.zIndex).map((layer) => {
+                            const isSelected = layer.id === templateDraft.selectedLayerId;
+                            const commonStyle = {
+                              left: `${layer.x}%`,
+                              top: `${layer.y}%`,
+                              width: `${layer.width}%`,
+                              height: `${layer.height}%`,
+                              transform: `translate(-50%, -50%) rotate(${layer.rotation}deg)`,
+                              opacity: layer.opacity,
+                              zIndex: layer.zIndex,
+                            };
+
+                            if (layer.type === "image" && layer.sourceUrl) {
+                              return (
+                                <button
+                                  key={layer.id}
+                                  type="button"
+                                  onClick={() => setTemplateDraft((current) => current ? { ...current, selectedLayerId: layer.id, status: `${layer.name} selected in draft.` } : current)}
+                                  className={`absolute overflow-hidden rounded-sm border border-transparent ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
+                                  style={commonStyle}
+                                >
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={layer.sourceUrl} alt={layer.sourceName || layer.name} className="pointer-events-none h-full w-full object-contain" draggable={false} />
+                                </button>
+                              );
+                            }
+
+                            if (layer.type === "shape") {
+                              return (
+                                <button
+                                  key={layer.id}
+                                  type="button"
+                                  onClick={() => setTemplateDraft((current) => current ? { ...current, selectedLayerId: layer.id, status: `${layer.name} selected in draft.` } : current)}
+                                  className={`absolute rounded-lg border border-white/20 ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
+                                  style={{ ...commonStyle, backgroundColor: layer.color }}
+                                  aria-label={layer.name}
+                                />
+                              );
+                            }
+
+                            if (layer.type === "placeholder" || layer.type === "image-placeholder") {
+                              return (
+                                <button
+                                  key={layer.id}
+                                  type="button"
+                                  onClick={() => setTemplateDraft((current) => current ? { ...current, selectedLayerId: layer.id, status: `${layer.name} selected. Upload artwork to replace it.` } : current)}
+                                  className={`absolute grid place-items-center rounded-lg border border-dashed border-cyan-200/80 bg-[#071015]/85 px-2 text-center text-[10px] font-black uppercase tracking-wide text-cyan-100 ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
+                                  style={commonStyle}
+                                >
+                                  {layer.text || "Upload Logo"}
+                                </button>
+                              );
+                            }
+
+                            return (
+                              <button
+                                key={layer.id}
+                                type="button"
+                                onClick={() => setTemplateDraft((current) => current ? { ...current, selectedLayerId: layer.id, status: `${layer.name} selected in draft.` } : current)}
+                                className={`absolute grid place-items-center px-1 text-center font-black leading-tight ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
+                                style={{
+                                  ...commonStyle,
+                                  color: layer.color,
+                                  fontFamily: layer.fontFamily,
+                                  fontSize: `${layer.fontSize}px`,
+                                  lineHeight: 1.08,
+                                  whiteSpace: "pre-wrap",
+                                }}
+                              >
+                                {layer.text || "Edit Text"}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                      <span className="shrink-0 rounded-full border border-cyan-300/30 px-2 py-1 text-[10px] font-semibold text-cyan-200">
-                        {template.category}
-                      </span>
                     </div>
+                  </div>
+                </section>
+
+                <aside className="min-h-0 overflow-y-auto rounded-xl border border-[#243b43] bg-[#071015] p-3 [scrollbar-color:#27515d_#081114] [scrollbar-width:thin]">
+                  <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-cyan-200">Draft Controls</p>
+                  {templateDraftSelectedLayer ? (
+                    <div className="space-y-3">
+                      <div className="rounded-lg border border-[#243b43] bg-[#0b1519] p-3">
+                        <p className="text-sm font-black text-white">{templateDraftSelectedLayer.name}</p>
+                        <p className="text-xs uppercase tracking-wide text-neutral-500">{templateDraftSelectedLayer.type} layer</p>
+                      </div>
+                      {templateDraftSelectedLayer.type === "text" ? (
+                        <>
+                          <label className="block text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                            Text
+                            <textarea
+                              value={templateDraftSelectedLayer.text || ""}
+                              onChange={(event) => updateTemplateDraftLayer({ text: event.target.value }, "Draft text updated.", false)}
+                              className="mt-2 h-20 w-full rounded-lg border border-[#2c424a] bg-[#081114] px-3 py-2 text-sm normal-case tracking-normal text-neutral-100 outline-none focus:border-cyan-300"
+                            />
+                          </label>
+                          <select
+                            value={templateDraftSelectedLayer.fontId || getFontByFamily(templateDraftSelectedLayer.fontFamily).id}
+                            onChange={(event) => {
+                              const font = getFontById(event.target.value);
+                              updateTemplateDraftLayer({ fontId: font.id, fontFamily: font.cssFontFamily }, "Draft font updated.", false);
+                            }}
+                            className="w-full rounded-lg border border-[#2c424a] bg-[#081114] px-3 py-2 text-sm text-neutral-100 outline-none focus:border-cyan-300"
+                          >
+                            {FONT_CATEGORIES.map((category) => (
+                              <optgroup key={category} label={category}>
+                                {FONT_REGISTRY.filter((font) => font.category === category).map((font) => (
+                                  <option key={font.id} value={font.id}>{font.label}</option>
+                                ))}
+                              </optgroup>
+                            ))}
+                          </select>
+                          <input
+                            type="color"
+                            value={templateDraftSelectedLayer.color || "#67e8f9"}
+                            onChange={(event) => updateTemplateDraftLayer({ color: event.target.value }, "Draft color updated.", false)}
+                            className="h-10 w-full rounded-md border border-[#2c424a] bg-[#081114] p-1"
+                          />
+                        </>
+                      ) : null}
+                      {templateDraftSelectedLayer.type === "placeholder" || templateDraftSelectedLayer.type === "image-placeholder" || templateDraftSelectedLayer.type === "image" ? (
+                        <label className="block cursor-pointer rounded-lg border border-cyan-300/60 bg-[#0b1519] px-3 py-2 text-center text-sm font-black text-cyan-100 transition hover:bg-[#10242a]">
+                          Replace Image
+                          <input type="file" accept="image/*" className="sr-only" onChange={handleTemplateDraftUpload} />
+                        </label>
+                      ) : null}
+                      <Slider
+                        label="Scale"
+                        value={Math.round(Math.max(templateDraftSelectedLayer.width, templateDraftSelectedLayer.height))}
+                        min={8}
+                        max={100}
+                        onChange={updateTemplateDraftLayerScale}
+                      />
+                      <Slider
+                        label="Width"
+                        value={Math.round(templateDraftSelectedLayer.width)}
+                        min={4}
+                        max={100}
+                        onChange={(width) => updateTemplateDraftLayer({ width }, "Draft layer width updated.")}
+                      />
+                      <Slider
+                        label="Height"
+                        value={Math.round(templateDraftSelectedLayer.height)}
+                        min={4}
+                        max={100}
+                        onChange={(height) => updateTemplateDraftLayer({ height }, "Draft layer height updated.")}
+                      />
+                      <Slider
+                        label="X Position"
+                        value={Math.round(safeNumber(templateDraftSelectedLayer.x, templateDraftSelectedBounds.minX, templateDraftSelectedBounds.maxX, 50))}
+                        min={templateDraftSelectedBounds.minX}
+                        max={templateDraftSelectedBounds.maxX}
+                        onChange={updateTemplateDraftLayerX}
+                      />
+                      <Slider
+                        label="Y Position"
+                        value={Math.round(safeNumber(templateDraftSelectedLayer.y, templateDraftSelectedBounds.minY, templateDraftSelectedBounds.maxY, 50))}
+                        min={templateDraftSelectedBounds.minY}
+                        max={templateDraftSelectedBounds.maxY}
+                        onChange={updateTemplateDraftLayerY}
+                      />
+                      <Slider
+                        label="Rotation"
+                        value={Math.round(templateDraftSelectedLayer.rotation)}
+                        min={-30}
+                        max={30}
+                        onChange={(rotation) => updateTemplateDraftLayer({ rotation }, "Draft rotation updated.", false)}
+                      />
+                      {!templateDraftSelectedLayer.locked ? (
+                        <button
+                          type="button"
+                          onClick={deleteTemplateDraftLayer}
+                          className="w-full rounded-md border border-red-400/50 bg-red-950/30 px-3 py-2 text-sm font-semibold text-red-100 transition hover:border-red-300"
+                        >
+                          Delete Layer
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-[#243b43] bg-[#0b1519] p-4 text-sm text-neutral-400">Select a draft layer to edit it.</div>
+                  )}
+                </aside>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#1e343c] pt-4 lg:col-span-3">
+                  <p className="text-sm text-neutral-400">{templateDraft.status}</p>
+                  <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={() => {
-                        loadEditableTemplate(template.id);
-                        setIsTemplateLibraryOpen(false);
-                      }}
-                      className="mt-3 w-full rounded-md border border-cyan-300 bg-cyan-300 px-3 py-2 text-sm font-black text-neutral-950 transition hover:bg-cyan-200"
+                      onClick={applyTemplateDraft}
+                      className="rounded-md border border-cyan-300 bg-cyan-300 px-4 py-2 text-sm font-black text-neutral-950 transition hover:bg-cyan-200"
                     >
-                      Use Template
+                      Apply Template
                     </button>
-                  </article>
-                  );
-                })}
-              </div>
-              {filteredTemplateLibrary.length === 0 ? (
-                <div className="grid min-h-48 place-items-center rounded-xl border border-[#243b43] bg-[#071015] p-6 text-center text-sm text-neutral-400">
-                  No templates found for this search. Try another category or keyword.
+                    <button
+                      type="button"
+                      onClick={backToTemplateGrid}
+                      className="rounded-md border border-[#2c424a] bg-[#081114] px-4 py-2 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300"
+                    >
+                      Back to Templates
+                    </button>
+                    <button
+                      type="button"
+                      onClick={closeTemplateLibrary}
+                      className="rounded-md border border-[#2c424a] bg-[#081114] px-4 py-2 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
-              ) : null}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       ) : null}
