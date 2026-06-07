@@ -295,8 +295,8 @@ function createMockupSvg(label: string, variant: "front" | "back" | "sleeve" | "
   const garmentBody = variant === "neck"
     ? '<rect x="685" y="500" width="510" height="390" rx="58" fill="#101417"/><path d="M760 500 C850 660 1030 660 1120 500" fill="#06080a"/><rect x="815" y="610" width="360" height="150" rx="26" fill="#e8eef4" opacity=".92"/><rect x="855" y="648" width="280" height="64" rx="14" fill="#111827" opacity=".95"/>'
     : variant === "sleeve"
-      ? '<path d="M760 390 C910 330 1080 330 1230 390 L1320 1260 C1120 1360 880 1360 680 1260 Z" fill="url(#shirt)" filter="url(#shadow)"/><path d="M770 510 C910 560 1080 560 1220 510 L1190 1220 C1040 1280 960 1280 810 1220 Z" fill="url(#fabric)" opacity=".7"/>'
-      : '<path d="M715 430 L520 560 L360 1280 C520 1390 650 1330 700 1210 L700 1800 L1180 1800 L1180 1210 C1230 1330 1360 1390 1520 1280 L1360 560 L1165 430 C1080 520 800 520 715 430 Z" fill="url(#shirt)" filter="url(#shadow)"/><path d="M790 310 L1180 310 L1125 470 C1020 560 890 560 735 470 Z" fill="#080b0d"/><path d="M760 585 C850 655 1080 655 1220 585 L1160 1720 L740 1720 Z" fill="url(#fabric)" opacity=".72"/>';
+      ? '<path d="M760 390 C910 330 1080 330 1230 390 L1320 1260 C1120 1360 880 1360 680 1260 Z" fill="url(#shirt)"/><path d="M770 510 C910 560 1080 560 1220 510 L1190 1220 C1040 1280 960 1280 810 1220 Z" fill="url(#fabric)" opacity=".7"/>'
+      : '<path d="M715 430 L520 560 L360 1280 C520 1390 650 1330 700 1210 L700 1800 L1180 1800 L1180 1210 C1230 1330 1360 1390 1520 1280 L1360 560 L1165 430 C1080 520 800 520 715 430 Z" fill="url(#shirt)"/><path d="M790 310 L1180 310 L1125 470 C1020 560 890 560 735 470 Z" fill="#080b0d"/><path d="M760 585 C850 655 1080 655 1220 585 L1160 1720 L740 1720 Z" fill="url(#fabric)" opacity=".72"/>';
 
   const transferBody = `<rect x="520" y="140" width="840" height="${sheetHeight}" rx="42" fill="url(#sheet)" filter="url(#shadow)"/><path d="M560 210 H1320 M560 320 H1320 M560 430 H1320" stroke="#d5e2ec" stroke-width="4" opacity=".55"/><path d="M620 220 V${sheetHeight + 80} M760 220 V${sheetHeight + 80} M900 220 V${sheetHeight + 80} M1040 220 V${sheetHeight + 80} M1180 220 V${sheetHeight + 80}" stroke="#edf5fb" stroke-width="3" opacity=".75"/>`;
 
@@ -308,8 +308,8 @@ function createMockupSvg(label: string, variant: "front" | "back" | "sleeve" | "
       <linearGradient id="sheet" x1="0" x2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".6" stop-color="#f6fbff"/><stop offset="1" stop-color="#e8eef5"/></linearGradient>
       <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="52" stdDeviation="44" flood-color="#0f172a" flood-opacity=".34"/></filter>
     </defs>
-    <rect width="2000" height="2400" rx="0" fill="url(#bg)"/>
-    <ellipse cx="1000" cy="2180" rx="610" ry="110" fill="#0f172a" opacity=".16"/>
+    <rect width="2000" height="2400" rx="0" fill="${isTransfer ? "url(#bg)" : "#070d10"}"/>
+    ${isTransfer ? '<ellipse cx="1000" cy="2180" rx="610" ry="110" fill="#0f172a" opacity=".16"/>' : ""}
     ${isTransfer ? transferBody : garmentBody}
     <text x="1000" y="2260" text-anchor="middle" font-family="Inter, Arial" font-size="42" font-weight="800" fill="#50606b" opacity=".55">${label}</text>
   </svg>`);
@@ -2841,8 +2841,7 @@ export default function CustomizerPrototype() {
               ) : null}
               {state.mode === "apparel" ? (
                 <div className={`absolute inset-0 grid place-items-center overflow-hidden ${displayMockupUrl ? "opacity-0" : ""}`}>
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_15%,rgba(255,255,255,0.82),transparent_24%),radial-gradient(circle_at_50%_74%,rgba(15,23,42,0.18),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.26),rgba(15,23,42,0.08))]" />
-                  <div className="relative h-[90%] w-[72%] drop-shadow-[0_30px_48px_rgba(0,0,0,0.48)]">
+                  <div className="relative h-[90%] w-[72%]">
                     <div className="absolute left-[21%] top-[3%] h-[15%] w-[58%] rounded-b-[46%] bg-[linear-gradient(180deg,#1b2024_0%,#080b0d_82%)] shadow-[inset_0_-10px_18px_rgba(0,0,0,0.55)]" />
                     <div className="absolute left-[-19%] top-[18%] h-[26%] w-[40%] -rotate-[18deg] rounded-[20px_24px_18px_16px] bg-[linear-gradient(145deg,#1d2428_0%,#07090a_76%)] shadow-[inset_10px_0_22px_rgba(255,255,255,0.03),0_16px_20px_rgba(0,0,0,0.28)]" />
                     <div className="absolute right-[-19%] top-[18%] h-[26%] w-[40%] rotate-[18deg] rounded-[24px_20px_16px_18px] bg-[linear-gradient(215deg,#1d2428_0%,#07090a_76%)] shadow-[inset_-10px_0_22px_rgba(255,255,255,0.03),0_16px_20px_rgba(0,0,0,0.28)]" />
