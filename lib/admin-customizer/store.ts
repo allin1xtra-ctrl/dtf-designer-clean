@@ -1,10 +1,14 @@
 import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
 
+import { createClient } from "@supabase/supabase-js";
+
 import type { AdminCustomizerStore, AdminMediaAsset, AdminMockupProduct, AdminMockupVariant, AdminTemplate } from "./types";
 import { normalizeMockupProduct, normalizeMockupVariant, normalizeTemplate } from "./validation";
 
 const STORE_PATH = path.join(process.cwd(), "data", "admin-customizer-store.json");
+const SUPABASE_STORE_TABLE = "admin_customizer_store";
+const SUPABASE_STORE_KEY = "default";
 
 const PRODUCT_TYPE_SEEDS = [
   ["T-Shirts", "t-shirts"],
@@ -41,28 +45,86 @@ function createEmptyStore(): AdminCustomizerStore {
   };
 }
 
+function normalizeStore(input: Partial<AdminCustomizerStore> | null | undefined) {
+  const fallback = createEmptyStore();
+  return {
+    templates: Array.isArray(input?.templates) ? input.templates : fallback.templates,
+    mockupProducts: Array.isArray(input?.mockupProducts) && input.mockupProducts.length ? input.mockupProducts : fallback.mockupProducts,
+    mockupVariants: Array.isArray(input?.mockupVariants) ? input.mockupVariants : fallback.mockupVariants,
+    mediaAssets: Array.isArray(input?.mediaAssets) ? input.mediaAssets : fallback.mediaAssets,
+    updatedAt: typeof input?.updatedAt === "string" ? input.updatedAt : fallback.updatedAt,
+  };
+}
+
+function getSupabaseStoreConfig() {
+  const url = String(process.env.ADMIN_CUSTOMIZER_SUPABASE_URL || process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim();
+  const serviceRoleKey = String(process.env.ADMIN_CUSTOMIZER_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
+  if (!url || !serviceRoleKey) return null;
+  return { url, serviceRoleKey };
+}
+
+function createSupabaseStoreClient() {
+  const config = getSupabaseStoreConfig();
+  if (!config) return null;
+  return createClient(config.url, config.serviceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+}
+
+async function readSupabaseStore(): Promise<AdminCustomizerStore | null> {
+  const supabase = createSupabaseStoreClient();
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from(SUPABASE_STORE_TABLE)
+    .select("data")
+    .eq("store_key", SUPABASE_STORE_KEY)
+    .maybeSingle();
+
+  if (error) throw new Error(`Admin customizer store read failed: ${error.message}`);
+  return normalizeStore(data?.data as Partial<AdminCustomizerStore> | undefined);
+}
+
+async function writeSupabaseStore(store: AdminCustomizerStore) {
+  const supabase = createSupabaseStoreClient();
+  if (!supabase) return false;
+  const nextStore = { ...store, updatedAt: now() };
+  const { error } = await supabase
+    .from(SUPABASE_STORE_TABLE)
+    .upsert(
+      {
+        store_key: SUPABASE_STORE_KEY,
+        data: nextStore,
+        updated_at: nextStore.updatedAt,
+      },
+      { onConflict: "store_key" }
+    );
+
+  if (error) throw new Error(`Admin customizer store write failed: ${error.message}`);
+  return true;
+}
+
 async function ensureStoreDirectory() {
   await mkdir(path.dirname(STORE_PATH), { recursive: true });
 }
 
 export async function readAdminCustomizerStore(): Promise<AdminCustomizerStore> {
+  const supabaseStore = await readSupabaseStore();
+  if (supabaseStore) return supabaseStore;
+
   try {
     const raw = await readFile(STORE_PATH, "utf8");
     const parsed = JSON.parse(raw) as Partial<AdminCustomizerStore>;
-    const fallback = createEmptyStore();
-    return {
-      templates: Array.isArray(parsed.templates) ? parsed.templates : fallback.templates,
-      mockupProducts: Array.isArray(parsed.mockupProducts) && parsed.mockupProducts.length ? parsed.mockupProducts : fallback.mockupProducts,
-      mockupVariants: Array.isArray(parsed.mockupVariants) ? parsed.mockupVariants : fallback.mockupVariants,
-      mediaAssets: Array.isArray(parsed.mediaAssets) ? parsed.mediaAssets : fallback.mediaAssets,
-      updatedAt: typeof parsed.updatedAt === "string" ? parsed.updatedAt : fallback.updatedAt,
-    };
+    return normalizeStore(parsed);
   } catch {
     return createEmptyStore();
   }
 }
 
 async function writeAdminCustomizerStore(store: AdminCustomizerStore) {
+  if (await writeSupabaseStore(store)) return;
   await ensureStoreDirectory();
   await writeFile(STORE_PATH, `${JSON.stringify({ ...store, updatedAt: now() }, null, 2)}\n`, "utf8");
 }

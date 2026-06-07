@@ -18,7 +18,7 @@ export default function ShopifyOrderFulfillmentManager() {
       });
       const data = await res.json();
       setStatus(data.message);
-    } catch (e) {
+    } catch {
       setStatus("Error fulfilling order.");
     } finally {
       setLoading(false);

@@ -2,9 +2,16 @@
 "use client";
 import React, { useState } from "react";
 
+type ShopifyVariant = {
+  id: string | number;
+  title?: string;
+  price?: string;
+  sku?: string;
+};
+
 export default function ShopifyProductVariantManager() {
   const [productId, setProductId] = useState("");
-  const [variants, setVariants] = useState([]);
+  const [variants, setVariants] = useState<ShopifyVariant[]>([]);
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -19,7 +26,7 @@ export default function ShopifyProductVariantManager() {
       });
       const data = await res.json();
       setVariants(data.variants || []);
-    } catch (e) {
+    } catch {
       setStatus("Error loading variants.");
     } finally {
       setLoading(false);
@@ -45,7 +52,7 @@ export default function ShopifyProductVariantManager() {
       </button>
       {status && <div style={{ marginTop: 12 }}>{status}</div>}
       <ul style={{ marginTop: 16 }}>
-        {variants.map((v: any) => (
+        {variants.map((v) => (
           <li key={v.id} style={{ marginBottom: 8 }}>
             <div>ID: {v.id}</div>
             <div>Title: {v.title}</div>

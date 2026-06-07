@@ -2,8 +2,13 @@
 "use client";
 import React, { useState } from "react";
 
+type ShopifyOrder = {
+  id: string | number;
+  status?: string;
+};
+
 export default function ShopifyOrderList() {
-  const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState<ShopifyOrder[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -22,7 +27,7 @@ export default function ShopifyOrderList() {
       } else {
         setError(data.message || "Failed to fetch orders.");
       }
-    } catch (e) {
+    } catch {
       setError("Error fetching orders.");
     } finally {
       setLoading(false);
@@ -37,7 +42,7 @@ export default function ShopifyOrderList() {
       </button>
       {error && <div style={{ color: "red", marginTop: 8 }}>{error}</div>}
       <ul style={{ marginTop: 16 }}>
-        {orders.map((o: any) => (
+        {orders.map((o) => (
           <li key={o.id} style={{ marginBottom: 8 }}>
             <strong>Order #{o.id}</strong> (Status: {o.status})
           </li>

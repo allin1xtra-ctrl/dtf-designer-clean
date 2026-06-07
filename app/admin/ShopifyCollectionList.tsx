@@ -2,8 +2,13 @@
 "use client";
 import React, { useState } from "react";
 
+type ShopifyCollection = {
+  id: string | number;
+  title?: string;
+};
+
 export default function ShopifyCollectionList() {
-  const [collections, setCollections] = useState([]);
+  const [collections, setCollections] = useState<ShopifyCollection[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -22,7 +27,7 @@ export default function ShopifyCollectionList() {
       } else {
         setError(data.message || "Failed to fetch collections.");
       }
-    } catch (e) {
+    } catch {
       setError("Error fetching collections.");
     } finally {
       setLoading(false);
@@ -37,7 +42,7 @@ export default function ShopifyCollectionList() {
       </button>
       {error && <div style={{ color: "red", marginTop: 8 }}>{error}</div>}
       <ul style={{ marginTop: 16 }}>
-        {collections.map((c: any) => (
+        {collections.map((c) => (
           <li key={c.id} style={{ marginBottom: 8 }}>
             <strong>{c.title}</strong> (ID: {c.id})
           </li>
