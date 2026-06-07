@@ -5,6 +5,7 @@ const ShopifyProductImageManager = dynamic(() => import("./ShopifyProductImageMa
 const ShopifyProductVariantManager = dynamic(() => import("./ShopifyProductVariantManager"), { ssr: false });
 import React from "react";
 import dynamic from "next/dynamic";
+import AdminNav from "./AdminNav";
 
 const ShopifyProductList = dynamic(() => import("./ShopifyProductList"), { ssr: false });
 const ShopifyProductCreate = dynamic(() => import("./ShopifyProductCreate"), { ssr: false });
@@ -15,19 +16,22 @@ const ShopifyCollectionList = dynamic(() => import("./ShopifyCollectionList"), {
 
 export default function AdminPage() {
   return (
-    <main style={{ padding: 32 }}>
-      <h1>Admin Dashboard</h1>
-      <p>Welcome to the admin panel. Here you can manage Shopify integration, products, and app settings.</p>
-      <ShopifyProductList />
-      <ShopifyProductCreate />
-      <ShopifyProductEditor />
-      <ShopifyProductDelete />
-      <ShopifyProductImageManager />
-      <ShopifyProductVariantManager />
-      <ShopifyOrderList />
-      <ShopifyCollectionList />
-      <ShopifyOrderFulfillmentManager />
-      <ShopifyCustomerManager />
-    </main>
+    <>
+      <AdminNav />
+      <main style={{ padding: 32 }}>
+        <h1>Admin Dashboard</h1>
+        <p>Welcome to the admin panel. Manage Shopify integration, products, customizer templates, mockups, and media.</p>
+        <ShopifyProductList />
+        <ShopifyProductCreate />
+        <ShopifyProductEditor />
+        <ShopifyProductDelete />
+        <ShopifyProductImageManager />
+        <ShopifyProductVariantManager />
+        <ShopifyOrderList />
+        <ShopifyCollectionList />
+        <ShopifyOrderFulfillmentManager />
+        <ShopifyCustomerManager />
+      </main>
+    </>
   );
 }
