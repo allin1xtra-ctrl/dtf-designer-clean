@@ -2,7 +2,7 @@
   dtf-customizer-page.liquid — Embedded Vercel customizer for /pages/customizer
 {% endcomment %}
 
-{% assign designer_base = section.settings.designer_url | default: 'https://dtf-designer-clean.vercel.app/customizer' %}
+{% assign designer_base = section.settings.designer_url | default: 'https://dtf-designer-clean-allin1xtra-2553-brandon-hodges-projects.vercel.app/customizer' %}
 {% assign param_product    = request.params.product    | default: '' %}
 {% assign param_variant    = request.params.variant    | default: '' %}
 {% assign param_product_id = request.params.product_id | default: '' %}
@@ -138,7 +138,7 @@
   var iframe = document.getElementById('dtf-customizer-iframe');
   if (!iframe) return;
 
-  var DEFAULT_DESIGNER_URL = 'https://dtf-designer-clean.vercel.app/customizer';
+  var DEFAULT_DESIGNER_URL = 'https://dtf-designer-clean-allin1xtra-2553-brandon-hodges-projects.vercel.app/customizer';
   var designerBaseUrl = {{ designer_base | json }};
   try {
     var parsedDesignerBaseUrl = new URL(designerBaseUrl, window.location.origin);
@@ -213,7 +213,7 @@
 {
   "name": "DTF Customizer Page",
   "settings": [
-    { "type": "url", "id": "designer_url", "label": "Customizer app URL", "default": "https://dtf-designer-clean.vercel.app/customizer" },
+    { "type": "url", "id": "designer_url", "label": "Customizer app URL", "default": "https://dtf-designer-clean-allin1xtra-2553-brandon-hodges-projects.vercel.app/customizer" },
     { "type": "checkbox", "id": "show_header", "label": "Show header", "default": true },
     { "type": "text", "id": "heading", "label": "Heading", "default": "🎨 DTF Designer Pro" },
     { "type": "textarea", "id": "subheading", "label": "Subheading", "default": "Design your custom product, upload your artwork, and add straight to cart." },

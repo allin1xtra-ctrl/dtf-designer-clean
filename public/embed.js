@@ -169,7 +169,7 @@
 
       const productId = container.dataset.productId || "";
       const productHandle = getCurrentProductHandle(container);
-      const designerUrl = normalizeDesignerUrl(container.dataset.designerUrl || "https://dtf-designer-clean.vercel.app");
+      const designerUrl = normalizeDesignerUrl(container.dataset.designerUrl || "https://dtf-designer-clean-allin1xtra-2553-brandon-hodges-projects.vercel.app");
       const appVersion = container.dataset.appVersion || "2026-04-15-3";
       const redirectToCart = container.dataset.redirectToCart !== "false";
       const productTitle = getProductTitle(container);

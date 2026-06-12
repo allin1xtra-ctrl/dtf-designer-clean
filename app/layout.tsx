@@ -13,7 +13,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://dtf-designer-clean.vercel.app"),
+  metadataBase: new URL("https://dtf-designer-clean-allin1xtra-2553-brandon-hodges-projects.vercel.app"),
   title: {
     default: "Custom DTF Transfers, Gang Sheets & Custom Apparel | Your Favorite DTF Plug",
     template: "%s | Your Favorite DTF Plug",
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     title: "Custom DTF Transfers, Gang Sheets & Custom Apparel | Your Favorite DTF Plug",
     description:
       "Order premium custom DTF transfers, gang sheets, custom t-shirts, and hoodies with no minimums, vibrant color, fast turnaround, and easy online artwork upload.",
-    url: "https://dtf-designer-clean.vercel.app",
+    url: "https://dtf-designer-clean-allin1xtra-2553-brandon-hodges-projects.vercel.app",
     siteName: "Your Favorite DTF Plug",
   },
   twitter: {
