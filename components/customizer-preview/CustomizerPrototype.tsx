@@ -247,6 +247,27 @@ function getShopifyEmbedContext(): ShopifyEmbedContext {
   };
 }
 
+function getCustomizerUrlState() {
+  if (typeof window === "undefined") {
+    return { mode: null as PreviewMode | null, transferSize: "" };
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const requestedMode = String(params.get("dtf_mode") || params.get("mode") || "").toLowerCase();
+  const requestedTransferSize = normalizeTransferSizeId(
+    params.get("transferSize") || params.get("transfer_size") || ""
+  );
+
+  return {
+    mode: requestedMode.includes("transfer") || requestedMode.includes("gang")
+      ? "transfer" as PreviewMode
+      : requestedMode.includes("apparel")
+        ? "apparel" as PreviewMode
+        : null,
+    transferSize: requestedTransferSize,
+  };
+}
+
 function normalizeShopifyVariantId(value: string) {
   const normalized = String(value || "").trim();
   if (!normalized || normalized === "undefined" || normalized === "null" || normalized === "NaN") return "";
@@ -2664,16 +2685,21 @@ export default function CustomizerPrototype() {
   };
 
   const loadStagingConfig = () => {
+    const urlState = getCustomizerUrlState();
+
     try {
       const rawConfig = window.localStorage.getItem(STAGING_CUSTOMIZER_CONFIG_STORAGE_KEY);
       if (!rawConfig) {
+        const nextMode = urlState.mode || "apparel";
+        const nextTransferSize = nextMode === "transfer" ? getSafeTransferSize(urlState.transferSize) : SAFE_TRANSFER_SIZE;
+
         setStagingConfig(null);
         setStagingConfigWarning("Using safe preview defaults.");
         setState((current) => ({
           ...current,
-          mode: "apparel",
-          transferSize: SAFE_TRANSFER_SIZE,
-          selectedTemplate: "Centered Logo",
+          mode: nextMode,
+          transferSize: nextTransferSize,
+          selectedTemplate: nextMode === "transfer" ? "Logo Transfer" : "Centered Logo",
           usingSafeDefaults: true,
           status: "Using safe preview defaults. Validate a config in /admin/customizer-setup to load setup values.",
         }));
@@ -2684,12 +2710,14 @@ export default function CustomizerPrototype() {
         type?: unknown;
         label?: unknown;
       };
-      const nextMode = resolvePreviewModeFromConfigType(parsedConfig.type);
+      const nextMode = urlState.mode || resolvePreviewModeFromConfigType(parsedConfig.type);
       const firstTransferSize = Array.isArray(parsedConfig.transferSizes)
         ? parsedConfig.transferSizes.map(getTransferSizeLabel).find(Boolean)
         : "";
       const defaultTransferSize = getConfiguredTransferSizeLabel(parsedConfig, parsedConfig.stagingSettings?.defaultTransferSizeId);
-      const nextTransferSize = nextMode === "transfer" ? getSafeTransferSize(defaultTransferSize || firstTransferSize) : SAFE_TRANSFER_SIZE;
+      const nextTransferSize = nextMode === "transfer"
+        ? getSafeTransferSize(urlState.transferSize || defaultTransferSize || firstTransferSize)
+        : SAFE_TRANSFER_SIZE;
       const usedFallback = nextMode === "transfer" && !firstTransferSize;
       const label = typeof parsedConfig.label === "string" ? parsedConfig.label : "staging setup";
       const realismDefaults = parsedConfig.stagingSettings?.realismDefaults;
@@ -2717,13 +2745,16 @@ export default function CustomizerPrototype() {
           : "Loaded staging setup config. Production remains disconnected.",
       }));
     } catch {
+      const nextMode = urlState.mode || "apparel";
+      const nextTransferSize = nextMode === "transfer" ? getSafeTransferSize(urlState.transferSize) : SAFE_TRANSFER_SIZE;
+
       setStagingConfig(null);
       setStagingConfigWarning("Invalid staging config, using safe defaults.");
       setState((current) => ({
         ...current,
-        mode: "apparel",
-        transferSize: SAFE_TRANSFER_SIZE,
-        selectedTemplate: "Centered Logo",
+        mode: nextMode,
+        transferSize: nextTransferSize,
+        selectedTemplate: nextMode === "transfer" ? "Logo Transfer" : "Centered Logo",
         usingSafeDefaults: true,
         status: "Unable to load staging setup config. Using safe preview defaults.",
       }));
