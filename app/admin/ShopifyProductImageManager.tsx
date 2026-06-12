@@ -2,9 +2,14 @@
 "use client";
 import React, { useState } from "react";
 
+type ShopifyProductImage = {
+  id: string | number;
+  src?: string;
+};
+
 export default function ShopifyProductImageManager() {
   const [productId, setProductId] = useState("");
-  const [images, setImages] = useState([]);
+  const [images, setImages] = useState<ShopifyProductImage[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
@@ -20,7 +25,7 @@ export default function ShopifyProductImageManager() {
       });
       const data = await res.json();
       setImages(data.images || []);
-    } catch (e) {
+    } catch {
       setStatus("Error loading images.");
     } finally {
       setLoading(false);
@@ -42,7 +47,7 @@ export default function ShopifyProductImageManager() {
       const data = await res.json();
       setStatus(data.message);
       fetchImages();
-    } catch (e) {
+    } catch {
       setStatus("Error uploading image.");
     } finally {
       setLoading(false);
@@ -72,8 +77,9 @@ export default function ShopifyProductImageManager() {
       </div>
       {status && <div style={{ marginTop: 12 }}>{status}</div>}
       <ul style={{ marginTop: 16 }}>
-        {images.map((img: any) => (
+        {images.map((img) => (
           <li key={img.id} style={{ marginBottom: 8 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={img.src} alt="Product" style={{ maxWidth: 100, maxHeight: 100 }} />
             <div>ID: {img.id}</div>
           </li>

@@ -2,8 +2,15 @@
 "use client";
 import React, { useState } from "react";
 
+type ShopifyCustomer = {
+  id: string | number;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+};
+
 export default function ShopifyCustomerManager() {
-  const [customers, setCustomers] = useState([]);
+  const [customers, setCustomers] = useState<ShopifyCustomer[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -22,7 +29,7 @@ export default function ShopifyCustomerManager() {
       } else {
         setError(data.message || "Failed to fetch customers.");
       }
-    } catch (e) {
+    } catch {
       setError("Error fetching customers.");
     } finally {
       setLoading(false);
@@ -37,7 +44,7 @@ export default function ShopifyCustomerManager() {
       </button>
       {error && <div style={{ color: "red", marginTop: 8 }}>{error}</div>}
       <ul style={{ marginTop: 16 }}>
-        {customers.map((c: any) => (
+        {customers.map((c) => (
           <li key={c.id} style={{ marginBottom: 8 }}>
             <strong>{c.first_name} {c.last_name}</strong> (ID: {c.id}, Email: {c.email})
           </li>

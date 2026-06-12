@@ -22,7 +22,7 @@ export default function ShopifyProductEditor() {
       });
       const data = await res.json();
       setStatus(data.message);
-    } catch (e) {
+    } catch {
       setStatus("Error updating product.");
     } finally {
       setLoading(false);

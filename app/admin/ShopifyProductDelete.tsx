@@ -21,7 +21,7 @@ export default function ShopifyProductDelete() {
       });
       const data = await res.json();
       setStatus(data.message);
-    } catch (e) {
+    } catch {
       setStatus("Error deleting product.");
     } finally {
       setLoading(false);

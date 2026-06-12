@@ -21,7 +21,7 @@ export default function ShopifyProductCreate() {
       });
       const data = await res.json();
       setStatus(data.message);
-    } catch (e) {
+    } catch {
       setStatus("Error creating product.");
     } finally {
       setLoading(false);

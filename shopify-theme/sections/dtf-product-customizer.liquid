@@ -1,0 +1,143 @@
+{% comment %}
+  Product-page customizer embed.
+  Keeps the old /customizer app available as rollback while loading the clean /customizer-preview experience by default.
+{% endcomment %}
+
+{% liquid
+  assign configured_designer_url = section.settings.designer_url | default: 'https://dtf-designer-clean.vercel.app/customizer-preview'
+  if configured_designer_url contains '/customizer-preview'
+    assign designer_base = configured_designer_url
+  else
+    assign designer_base = configured_designer_url | replace: '/customizer', '/customizer-preview'
+  endif
+  assign selected_variant = product.selected_or_first_available_variant
+%}
+
+<section class="dtf-product-customizer page-width" aria-label="Custom design studio">
+  <div id="dtf-customizer-wrapper" class="dtf-product-customizer__frame-wrap">
+    <iframe
+      id="dtf-customizer-iframe"
+      src="{{ designer_base }}?source=shopify&product={{ product.handle | url_encode }}&variant={{ selected_variant.id | url_encode }}&title={{ product.title | url_encode }}"
+      title="Custom design studio"
+      allow="clipboard-write"
+      loading="lazy"
+      class="dtf-product-customizer__iframe"
+    ></iframe>
+  </div>
+</section>
+
+<style>
+  #shopify-section-{{ section.id }} .dtf-product-customizer {
+    margin: 0 auto;
+    padding: 0;
+    background: #071015;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-product-customizer__frame-wrap {
+    width: 100%;
+    min-height: {{ section.settings.desktop_height }}px;
+    overflow: hidden;
+    background: #071015;
+  }
+
+  #shopify-section-{{ section.id }} .dtf-product-customizer__iframe {
+    display: block;
+    width: 100%;
+    min-height: {{ section.settings.desktop_height }}px;
+    height: {{ section.settings.desktop_height }}px;
+    border: 0;
+    background: #071015;
+  }
+
+  @media screen and (max-width: 749px) {
+    #shopify-section-{{ section.id }} .dtf-product-customizer__frame-wrap,
+    #shopify-section-{{ section.id }} .dtf-product-customizer__iframe {
+      min-height: {{ section.settings.mobile_height }}px;
+      height: {{ section.settings.mobile_height }}px;
+    }
+  }
+</style>
+
+<script>
+  (function () {
+    var iframe = document.getElementById('dtf-customizer-iframe');
+    var wrapper = document.getElementById('dtf-customizer-wrapper');
+    if (!iframe || !wrapper) return;
+
+    var designerOrigin = '';
+    try {
+      designerOrigin = new URL(iframe.src, window.location.origin).origin;
+    } catch (error) {
+      designerOrigin = '';
+    }
+
+    window.addEventListener('message', function (event) {
+      if (event.source !== iframe.contentWindow) return;
+      if (designerOrigin && event.origin !== designerOrigin) return;
+
+      var message = event.data || {};
+      var requestedHeight =
+        message.type === 'dtf:resize' && message.payload
+          ? Number(message.payload.height)
+          : message.type === 'DTF_IFRAME_HEIGHT'
+            ? Number(message.height)
+            : NaN;
+
+      if (!Number.isFinite(requestedHeight) || requestedHeight <= 0) return;
+
+      var minimumHeight = window.matchMedia('(max-width: 749px)').matches
+        ? {{ section.settings.mobile_height | json }}
+        : {{ section.settings.desktop_height | json }};
+      var nextHeight = Math.max(minimumHeight, Math.min(Math.ceil(requestedHeight), 2600));
+      iframe.style.height = nextHeight + 'px';
+      iframe.style.minHeight = nextHeight + 'px';
+      wrapper.style.height = nextHeight + 'px';
+      wrapper.style.minHeight = nextHeight + 'px';
+    });
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "DTF Product Customizer",
+  "tag": "section",
+  "class": "section",
+  "limit": 1,
+  "enabled_on": {
+    "templates": ["product"]
+  },
+  "settings": [
+    {
+      "type": "url",
+      "id": "designer_url",
+      "label": "Customizer app URL",
+      "default": "https://dtf-designer-clean.vercel.app/customizer-preview"
+    },
+    {
+      "type": "range",
+      "id": "desktop_height",
+      "label": "Desktop iframe height",
+      "min": 800,
+      "max": 2200,
+      "step": 50,
+      "default": 1500,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "mobile_height",
+      "label": "Mobile iframe height",
+      "min": 1000,
+      "max": 2600,
+      "step": 50,
+      "default": 1900,
+      "unit": "px"
+    }
+  ],
+  "presets": [
+    {
+      "name": "DTF Product Customizer"
+    }
+  ]
+}
+{% endschema %}
