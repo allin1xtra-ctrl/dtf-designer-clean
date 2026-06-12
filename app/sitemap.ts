@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const BASE_URL = "https://dtf-designer-clean-allin1xtra-2553-brandon-hodges-projects.vercel.app";
+const BASE_URL = "https://dtf-designer-clean.vercel.app";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [

@@ -4,7 +4,7 @@
 {% endcomment %}
 
 {% liquid
-  assign configured_designer_url = section.settings.designer_url | default: 'https://dtf-designer-clean-allin1xtra-2553-brandon-hodges-projects.vercel.app/customizer-preview'
+  assign configured_designer_url = section.settings.designer_url | default: 'https://dtf-designer-clean.vercel.app/customizer-preview'
   if configured_designer_url contains '/customizer-preview'
     assign designer_base = configured_designer_url
   else
@@ -111,7 +111,7 @@
       "type": "url",
       "id": "designer_url",
       "label": "Customizer app URL",
-      "default": "https://dtf-designer-clean-allin1xtra-2553-brandon-hodges-projects.vercel.app/customizer-preview"
+      "default": "https://dtf-designer-clean.vercel.app/customizer-preview"
     },
     {
       "type": "range",
