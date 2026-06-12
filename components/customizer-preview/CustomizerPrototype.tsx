@@ -4,7 +4,7 @@ import { ChangeEvent, useEffect, useMemo, useState } from "react";
 
 type PreviewMode = "apparel" | "transfer";
 type PanelTab = "tools" | "assistant" | "order";
-type ViewId = "front" | "back" | "leftSleeve" | "rightSleeve" | "neckTag";
+type ViewId = "front" | "back" | "leftSleeve" | "rightSleeve" | "neckTag" | "leftLeg" | "rightLeg" | "chest";
 type StagingUploadStatus = "idle" | "uploading" | "success" | "warning" | "error";
 type StagingSaveStatus = "idle" | "saving" | "success" | "warning" | "error";
 type MockupBlendMode = "normal" | "multiply" | "overlay" | "soft-light";
@@ -192,7 +192,8 @@ type ShopifyEmbedContext = {
 
 type MockupColorKey = "black" | "white" | "heatherGrey" | "regularGrey" | "royalBlue" | "red" | "offWhite";
 type MockupAsset = { label: string; url: string; hasBakedPrintGuide: boolean };
-type ApparelMockupOverrides = Partial<Record<MockupColorKey, Partial<Record<ViewId, MockupAsset>>>>;
+type ApparelProductOption = { id: string; name: string; type: string; views: ViewId[]; active: boolean };
+type ApparelMockupOverrides = Partial<Record<string, Partial<Record<MockupColorKey, Partial<Record<ViewId, MockupAsset>>>>>>;
 
 type PreviewColorOption = {
   id: string;
@@ -204,6 +205,7 @@ type PreviewColorOption = {
 
 type EditorState = {
   mode: PreviewMode;
+  apparelProductType: string;
   activeView: ViewId;
   transferSize: string;
   artworkByView: Record<ViewId, ArtworkState | null>;
@@ -229,7 +231,29 @@ const APPAREL_VIEWS: Array<{ id: ViewId; label: string; short: string }> = [
   { id: "leftSleeve", label: "Left Sleeve", short: "LS" },
   { id: "rightSleeve", label: "Right Sleeve", short: "RS" },
   { id: "neckTag", label: "Neck Tag", short: "N" },
+  { id: "leftLeg", label: "Left Leg", short: "LL" },
+  { id: "rightLeg", label: "Right Leg", short: "RL" },
+  { id: "chest", label: "Chest", short: "C" },
 ];
+
+const APPAREL_PRODUCT_OPTIONS: ApparelProductOption[] = [
+  { id: "t-shirts", name: "T-Shirts", type: "t-shirts", views: ["front", "back", "leftSleeve", "rightSleeve", "neckTag"], active: true },
+  { id: "hoodies", name: "Hoodies", type: "hoodies", views: ["front", "back", "leftSleeve", "rightSleeve", "neckTag"], active: true },
+  { id: "jerseys", name: "Jerseys", type: "jerseys", views: ["front", "back", "leftSleeve", "rightSleeve", "neckTag"], active: true },
+  { id: "shorts", name: "Shorts", type: "shorts", views: ["front", "back", "leftLeg", "rightLeg"], active: true },
+  { id: "pants", name: "Pants", type: "pants", views: ["front", "back", "leftLeg", "rightLeg"], active: true },
+  { id: "jackets", name: "Jackets", type: "jackets", views: ["front", "back", "leftSleeve", "rightSleeve", "chest", "neckTag"], active: true },
+  { id: "sweaters", name: "Sweaters", type: "sweaters", views: ["front", "back", "leftSleeve", "rightSleeve", "neckTag"], active: true },
+];
+
+const APPAREL_VIEW_LABELS = APPAREL_VIEWS.reduce<Record<ViewId, string>>((labels, view) => {
+  labels[view.id] = view.label;
+  return labels;
+}, {} as Record<ViewId, string>);
+
+function isViewId(value: string): value is ViewId {
+  return APPAREL_VIEWS.some((view) => view.id === value);
+}
 
 function getShopifyEmbedContext(): ShopifyEmbedContext {
   if (typeof window === "undefined") {
@@ -423,7 +447,7 @@ function getFontByFamily(fontFamily?: string) {
   );
 }
 
-const STAGING_APPAREL_MOCKUPS: Record<MockupColorKey, Record<ViewId, MockupAsset>> = {
+const STAGING_APPAREL_MOCKUPS: Record<MockupColorKey, Partial<Record<ViewId, MockupAsset>>> = {
   black: {
     front: { label: "Black T-Shirt Front Mockup", url: "/customizer-preview/mockups/black-front.png", hasBakedPrintGuide: false },
     back: { label: "Black T-Shirt Back Mockup", url: "/customizer-preview/mockups/black-back.png", hasBakedPrintGuide: false },
@@ -759,6 +783,9 @@ const emptyArtworkByView: Record<ViewId, ArtworkState | null> = {
   leftSleeve: null,
   rightSleeve: null,
   neckTag: null,
+  leftLeg: null,
+  rightLeg: null,
+  chest: null,
 };
 
 const emptyLayersByView: Record<ViewId, EditableTemplateLayer[]> = {
@@ -767,6 +794,9 @@ const emptyLayersByView: Record<ViewId, EditableTemplateLayer[]> = {
   leftSleeve: [],
   rightSleeve: [],
   neckTag: [],
+  leftLeg: [],
+  rightLeg: [],
+  chest: [],
 };
 
 const emptyTransferLayersBySize = TRANSFER_SIZES.reduce<Record<string, EditableTemplateLayer[]>>((sizes, size) => {
@@ -776,6 +806,7 @@ const emptyTransferLayersBySize = TRANSFER_SIZES.reduce<Record<string, EditableT
 
 const initialState: EditorState = {
   mode: "apparel",
+  apparelProductType: "t-shirts",
   activeView: "front",
   transferSize: SAFE_TRANSFER_SIZE,
   artworkByView: emptyArtworkByView,
@@ -931,12 +962,30 @@ function normalizePreviewColorOption(color: { id?: string; label?: string; hex?:
   };
 }
 
-function getApparelMockupForColor(mockupKey: MockupColorKey, view: ViewId, overrides: ApparelMockupOverrides = {}) {
+function getProductPlaceholderMockup(product: ApparelProductOption, view: ViewId): MockupAsset {
+  const viewLabel = APPAREL_VIEW_LABELS[view] || view;
+  return {
+    label: `${product.name} ${viewLabel} placeholder mockup`,
+    url: createMockupSvg(`${product.name} ${viewLabel}`, view === "neckTag" ? "neck" : view.includes("Sleeve") ? "sleeve" : view === "back" ? "back" : "front"),
+    hasBakedPrintGuide: false,
+  };
+}
+
+function getViewLabel(view: ViewId) {
+  return APPAREL_VIEW_LABELS[view] || "Front";
+}
+
+function getApparelMockupForColor(product: ApparelProductOption, mockupKey: MockupColorKey, view: ViewId, overrides: ApparelMockupOverrides = {}) {
+  const productOverrides = overrides[product.id] || overrides[product.type] || {};
+  if (product.id !== "t-shirts") {
+    return productOverrides[mockupKey]?.[view] || productOverrides.black?.[view] || getProductPlaceholderMockup(product, view);
+  }
+
   return (
-    overrides[mockupKey]?.[view] ||
+    productOverrides[mockupKey]?.[view] ||
     STAGING_APPAREL_MOCKUPS[mockupKey]?.[view] ||
     STAGING_APPAREL_MOCKUPS.black?.[view] ||
-    { label: "Generated apparel staging mockup", url: createMockupSvg("Generated apparel staging mockup", view === "neckTag" ? "neck" : view.includes("Sleeve") ? "sleeve" : view === "back" ? "back" : "front") }
+    getProductPlaceholderMockup(product, view)
   );
 }
 
@@ -994,7 +1043,7 @@ function mapLayerToPayloadLayer(
 
 function getCanvasLabel(state: EditorState) {
   if (state.mode === "transfer") return getSafeTransferSize(state.transferSize);
-  return APPAREL_VIEWS.find((view) => view.id === state.activeView)?.label || "Front";
+  return getViewLabel(state.activeView);
 }
 
 function getTransferSizeLabel(value: unknown) {
@@ -1071,6 +1120,9 @@ function getDefaultPrintAreaForView(state: EditorState): StagingPrintArea {
     leftSleeve: { x: 51, y: 50, width: 30, height: 42 },
     rightSleeve: { x: 49, y: 50, width: 30, height: 42 },
     neckTag: { x: 50, y: 43, width: 28, height: 17 },
+    leftLeg: { x: 50, y: 52, width: 32, height: 52 },
+    rightLeg: { x: 50, y: 52, width: 32, height: 52 },
+    chest: { x: 42, y: 39, width: 24, height: 22 },
   };
 
   return defaults[state.activeView];
@@ -1313,6 +1365,7 @@ export default function CustomizerPrototype() {
   const [brokenTemplatePreviewImages, setBrokenTemplatePreviewImages] = useState<string[]>([]);
   const [templateDraft, setTemplateDraft] = useState<TemplateDraftState | null>(null);
   const [adminTemplateLibrary, setAdminTemplateLibrary] = useState<StarterTemplateCard[]>([]);
+  const [adminApparelProducts, setAdminApparelProducts] = useState<ApparelProductOption[]>([]);
   const [adminMockupOverrides, setAdminMockupOverrides] = useState<ApparelMockupOverrides>({});
   const [stagingConfig, setStagingConfig] = useState<StagingCustomizerConfig | null>(null);
   const [stagingConfigWarning, setStagingConfigWarning] = useState("");
@@ -1340,6 +1393,12 @@ export default function CustomizerPrototype() {
     configuredColors.find((color) => color.hex.toLowerCase() === state.selectedColorHex.toLowerCase()) ||
     configuredColors[0] ||
     DEFAULT_PRODUCT_COLORS[0];
+  const apparelProductOptions = adminApparelProducts.length ? adminApparelProducts : APPAREL_PRODUCT_OPTIONS;
+  const selectedApparelProduct =
+    apparelProductOptions.find((product) => product.id === state.apparelProductType || product.type === state.apparelProductType) ||
+    apparelProductOptions[0] ||
+    APPAREL_PRODUCT_OPTIONS[0];
+  const activeApparelViews = selectedApparelProduct.views.length ? selectedApparelProduct.views : APPAREL_PRODUCT_OPTIONS[0].views;
   const printAreaGuideColor = state.mode === "apparel" ? selectedColor.hex : "#67e8f9";
   const selectedMockupColorKey = selectedColor.mockupKey;
   const configuredMaterials = stagingConfig?.materialOptions?.filter((material) => material.enabled !== false).map((material) => material.label || material.id || "Material") || MATERIAL_OPTIONS;
@@ -1355,8 +1414,8 @@ export default function CustomizerPrototype() {
         ? stagingConfig?.stagingSettings?.gangSheetMockupUrl || stagingConfig?.stagingSettings?.transferMockupUrl
         : stagingConfig?.stagingSettings?.transferMockupUrl;
   const safeMockupUrl = activeMockupUrl && !brokenMockupUrls.includes(activeMockupUrl) ? activeMockupUrl : "";
-  const requestedColorMockup = getApparelMockupForColor(selectedMockupColorKey, state.activeView, adminMockupOverrides);
-  const blackFallbackMockup = getApparelMockupForColor("black", state.activeView, adminMockupOverrides);
+  const requestedColorMockup = getApparelMockupForColor(selectedApparelProduct, selectedMockupColorKey, state.activeView, adminMockupOverrides);
+  const blackFallbackMockup = getApparelMockupForColor(selectedApparelProduct, "black", state.activeView, adminMockupOverrides);
   const colorFallbackMockup =
     brokenMockupUrls.includes(requestedColorMockup.url) && requestedColorMockup.url !== blackFallbackMockup.url
       ? blackFallbackMockup
@@ -1391,6 +1450,15 @@ export default function CustomizerPrototype() {
   const safeRotation = safeNumber(selectedLayer?.rotation ?? state.rotation, -30, 30, 0);
   const safeArtworkOpacity = safeNumber(artworkOpacity, 45, 100, 95);
   const effectiveBlendMode = state.mode === "apparel" && fabricBlendEnabled ? mockupBlendMode : "normal";
+  useEffect(() => {
+    if (state.mode !== "apparel" || activeApparelViews.includes(state.activeView)) return;
+    setState((current) => ({
+      ...current,
+      activeView: activeApparelViews[0] || "front",
+      status: `${selectedApparelProduct.name} preview active.`,
+    }));
+  }, [activeApparelViews, selectedApparelProduct.name, state.activeView, state.mode]);
+
   const measurementReference = useMemo(
     () =>
       state.mode === "apparel"
@@ -1497,15 +1565,15 @@ export default function CustomizerPrototype() {
   );
 
   const designJson = useMemo(() => {
-    const selectedViewLabel = APPAREL_VIEWS.find((view) => view.id === state.activeView)?.label || "Front";
+    const selectedViewLabel = getViewLabel(state.activeView);
     const selectedColorLabel = selectedColor?.label || selectedColor?.hex || "Black";
     const selectedMaterial = configuredMaterials[0] || "Hot Peel Film";
     const selectedInkOption = stagingConfig?.stagingSettings?.inkOptions?.[0] || "CMYK";
 
     return {
       editorMode: state.mode,
-      productHandle: stagingConfig?.productHandle || "custom-t-shirt-upload-customize",
-      productTitle: stagingConfig?.label || "Customizer Preview Product",
+      productHandle: state.mode === "apparel" ? selectedApparelProduct.type : stagingConfig?.productHandle || "custom-dtf-transfer",
+      productTitle: state.mode === "apparel" ? selectedApparelProduct.name : stagingConfig?.label || "Customizer Preview Product",
       selectedColor: state.mode === "apparel" ? selectedColorLabel : undefined,
       selectedView: state.mode === "apparel" ? selectedViewLabel : undefined,
       printLocation: state.mode === "apparel" ? state.activeView : undefined,
@@ -1546,6 +1614,8 @@ export default function CustomizerPrototype() {
     selectedTemplateConfig?.id,
     selectedColor?.hex,
     selectedColor?.label,
+    selectedApparelProduct.name,
+    selectedApparelProduct.type,
     stagingConfig?.label,
     stagingConfig?.productHandle,
     stagingConfig?.stagingSettings?.inkOptions,
@@ -1556,7 +1626,7 @@ export default function CustomizerPrototype() {
   ]);
 
   const stagingDesignPayload = useMemo(() => {
-    const selectedViewLabel = APPAREL_VIEWS.find((view) => view.id === state.activeView)?.label || "Front";
+    const selectedViewLabel = getViewLabel(state.activeView);
     const selectedTarget = state.mode === "apparel" ? selectedViewLabel : safeTransferSize;
     const selectedColorLabel = selectedColor?.label || selectedColor?.hex || "Black";
 
@@ -1564,8 +1634,8 @@ export default function CustomizerPrototype() {
       configId: "customizer-preview-staging",
       type: state.mode === "apparel" ? "apparel_customizer" : "dtf_transfer_by_size",
       editorMode: state.mode,
-      productHandle: "custom-t-shirt-upload-customize",
-      productTitle: "Customizer Preview Product",
+      productHandle: state.mode === "apparel" ? selectedApparelProduct.type : "custom-dtf-transfer",
+      productTitle: state.mode === "apparel" ? selectedApparelProduct.name : "Customizer Preview Product",
       quantity: 1,
       templateId: selectedTemplateConfig?.id || state.selectedTemplate.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
       templateName: state.selectedTemplate,
@@ -1615,6 +1685,8 @@ export default function CustomizerPrototype() {
     selectedTemplateConfig?.id,
     selectedColor?.hex,
     selectedColor?.label,
+    selectedApparelProduct.name,
+    selectedApparelProduct.type,
     safeRotation,
     safeScale,
     safeArtworkOpacity,
@@ -1675,7 +1747,16 @@ export default function CustomizerPrototype() {
       try {
         const response = await fetch("/api/customizer/mockups", { cache: "no-store" });
         const result = await response.json().catch(() => ({}));
+        const products: Array<{
+          id?: string;
+          name?: string;
+          slug?: string;
+          type?: string;
+          views?: string[];
+          active?: boolean;
+        }> = Array.isArray(result.products) ? result.products : [];
         const variants: Array<{
+          productId?: string;
           colorName?: string;
           colorSlug?: string;
           frontImageUrl?: string;
@@ -1683,15 +1764,37 @@ export default function CustomizerPrototype() {
           leftSleeveImageUrl?: string;
           rightSleeveImageUrl?: string;
           neckTagImageUrl?: string;
+          additionalViews?: Record<string, string>;
           hasBakedPrintGuide?: Partial<Record<ViewId, boolean>>;
           active?: boolean;
         }> = Array.isArray(result.variants) ? result.variants : [];
-        if (!isActive || !response.ok || variants.length === 0) return;
+        if (!isActive || !response.ok) return;
+
+        const normalizedProducts = products
+          .filter((product) => product.active !== false)
+          .map((product) => {
+            const id = String(product.id || product.slug || product.type || "").trim();
+            const views = Array.isArray(product.views)
+              ? product.views.filter((view): view is ViewId => isViewId(String(view)))
+              : [];
+            return id
+              ? {
+                  id,
+                  name: String(product.name || id),
+                  type: String(product.type || product.slug || id),
+                  views: views.length ? views : APPAREL_PRODUCT_OPTIONS[0].views,
+                  active: true,
+                }
+              : null;
+          })
+          .filter((product): product is ApparelProductOption => Boolean(product));
+        if (normalizedProducts.length) setAdminApparelProducts(normalizedProducts);
 
         const nextOverrides: ApparelMockupOverrides = {};
         variants
           .filter((variant) => variant.active !== false)
           .forEach((variant) => {
+            const productId = String(variant.productId || "t-shirts");
             const mockupKey = getMockupColorKey(`${variant.colorName || ""} ${variant.colorSlug || ""}`);
             const viewUrls: Partial<Record<ViewId, string | undefined>> = {
               front: variant.frontImageUrl,
@@ -1700,23 +1803,38 @@ export default function CustomizerPrototype() {
               rightSleeve: variant.rightSleeveImageUrl,
               neckTag: variant.neckTagImageUrl,
             };
+            Object.entries(variant.additionalViews || {}).forEach(([view, url]) => {
+              if (isViewId(view)) viewUrls[view] = url;
+            });
             APPAREL_VIEWS.forEach(({ id }) => {
               const url = viewUrls[id];
               if (!url) return;
-              nextOverrides[mockupKey] = {
-                ...nextOverrides[mockupKey],
-                [id]: {
-                  label: `${variant.colorName || mockupKey} admin ${id} mockup`,
-                  url,
-                  hasBakedPrintGuide: Boolean(variant.hasBakedPrintGuide?.[id]),
+              const productOverrides = nextOverrides[productId] || {};
+              nextOverrides[productId] = {
+                ...productOverrides,
+                [mockupKey]: {
+                  ...productOverrides[mockupKey],
+                  [id]: {
+                    label: `${variant.colorName || mockupKey} admin ${id} mockup`,
+                    url,
+                    hasBakedPrintGuide: Boolean(variant.hasBakedPrintGuide?.[id]),
+                  },
                 },
               };
             });
           });
 
-        if (Object.keys(nextOverrides).length) setAdminMockupOverrides(nextOverrides);
+        APPAREL_PRODUCT_OPTIONS.forEach((product) => {
+          if (nextOverrides[product.id]) return;
+          nextOverrides[product.id] = {};
+        });
+
+        setAdminMockupOverrides(nextOverrides);
       } catch {
-        if (isActive) setAdminMockupOverrides({});
+        if (isActive) {
+          setAdminApparelProducts([]);
+          setAdminMockupOverrides({});
+        }
       }
     }
 
@@ -1803,6 +1921,19 @@ export default function CustomizerPrototype() {
         mode === "apparel"
           ? "Apparel preview mode active. View-specific artwork is isolated."
           : "DTF transfer preview mode active. Apparel locations are hidden.",
+    }));
+  };
+
+  const selectApparelProduct = (productId: string) => {
+    const product = apparelProductOptions.find((option) => option.id === productId || option.type === productId) || apparelProductOptions[0];
+    const nextView = product.views.includes(state.activeView) ? state.activeView : product.views[0] || "front";
+    setState((current) => ({
+      ...current,
+      mode: "apparel",
+      apparelProductType: product.id,
+      activeView: nextView,
+      selectedTemplate: "Centered Logo",
+      status: `${product.name} apparel mockups loaded. ${getViewLabel(nextView)} preview active.`,
     }));
   };
 
@@ -2197,7 +2328,7 @@ export default function CustomizerPrototype() {
         selectedLayerId: templateDraft.selectedLayerId || templateDraft.layers[0]?.id || null,
         status:
           templateDraft.mode === "apparel"
-            ? `${templateDraft.template.name} customized template applied to ${APPAREL_VIEWS.find((view) => view.id === templateDraft.targetView)?.label || templateDraft.targetView}.`
+            ? `${templateDraft.template.name} customized template applied to ${getViewLabel(templateDraft.targetView)}.`
             : `${templateDraft.template.name} customized template applied to ${targetTransferSize}.`,
       };
     });
@@ -2441,7 +2572,7 @@ export default function CustomizerPrototype() {
       const canPostToShopify = isEmbeddedInShopify() && Boolean(variantId);
 
       if (canPostToShopify) {
-        const selectedViewLabel = APPAREL_VIEWS.find((view) => view.id === state.activeView)?.label || "Front";
+        const selectedViewLabel = getViewLabel(state.activeView);
         const selectedColorLabel = selectedColor?.label || selectedColor?.hex || "Black";
         const properties = {
           "Customizer": "Clean Custom Design Studio",
@@ -2807,7 +2938,26 @@ export default function CustomizerPrototype() {
             ))}
           </nav>
           <div className="flex flex-wrap items-center gap-2">
-            <ModeButton active={state.mode === "apparel"} onClick={() => setMode("apparel")}>Apparel</ModeButton>
+            <label className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-black shadow-sm transition ${
+              state.mode === "apparel"
+                ? "border-cyan-300 bg-cyan-300 text-neutral-950"
+                : "border-[#2c424a] bg-[#0b1519] text-neutral-100 hover:border-cyan-300"
+            }`}>
+              <span>Apparel</span>
+              <select
+                value={selectedApparelProduct.id}
+                onChange={(event) => selectApparelProduct(event.target.value)}
+                onClick={() => {
+                  if (state.mode !== "apparel") setMode("apparel");
+                }}
+                className="max-w-[150px] rounded border border-black/10 bg-white/90 px-2 py-0.5 text-xs font-black text-neutral-950 outline-none"
+                aria-label="Choose apparel product type"
+              >
+                {apparelProductOptions.map((product) => (
+                  <option key={product.id} value={product.id}>{product.name}</option>
+                ))}
+              </select>
+            </label>
             <ModeButton active={state.mode === "transfer"} onClick={() => setMode("transfer")}>Transfers</ModeButton>
           </div>
         </div>
@@ -3070,6 +3220,7 @@ export default function CustomizerPrototype() {
 
             <PanelCard title="Design Info">
               <dl className="space-y-2 text-sm">
+                <div className="flex justify-between gap-3"><dt className="text-neutral-500">Product</dt><dd className="text-neutral-200">{state.mode === "apparel" ? selectedApparelProduct.name : "Transfer"}</dd></div>
                 <div className="flex justify-between gap-3"><dt className="text-neutral-500">Canvas</dt><dd className="text-neutral-200">{state.mode === "apparel" ? "12 x 16 in" : safeTransferSize}</dd></div>
                 <div className="flex justify-between gap-3"><dt className="text-neutral-500">DPI</dt><dd className="text-neutral-200">300 preview</dd></div>
                 <div className="flex justify-between gap-3"><dt className="text-neutral-500">Mode</dt><dd className="text-neutral-200">{state.mode}</dd></div>
@@ -3153,11 +3304,11 @@ export default function CustomizerPrototype() {
           <div className="mb-1.5 shrink-0 rounded-xl border border-[#26343b] bg-[#0b1215] p-2">
             <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <p className="text-xs uppercase tracking-[0.16em] text-cyan-300">{state.mode === "apparel" ? "Current View" : "Choose Transfer Size"}</p>
-                <p className="mt-0.5 text-base font-semibold text-white">{state.mode === "apparel" ? getCanvasLabel(state) : `${safeTransferSize} Transfer`}</p>
+                <p className="text-xs uppercase tracking-[0.16em] text-cyan-300">{state.mode === "apparel" ? "Current Apparel View" : "Choose Transfer Size"}</p>
+                <p className="mt-0.5 text-base font-semibold text-white">{state.mode === "apparel" ? `${selectedApparelProduct.name} / ${getCanvasLabel(state)}` : `${safeTransferSize} Transfer`}</p>
               </div>
               <div className="flex max-w-full gap-2 overflow-x-auto pb-1">
-                {(state.mode === "apparel" ? APPAREL_VIEWS.map((view) => view.label) : configuredTransferSizes.map((size) => size.id)).map((item) => (
+                {(state.mode === "apparel" ? activeApparelViews.map((viewId) => getViewLabel(viewId)) : configuredTransferSizes.map((size) => size.id)).map((item) => (
                   <button
                     key={item}
                     type="button"
@@ -3792,7 +3943,7 @@ export default function CustomizerPrototype() {
                             <p className="mt-1 text-xs leading-5 text-neutral-400">{template.description}</p>
                             <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
                               {template.layers.length} editable layers
-                              {template.targetView ? ` - ${APPAREL_VIEWS.find((view) => view.id === template.targetView)?.label || template.targetView}` : ""}
+                              {template.targetView ? ` - ${getViewLabel(template.targetView)}` : ""}
                             </p>
                           </div>
                           <span className="shrink-0 rounded-full border border-cyan-300/30 px-2 py-1 text-[10px] font-semibold text-cyan-200">
@@ -3845,7 +3996,7 @@ export default function CustomizerPrototype() {
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">
                         {templateDraft.mode === "apparel"
-                          ? APPAREL_VIEWS.find((view) => view.id === templateDraft.targetView)?.label || templateDraft.targetView
+                          ? getViewLabel(templateDraft.targetView)
                           : templateDraft.transferSize}
                       </p>
                       <p className="text-sm text-neutral-400">{templateDraft.layers.length} editable draft layers</p>

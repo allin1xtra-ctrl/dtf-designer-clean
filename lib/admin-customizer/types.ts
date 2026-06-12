@@ -54,6 +54,8 @@ export type AdminPrintArea = {
   y: number;
   width: number;
   height: number;
+  widthInches?: number;
+  heightInches?: number;
 };
 
 export type AdminMockupProduct = {
@@ -61,6 +63,7 @@ export type AdminMockupProduct = {
   name: string;
   slug: string;
   type: string;
+  views: string[];
   active: boolean;
   createdAt: string;
   updatedAt: string;

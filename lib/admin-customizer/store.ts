@@ -11,15 +11,13 @@ const SUPABASE_STORE_TABLE = "admin_customizer_store";
 const SUPABASE_STORE_KEY = "default";
 
 const PRODUCT_TYPE_SEEDS = [
-  ["T-Shirts", "t-shirts"],
-  ["Hoodies", "hoodies"],
-  ["Jackets", "jackets"],
-  ["Sweaters", "sweaters"],
-  ["Shorts", "shorts"],
-  ["Sweatpants", "sweatpants"],
-  ["Jerseys", "jerseys"],
-  ["Hats", "hats"],
-  ["Cups", "cups"],
+  { name: "T-Shirts", type: "t-shirts", views: ["front", "back", "leftSleeve", "rightSleeve", "neckTag"] },
+  { name: "Hoodies", type: "hoodies", views: ["front", "back", "leftSleeve", "rightSleeve", "neckTag"] },
+  { name: "Jerseys", type: "jerseys", views: ["front", "back", "leftSleeve", "rightSleeve", "neckTag"] },
+  { name: "Shorts", type: "shorts", views: ["front", "back", "leftLeg", "rightLeg"] },
+  { name: "Pants", type: "pants", views: ["front", "back", "leftLeg", "rightLeg"] },
+  { name: "Jackets", type: "jackets", views: ["front", "back", "leftSleeve", "rightSleeve", "chest", "neckTag"] },
+  { name: "Sweaters", type: "sweaters", views: ["front", "back", "leftSleeve", "rightSleeve", "neckTag"] },
 ] as const;
 
 function now() {
@@ -30,11 +28,12 @@ function createEmptyStore(): AdminCustomizerStore {
   const timestamp = now();
   return {
     templates: [],
-    mockupProducts: PRODUCT_TYPE_SEEDS.map(([name, type]) => ({
+    mockupProducts: PRODUCT_TYPE_SEEDS.map(({ name, type, views }) => ({
       id: type,
       name,
       slug: type,
       type,
+      views: [...views],
       active: true,
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -45,11 +44,37 @@ function createEmptyStore(): AdminCustomizerStore {
   };
 }
 
+function mergeSeedProducts(products: AdminMockupProduct[], fallbackProducts: AdminMockupProduct[]) {
+  const nowTimestamp = now();
+  const byType = new Map(products.map((product) => [product.type || product.slug || product.id, product]));
+
+  const seeded = fallbackProducts.map((seed) => {
+    const existing = byType.get(seed.type) || byType.get(seed.slug) || byType.get(seed.id);
+    return {
+      ...seed,
+      ...existing,
+      id: existing?.id || seed.id,
+      slug: existing?.slug || seed.slug,
+      type: existing?.type || seed.type,
+      views: Array.isArray(existing?.views) && existing.views.length ? existing.views : seed.views,
+      active: existing?.active ?? seed.active,
+      createdAt: existing?.createdAt || seed.createdAt || nowTimestamp,
+      updatedAt: existing?.updatedAt || seed.updatedAt || nowTimestamp,
+    };
+  });
+
+  const seedTypes = new Set(fallbackProducts.map((product) => product.type));
+  const legacySeedTypes = new Set(["sweatpants", "hats", "cups"]);
+  const customProducts = products.filter((product) => !seedTypes.has(product.type) && !legacySeedTypes.has(product.type));
+  return [...seeded, ...customProducts];
+}
+
 function normalizeStore(input: Partial<AdminCustomizerStore> | null | undefined) {
   const fallback = createEmptyStore();
+  const inputProducts = Array.isArray(input?.mockupProducts) && input.mockupProducts.length ? input.mockupProducts : fallback.mockupProducts;
   return {
     templates: Array.isArray(input?.templates) ? input.templates : fallback.templates,
-    mockupProducts: Array.isArray(input?.mockupProducts) && input.mockupProducts.length ? input.mockupProducts : fallback.mockupProducts,
+    mockupProducts: mergeSeedProducts(inputProducts, fallback.mockupProducts),
     mockupVariants: Array.isArray(input?.mockupVariants) ? input.mockupVariants : fallback.mockupVariants,
     mediaAssets: Array.isArray(input?.mediaAssets) ? input.mediaAssets : fallback.mediaAssets,
     updatedAt: typeof input?.updatedAt === "string" ? input.updatedAt : fallback.updatedAt,

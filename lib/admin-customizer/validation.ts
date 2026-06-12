@@ -108,6 +108,9 @@ export function normalizeMockupProduct(input: unknown, existing?: AdminMockupPro
   if (!name) errors.push("Product type name is required.");
   if (!type) errors.push("Product type is required.");
   if (errors.length) return { errors };
+  const views = Array.isArray(body.views)
+    ? body.views.map((view) => sanitizeText(view)).filter(Boolean).slice(0, 20)
+    : existing?.views || ["front", "back"];
   return {
     errors,
     value: {
@@ -115,6 +118,7 @@ export function normalizeMockupProduct(input: unknown, existing?: AdminMockupPro
       name,
       slug: slugify(body.slug || name),
       type,
+      views,
       active: body.active ?? existing?.active ?? true,
       createdAt: existing?.createdAt || now,
       updatedAt: now,

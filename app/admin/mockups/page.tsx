@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import AdminProductTypesPage from "../product-types/page";
 
 export default function AdminMockupsPage() {
-  redirect("/admin/product-types");
+  return <AdminProductTypesPage />;
 }
