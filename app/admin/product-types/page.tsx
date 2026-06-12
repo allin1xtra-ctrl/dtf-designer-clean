@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import AdminNav from "../AdminNav";
 
 const VIEW_OPTIONS = [
@@ -94,10 +94,13 @@ export default function AdminProductTypesPage() {
   const [productViews, setProductViews] = useState<string[]>(["front", "back"]);
   const [productActive, setProductActive] = useState(true);
   const [variantProductId, setVariantProductId] = useState("");
+  const [editingVariantId, setEditingVariantId] = useState("");
+  const [mockupViewId, setMockupViewId] = useState("front");
   const [colorName, setColorName] = useState("");
   const [activeVariant, setActiveVariant] = useState(true);
   const [viewImageUrls, setViewImageUrls] = useState<Record<string, string>>({});
   const [printAreas, setPrintAreas] = useState<Record<string, PrintAreaRecord>>({});
+  const [uploadingViewId, setUploadingViewId] = useState("");
 
   const selectedProduct = useMemo(
     () => products.find((product) => product.id === variantProductId) || products[0],
@@ -136,6 +139,7 @@ export default function AdminProductTypesPage() {
       });
       return next;
     });
+    setMockupViewId((current) => selectedViews.includes(current) ? current : selectedViews[0] || "front");
   }, [selectedViews.join("|")]);
 
   function toggleProductView(viewId: string) {
@@ -152,6 +156,67 @@ export default function AdminProductTypesPage() {
         [key]: Number(value),
       },
     }));
+  }
+
+  function getVariantImageUrl(variant: VariantRecord, viewId: string) {
+    const field = getViewImageField(viewId);
+    if (field && field in variant) return String(variant[field as keyof VariantRecord] || "");
+    return variant.additionalViews?.[viewId] || "";
+  }
+
+  function editVariant(variant: VariantRecord) {
+    const product = products.find((item) => item.id === variant.productId);
+    const views = product?.views?.length ? product.views : selectedViews;
+    setVariantProductId(variant.productId);
+    setEditingVariantId(variant.id);
+    setColorName(variant.colorName);
+    setActiveVariant(variant.active);
+    setViewImageUrls(views.reduce<Record<string, string>>((urls, viewId) => {
+      urls[viewId] = getVariantImageUrl(variant, viewId);
+      return urls;
+    }, {}));
+    setPrintAreas(views.reduce<Record<string, PrintAreaRecord>>((areas, viewId) => {
+      areas[viewId] = variant.printAreas?.[viewId] || defaultPrintAreaForView(viewId);
+      return areas;
+    }, {}));
+    setMockupViewId(views[0] || "front");
+    setStatus(`${variant.colorName} mockup set loaded for editing.`);
+  }
+
+  function resetVariantForm() {
+    setEditingVariantId("");
+    setColorName("");
+    setViewImageUrls({});
+    setActiveVariant(true);
+    setPrintAreas(selectedViews.reduce<Record<string, PrintAreaRecord>>((areas, viewId) => {
+      areas[viewId] = defaultPrintAreaForView(viewId);
+      return areas;
+    }, {}));
+  }
+
+  async function uploadMockupImage(viewId: string, event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setUploadingViewId(viewId);
+    setStatus(`Uploading ${getViewLabel(viewId)} mockup image...`);
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await fetch("/api/admin/customizer-media", { method: "POST", body: formData });
+    const result = await response.json().catch(() => ({}));
+    setUploadingViewId("");
+    if (!response.ok || !result.mediaAsset?.url) {
+      const message = Array.isArray(result.errors)
+        ? result.errors.join(" ")
+        : Array.isArray(result.warnings)
+          ? result.warnings.join(" ")
+          : "Upload did not return a hosted mockup URL.";
+      setStatus(message);
+      return;
+    }
+    setViewImageUrls((current) => ({ ...current, [viewId]: result.mediaAsset.url }));
+    const warnings = Array.isArray(result.warnings) ? ` ${result.warnings.join(" ")}` : "";
+    setStatus(`${getViewLabel(viewId)} mockup uploaded and ready to save.${warnings}`);
   }
 
   async function saveProduct(event: FormEvent<HTMLFormElement>) {
@@ -195,6 +260,7 @@ export default function AdminProductTypesPage() {
         kind: "variant",
         variant: {
           productId: variantProductId,
+          id: editingVariantId || undefined,
           colorName,
           ...baseFields,
           additionalViews,
@@ -217,6 +283,7 @@ export default function AdminProductTypesPage() {
       return;
     }
     setColorName("");
+    setEditingVariantId("");
     setViewImageUrls({});
     setActiveVariant(true);
     setStatus("Mockup color set saved.");
@@ -274,6 +341,21 @@ export default function AdminProductTypesPage() {
                       Hoodie support is ready. Upload hoodie front, back, sleeve, and neck-tag mockup images to replace placeholder canvas art.
                     </p>
                   ) : null}
+                  {productVariants.length ? (
+                    <div className="mt-3 grid gap-2">
+                      {productVariants.map((variant) => (
+                        <button
+                          key={variant.id}
+                          type="button"
+                          onClick={() => editVariant(variant)}
+                          className="flex items-center justify-between gap-3 rounded-md border border-[#2c424a] bg-[#071015] px-3 py-2 text-left text-xs text-neutral-300 transition hover:border-cyan-300"
+                        >
+                          <span className="font-black text-white">{variant.colorName}</span>
+                          <span>{variant.active ? "Active" : "Inactive"} / {Object.keys(variant.printAreas || {}).length} locations</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
                 </article>
               );
             })}
@@ -310,21 +392,60 @@ export default function AdminProductTypesPage() {
           </form>
 
           <form onSubmit={saveVariant} className="rounded-lg border border-[#243b43] bg-[#0b1519] p-4">
-            <h2 className="text-xl font-black text-white">Add Mockup Color Set</h2>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-xl font-black text-white">{editingVariantId ? "Edit Mockup Color Set" : "Add Mockup Color Set"}</h2>
+              {editingVariantId ? (
+                <button type="button" onClick={resetVariantForm} className="rounded-md border border-[#2c424a] px-2.5 py-1 text-xs font-semibold text-neutral-300 hover:border-cyan-300">
+                  New Set
+                </button>
+              ) : null}
+            </div>
             <div className="mt-4 grid gap-3">
               <select value={variantProductId} onChange={(event) => setVariantProductId(event.target.value)} className="rounded-md border border-[#2c424a] bg-[#071015] px-3 py-2">
                 {products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
               </select>
-              <input value={colorName} onChange={(event) => setColorName(event.target.value)} placeholder="Color variant name, e.g. Black" className="rounded-md border border-[#2c424a] bg-[#071015] px-3 py-2" />
-              {selectedViews.map((viewId) => {
+              <select
+                value={mockupViewId}
+                onChange={(event) => setMockupViewId(event.target.value)}
+                className="rounded-md border border-[#2c424a] bg-[#071015] px-3 py-2"
+              >
+                {selectedViews.map((viewId) => <option key={viewId} value={viewId}>{getViewLabel(viewId)}</option>)}
+              </select>
+              <input
+                value={colorName}
+                onChange={(event) => setColorName(event.target.value)}
+                placeholder="Color variant name, e.g. Black, White, Heather Grey, Red, Navy"
+                className="rounded-md border border-[#2c424a] bg-[#071015] px-3 py-2"
+              />
+              <div className="flex flex-wrap gap-2">
+                {["Black", "White", "Heather Grey", "Red", "Navy"].map((preset) => (
+                  <button key={preset} type="button" onClick={() => setColorName(preset)} className="rounded-md border border-[#2c424a] px-2.5 py-1 text-xs font-semibold text-neutral-300 hover:border-cyan-300">
+                    {preset}
+                  </button>
+                ))}
+              </div>
+              {[mockupViewId].map((viewId) => {
                 const area = printAreas[viewId] || defaultPrintAreaForView(viewId);
                 return (
                   <div key={viewId} className="rounded-md border border-[#20343b] bg-[#071015] p-3">
-                    <p className="text-sm font-black text-white">{getViewLabel(viewId)}</p>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-black text-white">{getViewLabel(viewId)}</p>
+                      {viewImageUrls[viewId] ? <span className="text-[11px] font-semibold text-emerald-300">Image URL set</span> : <span className="text-[11px] font-semibold text-yellow-200">Placeholder until saved URL is set</span>}
+                    </div>
+                    <label className="mt-2 block cursor-pointer rounded-md border border-dashed border-cyan-300/50 bg-cyan-950/20 px-3 py-2 text-center text-xs font-black text-cyan-100 transition hover:bg-cyan-900/30">
+                      {uploadingViewId === viewId ? "Uploading..." : `Upload ${getViewLabel(viewId)} PNG/JPG/WEBP`}
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        onChange={(event) => uploadMockupImage(viewId, event)}
+                        className="hidden"
+                        disabled={uploadingViewId === viewId}
+                      />
+                    </label>
                     <input
                       value={viewImageUrls[viewId] || ""}
                       onChange={(event) => setViewImageUrls((current) => ({ ...current, [viewId]: event.target.value }))}
-                      placeholder={`${getViewLabel(viewId)} mockup image URL`}
+                      placeholder={`${getViewLabel(viewId)} mockup image URL or uploaded URL`}
                       className="mt-2 w-full rounded-md border border-[#2c424a] bg-[#0b1519] px-3 py-2 text-sm"
                     />
                     <div className="mt-2 grid grid-cols-3 gap-2">

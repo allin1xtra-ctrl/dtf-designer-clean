@@ -28,7 +28,10 @@ export async function POST(req: NextRequest) {
   }
   const formData = await req.formData().catch(() => null);
   const file = formData?.get("file");
-  const validation = validateCustomizerUploadFile(file instanceof File ? file : null);
+  const validation = validateCustomizerUploadFile(file instanceof File ? file : null, {
+    allowedExtensions: ["png", "jpg", "jpeg", "webp"],
+    allowedContentTypes: ["image/png", "image/jpeg", "image/webp"],
+  });
   if (!validation.ok || !(file instanceof File)) {
     return NextResponse.json({ errors: validation.errors, warnings: validation.warnings }, { status: 400, headers: ADMIN_NO_STORE_HEADERS });
   }
@@ -47,7 +50,7 @@ export async function POST(req: NextRequest) {
     url: stagingAsset.url,
     type: stagingAsset.contentType,
     uploadedBy: "admin",
-    storage: stagingAsset.url ? "cloudinary" : "metadata_only",
+    storage: stagingAsset.storage || (stagingAsset.url ? "cloudinary" : "metadata_only"),
     publicId: stagingAsset.publicId,
     createdAt: new Date().toISOString(),
   };

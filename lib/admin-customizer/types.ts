@@ -94,7 +94,7 @@ export type AdminMediaAsset = {
   url?: string;
   type: string;
   uploadedBy: string;
-  storage?: "cloudinary" | "metadata_only";
+  storage?: "cloudinary" | "local_public" | "metadata_only";
   publicId?: string;
   createdAt: string;
 };

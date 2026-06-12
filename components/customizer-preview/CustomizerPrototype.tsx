@@ -127,6 +127,7 @@ type TemplateDraftState = {
 };
 
 type StagingPrintArea = { x: number; y: number; width: number; height: number };
+type AdminMockupPrintArea = StagingPrintArea & { widthInches?: number; heightInches?: number };
 type StagingPrintLocation = {
   id: string;
   label?: string;
@@ -194,6 +195,7 @@ type MockupColorKey = "black" | "white" | "heatherGrey" | "regularGrey" | "royal
 type MockupAsset = { label: string; url: string; hasBakedPrintGuide: boolean };
 type ApparelProductOption = { id: string; name: string; type: string; views: ViewId[]; active: boolean };
 type ApparelMockupOverrides = Partial<Record<string, Partial<Record<MockupColorKey, Partial<Record<ViewId, MockupAsset>>>>>>;
+type ApparelMockupPrintAreas = Partial<Record<string, Partial<Record<MockupColorKey, Partial<Record<ViewId, AdminMockupPrintArea>>>>>>;
 
 type PreviewColorOption = {
   id: string;
@@ -1367,6 +1369,7 @@ export default function CustomizerPrototype() {
   const [adminTemplateLibrary, setAdminTemplateLibrary] = useState<StarterTemplateCard[]>([]);
   const [adminApparelProducts, setAdminApparelProducts] = useState<ApparelProductOption[]>([]);
   const [adminMockupOverrides, setAdminMockupOverrides] = useState<ApparelMockupOverrides>({});
+  const [adminMockupPrintAreas, setAdminMockupPrintAreas] = useState<ApparelMockupPrintAreas>({});
   const [stagingConfig, setStagingConfig] = useState<StagingCustomizerConfig | null>(null);
   const [stagingConfigWarning, setStagingConfigWarning] = useState("");
   const [brokenMockupUrls, setBrokenMockupUrls] = useState<string[]>([]);
@@ -1405,8 +1408,25 @@ export default function CustomizerPrototype() {
   const templateSettings = stagingConfig?.stagingSettings?.templateSettings;
   const enabledTemplateCategories = templateSettings?.enabledCategories?.length ? templateSettings.enabledCategories : TEMPLATE_CATEGORIES;
   const templateLibrary = adminTemplateLibrary.length ? adminTemplateLibrary : STARTER_TEMPLATE_LIBRARY;
-  const printAreaResult = getSafePrintArea(stagingConfig, state);
   const activePrintLocation = state.mode === "apparel" ? getActivePrintLocation(stagingConfig, state.activeView) : null;
+  const selectedAdminPrintArea =
+    state.mode === "apparel"
+      ? adminMockupPrintAreas[selectedApparelProduct.id]?.[selectedMockupColorKey]?.[state.activeView] ||
+        adminMockupPrintAreas[selectedApparelProduct.id]?.black?.[state.activeView] ||
+        adminMockupPrintAreas[selectedApparelProduct.type]?.[selectedMockupColorKey]?.[state.activeView] ||
+        adminMockupPrintAreas[selectedApparelProduct.type]?.black?.[state.activeView]
+      : null;
+  const printAreaResult = selectedAdminPrintArea
+    ? {
+        area: {
+          x: selectedAdminPrintArea.x,
+          y: selectedAdminPrintArea.y,
+          width: selectedAdminPrintArea.width,
+          height: selectedAdminPrintArea.height,
+        },
+        usingFallback: false,
+      }
+    : getSafePrintArea(stagingConfig, state);
   const activeMockupUrl =
     state.mode === "apparel"
       ? ""
@@ -1463,8 +1483,8 @@ export default function CustomizerPrototype() {
     () =>
       state.mode === "apparel"
         ? {
-            width: safeNumber(activePrintLocation?.maxPrintWidth || 12, 1, 40, 12),
-            height: safeNumber(activePrintLocation?.maxPrintHeight || 16, 1, 80, 16),
+            width: safeNumber(selectedAdminPrintArea?.widthInches || activePrintLocation?.maxPrintWidth || 12, 1, 40, 12),
+            height: safeNumber(selectedAdminPrintArea?.heightInches || activePrintLocation?.maxPrintHeight || 16, 1, 80, 16),
           }
         : {
             width: safeNumber(selectedTransferConfig?.width || 3, 1, 80, 3),
@@ -1475,6 +1495,8 @@ export default function CustomizerPrototype() {
       activePrintLocation?.maxPrintWidth,
       selectedTransferConfig?.height,
       selectedTransferConfig?.width,
+      selectedAdminPrintArea?.heightInches,
+      selectedAdminPrintArea?.widthInches,
       state.mode,
     ]
   );
@@ -1765,6 +1787,7 @@ export default function CustomizerPrototype() {
           rightSleeveImageUrl?: string;
           neckTagImageUrl?: string;
           additionalViews?: Record<string, string>;
+          printAreas?: Record<string, AdminMockupPrintArea>;
           hasBakedPrintGuide?: Partial<Record<ViewId, boolean>>;
           active?: boolean;
         }> = Array.isArray(result.variants) ? result.variants : [];
@@ -1791,6 +1814,7 @@ export default function CustomizerPrototype() {
         if (normalizedProducts.length) setAdminApparelProducts(normalizedProducts);
 
         const nextOverrides: ApparelMockupOverrides = {};
+        const nextPrintAreas: ApparelMockupPrintAreas = {};
         variants
           .filter((variant) => variant.active !== false)
           .forEach((variant) => {
@@ -1808,19 +1832,31 @@ export default function CustomizerPrototype() {
             });
             APPAREL_VIEWS.forEach(({ id }) => {
               const url = viewUrls[id];
-              if (!url) return;
               const productOverrides = nextOverrides[productId] || {};
-              nextOverrides[productId] = {
-                ...productOverrides,
-                [mockupKey]: {
-                  ...productOverrides[mockupKey],
-                  [id]: {
-                    label: `${variant.colorName || mockupKey} admin ${id} mockup`,
-                    url,
-                    hasBakedPrintGuide: Boolean(variant.hasBakedPrintGuide?.[id]),
+              if (url) {
+                nextOverrides[productId] = {
+                  ...productOverrides,
+                  [mockupKey]: {
+                    ...productOverrides[mockupKey],
+                    [id]: {
+                      label: `${variant.colorName || mockupKey} admin ${id} mockup`,
+                      url,
+                      hasBakedPrintGuide: Boolean(variant.hasBakedPrintGuide?.[id]),
+                    },
                   },
-                },
-              };
+                };
+              }
+              const area = variant.printAreas?.[id];
+              if (area) {
+                const productAreas = nextPrintAreas[productId] || {};
+                nextPrintAreas[productId] = {
+                  ...productAreas,
+                  [mockupKey]: {
+                    ...productAreas[mockupKey],
+                    [id]: area,
+                  },
+                };
+              }
             });
           });
 
@@ -1830,10 +1866,12 @@ export default function CustomizerPrototype() {
         });
 
         setAdminMockupOverrides(nextOverrides);
+        setAdminMockupPrintAreas(nextPrintAreas);
       } catch {
         if (isActive) {
           setAdminApparelProducts([]);
           setAdminMockupOverrides({});
+          setAdminMockupPrintAreas({});
         }
       }
     }

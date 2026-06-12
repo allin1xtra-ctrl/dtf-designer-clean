@@ -1,5 +1,7 @@
 import { v2 as cloudinary } from "cloudinary";
 import type { UploadApiResponse } from "cloudinary";
+import { mkdir, writeFile } from "fs/promises";
+import path from "path";
 
 export type UploadPurpose =
   | "artwork_original"
@@ -17,7 +19,7 @@ export type UploadedAsset = {
   stagingOnly: true;
   url?: string;
   publicId?: string;
-  storage?: "cloudinary";
+  storage?: "cloudinary" | "local_public";
 };
 
 export type StoredDesignAsset = UploadedAsset & {
@@ -125,7 +127,7 @@ export function validateUploadPurpose(purpose: unknown): UploadValidationResult 
 
 export function validateCustomizerUploadFile(
   file: File | null | undefined,
-  options: { maxSizeBytes?: number } = {}
+  options: { maxSizeBytes?: number; allowedExtensions?: string[]; allowedContentTypes?: string[] } = {}
 ): UploadValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -151,12 +153,15 @@ export function validateCustomizerUploadFile(
     warnings.push("Filename contained unsafe characters and will be sanitized for staging.");
   }
 
-  if (!ALLOWED_UPLOAD_EXTENSIONS.includes(extension)) {
-    errors.push(`Unsupported file extension. Allowed extensions: ${ALLOWED_UPLOAD_EXTENSIONS.join(", ")}.`);
+  const allowedExtensions = options.allowedExtensions || ALLOWED_UPLOAD_EXTENSIONS;
+  const allowedContentTypes = options.allowedContentTypes || ALLOWED_UPLOAD_CONTENT_TYPES;
+
+  if (!allowedExtensions.includes(extension)) {
+    errors.push(`Unsupported file extension. Allowed extensions: ${allowedExtensions.join(", ")}.`);
   }
 
-  if (contentType && !ALLOWED_UPLOAD_CONTENT_TYPES.includes(contentType)) {
-    errors.push(`Unsupported content type. Allowed content types: ${ALLOWED_UPLOAD_CONTENT_TYPES.join(", ")}.`);
+  if (contentType && !allowedContentTypes.includes(contentType)) {
+    errors.push(`Unsupported content type. Allowed content types: ${allowedContentTypes.join(", ")}.`);
   }
 
   if (!contentType) {
@@ -226,7 +231,7 @@ export function getCustomizerCloudinaryConfig(env: NodeJS.ProcessEnv = process.e
 export function createStagingUploadedAsset(
   file: File,
   purpose: UploadPurpose,
-  options: { url?: string; publicId?: string; storage?: "cloudinary" } = {}
+  options: { url?: string; publicId?: string; storage?: "cloudinary" | "local_public" } = {}
 ): UploadedAsset {
   const filename = sanitizeAssetFilename(file.name || "customizer-upload");
   const extension = getFileExtension(filename) || "asset";
@@ -249,12 +254,34 @@ export async function uploadCustomizerAssetToCloudinary(file: File, purpose: Upl
   const config = getCustomizerCloudinaryConfig();
 
   if (!config) {
-    return {
-      ok: true,
-      warnings: [
-        "Cloudinary env vars are missing or incomplete. Staging validation will return asset metadata only and no hosted URL.",
-      ],
-    } as const;
+    if (process.env.NODE_ENV === "production") {
+      return {
+        ok: true,
+        warnings: [
+          "Cloudinary env vars are missing or incomplete. Production mockup uploads require Cloudinary and no local fallback was used.",
+        ],
+      } as const;
+    }
+
+    try {
+      const storedAsset = await uploadCustomizerAssetToLocalPublic(file, purpose);
+      return {
+        ok: true,
+        url: storedAsset.url,
+        publicId: storedAsset.publicId,
+        storage: "local_public" as const,
+        warnings: [
+          "Cloudinary env vars are missing or incomplete. Saved the upload to local public storage for development.",
+        ],
+      } as const;
+    } catch {
+      return {
+        ok: true,
+        warnings: [
+          "Cloudinary env vars are missing or incomplete. Staging validation will return asset metadata only and no hosted URL.",
+        ],
+      } as const;
+    }
   }
 
   cloudinary.config({
@@ -306,5 +333,19 @@ export async function uploadCustomizerAssetToCloudinary(file: File, purpose: Upl
     publicId: uploadResult.public_id,
     storage: "cloudinary" as const,
     warnings: [`Uploaded to Cloudinary staging folder: ${folder}.`],
+  };
+}
+
+async function uploadCustomizerAssetToLocalPublic(file: File, purpose: UploadPurpose) {
+  const filename = sanitizeAssetFilename(file.name || "customizer-upload");
+  const extension = getFileExtension(filename) || "png";
+  const publicFolder = path.join(process.cwd(), "public", "uploads", "admin-mockups", purpose);
+  const publicId = `${Date.now()}-${filename.replace(/\.[^.]+$/, "")}.${extension}`;
+  const diskPath = path.join(publicFolder, publicId);
+  await mkdir(publicFolder, { recursive: true });
+  await writeFile(diskPath, Buffer.from(await file.arrayBuffer()));
+  return {
+    url: `/uploads/admin-mockups/${purpose}/${publicId}`,
+    publicId: `local/${purpose}/${publicId}`,
   };
 }
