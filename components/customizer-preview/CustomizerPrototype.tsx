@@ -2958,7 +2958,7 @@ export default function CustomizerPrototype() {
   };
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#071015] pb-14 text-neutral-100 lg:pb-0 xl:fixed xl:inset-0 xl:z-50 xl:h-[100dvh] xl:overflow-hidden">
+    <main className="admin-doctor-customizer-root min-h-screen overflow-x-hidden bg-[#071015] pb-14 text-neutral-100 lg:pb-0 xl:fixed xl:inset-0 xl:z-50 xl:h-[100dvh] xl:overflow-hidden">
       <header className="border-b border-[#18313a] bg-[#09151a]/95 px-4 py-2 shadow-[0_14px_50px_rgba(0,0,0,0.35)] md:px-5 xl:h-14 xl:py-1.5">
         <div className="mx-auto flex max-w-[1680px] flex-col gap-3 xl:h-full xl:flex-row xl:items-center xl:justify-between">
           <div className="flex items-center gap-3">
@@ -3001,8 +3001,8 @@ export default function CustomizerPrototype() {
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-[1840px] gap-0 xl:h-[calc(100dvh-56px)] xl:overflow-hidden xl:grid-cols-[286px_minmax(0,1fr)_300px]">
-        <aside className={`${mobilePanel === "tools" ? "block" : "hidden"} bg-[#0b1519] p-2.5 pt-3 xl:block xl:h-full xl:min-h-0 xl:overflow-y-auto xl:border-r xl:border-[#18313a] xl:[scrollbar-color:#27515d_#081114] xl:[scrollbar-width:thin]`}>
+      <div className="admin-doctor-customizer-shell mx-auto grid max-w-[1840px] gap-0 xl:h-[calc(100dvh-56px)] xl:overflow-hidden xl:grid-cols-[286px_minmax(0,1fr)_300px]">
+        <aside className={`admin-doctor-tools-panel ${mobilePanel === "tools" ? "block" : "hidden"} bg-[#0b1519] p-2.5 pt-3 xl:block xl:h-full xl:min-h-0 xl:overflow-y-auto xl:border-r xl:border-[#18313a] xl:[scrollbar-color:#27515d_#081114] xl:[scrollbar-width:thin]`}>
           <div className="space-y-2.5">
             <PanelCard title="Layers">
               <div className="space-y-2 text-sm text-neutral-300">
@@ -3268,7 +3268,7 @@ export default function CustomizerPrototype() {
           </div>
         </aside>
 
-        <section className="flex min-h-[620px] flex-col bg-[#121a1f] p-2 xl:h-full xl:min-h-0 xl:overflow-hidden">
+        <section className="admin-doctor-canvas-panel flex min-h-[620px] flex-col bg-[#121a1f] p-2 xl:h-full xl:min-h-0 xl:overflow-hidden">
           <div className="mb-1 grid shrink-0 grid-cols-2 gap-2 lg:grid-cols-4">
             <label className="min-h-[58px] cursor-pointer rounded-lg border border-cyan-400/50 bg-cyan-300 p-2 text-left text-[#061015] shadow-[0_10px_24px_rgba(34,211,238,0.18)] transition hover:bg-cyan-200">
               <span className="flex items-center justify-between gap-2">
@@ -3600,7 +3600,7 @@ export default function CustomizerPrototype() {
 
         </section>
 
-        <section className={`${mobilePanel === "assistant" || mobilePanel === "order" ? "block" : "hidden"} border-t border-[#1e2a2f] bg-[#11181c] p-2.5 pt-3 lg:block lg:border-l lg:border-t-0 xl:h-full xl:min-h-0 xl:overflow-y-auto xl:[scrollbar-color:#27515d_#081114] xl:[scrollbar-width:thin]`}>
+        <section className={`admin-doctor-settings-panel ${mobilePanel === "assistant" || mobilePanel === "order" ? "block" : "hidden"} border-t border-[#1e2a2f] bg-[#11181c] p-2.5 pt-3 lg:block lg:border-l lg:border-t-0 xl:h-full xl:min-h-0 xl:overflow-y-auto xl:[scrollbar-color:#27515d_#081114] xl:[scrollbar-width:thin]`}>
           <div className="space-y-3">
             {state.mode === "transfer" ? (
               <PanelCard title="How It Works">
@@ -4263,7 +4263,7 @@ export default function CustomizerPrototype() {
         </div>
       ) : null}
 
-      <div className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-3 border-t border-[#1e2a2f] bg-[#0d1316] lg:hidden">
+      <div className="admin-doctor-mobile-tabs fixed inset-x-0 bottom-0 z-50 grid grid-cols-3 border-t border-[#1e2a2f] bg-[#0d1316] lg:hidden">
         {[
           ["tools", "Tools"],
           ["assistant", "Helper"],
@@ -4280,9 +4280,110 @@ export default function CustomizerPrototype() {
         ))}
       </div>
 
-      <div className="sticky bottom-12 z-40 border-t border-[#1e2a2f] bg-[#0c1114] px-4 py-3 text-sm text-neutral-300 lg:bottom-0 xl:hidden">
+      <div className="admin-doctor-mobile-status sticky bottom-12 z-40 border-t border-[#1e2a2f] bg-[#0c1114] px-4 py-3 text-sm text-neutral-300 lg:bottom-0 xl:hidden">
         <div className="mx-auto max-w-[1500px]">{state.status}</div>
       </div>
+      <style>{`
+        @media (max-width: 768px) {
+          html,
+          body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 1180px !important;
+            min-width: 1180px !important;
+            height: auto !important;
+            min-height: 920px !important;
+            max-height: none !important;
+            overflow-x: visible !important;
+            overflow-y: visible !important;
+            background: #061014 !important;
+          }
+
+          body > div {
+            width: 1180px !important;
+            min-width: 1180px !important;
+            max-width: none !important;
+            height: auto !important;
+            min-height: 920px !important;
+            max-height: none !important;
+            overflow: visible !important;
+          }
+
+          .admin-doctor-customizer-root {
+            width: 1180px !important;
+            min-width: 1180px !important;
+            max-width: none !important;
+            height: auto !important;
+            min-height: 920px !important;
+            max-height: none !important;
+            overflow: visible !important;
+            padding-bottom: 0 !important;
+            position: static !important;
+          }
+
+          .admin-doctor-customizer-root > header {
+            width: 1180px !important;
+            min-width: 1180px !important;
+          }
+
+          .admin-doctor-customizer-root > header > div {
+            width: 1180px !important;
+            min-width: 1180px !important;
+            max-width: none !important;
+            height: 56px !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            gap: 12px !important;
+          }
+
+          .admin-doctor-customizer-shell {
+            display: grid !important;
+            grid-template-columns: 286px minmax(594px, 1fr) 300px !important;
+            width: 1180px !important;
+            min-width: 1180px !important;
+            max-width: none !important;
+            height: auto !important;
+            min-height: 864px !important;
+            max-height: none !important;
+            overflow: visible !important;
+            margin: 0 !important;
+          }
+
+          .admin-doctor-tools-panel,
+          .admin-doctor-canvas-panel,
+          .admin-doctor-settings-panel {
+            display: block !important;
+            max-height: none !important;
+            overflow: visible !important;
+          }
+
+          .admin-doctor-canvas-panel {
+            display: flex !important;
+            min-height: 864px !important;
+          }
+
+          .admin-doctor-settings-panel > div > div {
+            display: block !important;
+          }
+
+          .admin-doctor-customizer-shell main,
+          .admin-doctor-customizer-shell aside,
+          .admin-doctor-customizer-shell section {
+            max-height: none !important;
+            overflow: visible !important;
+          }
+
+          .admin-doctor-customizer-shell canvas {
+            max-width: none !important;
+          }
+
+          .admin-doctor-mobile-tabs,
+          .admin-doctor-mobile-status {
+            display: none !important;
+          }
+        }
+      `}</style>
     </main>
   );
 }
