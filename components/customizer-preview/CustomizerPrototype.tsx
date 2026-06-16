@@ -275,7 +275,7 @@ function getShopifyEmbedContext(): ShopifyEmbedContext {
 
 function getCustomizerUrlState() {
   if (typeof window === "undefined") {
-    return { mode: null as PreviewMode | null, transferSize: "" };
+    return { mode: null as PreviewMode | null, transferSize: "", apparelProductType: "", activeView: null as ViewId | null };
   }
 
   const params = new URLSearchParams(window.location.search);
@@ -283,6 +283,8 @@ function getCustomizerUrlState() {
   const requestedTransferSize = normalizeTransferSizeId(
     params.get("transferSize") || params.get("transfer_size") || ""
   );
+  const requestedProductType = String(params.get("apparelProductType") || params.get("productType") || params.get("product_type") || "").trim();
+  const requestedView = String(params.get("view") || params.get("activeView") || params.get("printLocation") || "").trim();
 
   return {
     mode: requestedMode.includes("transfer") || requestedMode.includes("gang")
@@ -291,6 +293,10 @@ function getCustomizerUrlState() {
         ? "apparel" as PreviewMode
         : null,
     transferSize: requestedTransferSize,
+    apparelProductType: APPAREL_PRODUCT_OPTIONS.some((product) => product.id === requestedProductType || product.type === requestedProductType)
+      ? requestedProductType
+      : "",
+    activeView: isViewId(requestedView) ? requestedView : null,
   };
 }
 
@@ -423,13 +429,13 @@ function createTemplateThumbnail(name: string, category: string, layers: Templat
     if (layer.type === "shape") {
       return `<rect x="${x * 4 - width * 2}" y="${y * 3 - height * 1.5}" width="${width * 4}" height="${height * 3}" rx="12" fill="${color}" opacity="${layer.opacity ?? 0.85}"/>`;
     }
-    return `<rect x="${x * 4 - width * 2}" y="${y * 3 - height * 1.5}" width="${width * 4}" height="${height * 3}" rx="14" fill="#071015" stroke="#67e8f9" stroke-width="2" stroke-dasharray="7 7"/><text x="${x * 4}" y="${y * 3}" text-anchor="middle" dominant-baseline="middle" font-family="Inter, Arial" font-size="13" font-weight="900" fill="#cffafe">${escapeSvgText(layer.text || layer.name || `Slot ${index + 1}`)}</text>`;
+    return `<rect x="${x * 4 - width * 2}" y="${y * 3 - height * 1.5}" width="${width * 4}" height="${height * 3}" rx="14" fill="#071015" stroke="transparent" stroke-width="0"/><text x="${x * 4}" y="${y * 3}" text-anchor="middle" dominant-baseline="middle" font-family="Inter, Arial" font-size="13" font-weight="900" fill="#cffafe">${escapeSvgText(layer.text || layer.name || `Slot ${index + 1}`)}</text>`;
   }).join("");
 
   return svgDataUrl(`<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 400 300">
     <defs><radialGradient id="g" cx="50%" cy="20%" r="80%"><stop offset="0" stop-color="#24434d"/><stop offset="1" stop-color="#071015"/></radialGradient></defs>
     <rect width="400" height="300" rx="28" fill="url(#g)"/>
-    <rect x="78" y="42" width="244" height="210" rx="18" fill="#0d171b" stroke="#22d3ee" stroke-width="2" stroke-dasharray="8 8"/>
+    <rect x="78" y="42" width="244" height="210" rx="18" fill="#0d171b" stroke="transparent" stroke-width="0"/>
     ${layerMarkup}
     <text x="28" y="34" font-family="Inter, Arial" font-size="12" font-weight="900" fill="#67e8f9">${escapeSvgText(category)}</text>
     <text x="200" y="278" text-anchor="middle" font-family="Inter, Arial" font-size="18" font-weight="900" fill="#ffffff">${escapeSvgText(name)}</text>
@@ -453,22 +459,22 @@ const STAGING_APPAREL_MOCKUPS: Record<MockupColorKey, Partial<Record<ViewId, Moc
   black: {
     front: { label: "Black T-Shirt Front Mockup", url: "/customizer-preview/mockups/black-front.png", hasBakedPrintGuide: false },
     back: { label: "Black T-Shirt Back Mockup", url: "/customizer-preview/mockups/black-back.png", hasBakedPrintGuide: false },
-    leftSleeve: { label: "Black T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/black-left-sleeve.png", hasBakedPrintGuide: true },
-    rightSleeve: { label: "Black T-Shirt Right Sleeve Mockup", url: "/customizer-preview/mockups/black-right-sleeve.png", hasBakedPrintGuide: true },
+    leftSleeve: { label: "Black T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/black-left-sleeve.png", hasBakedPrintGuide: false },
+    rightSleeve: { label: "Black T-Shirt Right Sleeve Mockup", url: "/customizer-preview/mockups/black-right-sleeve.png", hasBakedPrintGuide: false },
     neckTag: { label: "Black T-Shirt Neck Tag Mockup", url: "/customizer-preview/mockups/black-neck-tag.png", hasBakedPrintGuide: false },
   },
   white: {
     front: { label: "White T-Shirt Front Mockup", url: "/customizer-preview/mockups/white-front.png", hasBakedPrintGuide: false },
     back: { label: "White T-Shirt Back Mockup", url: "/customizer-preview/mockups/white-back.png", hasBakedPrintGuide: false },
-    leftSleeve: { label: "White T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/white-left-sleeve.png", hasBakedPrintGuide: true },
+    leftSleeve: { label: "White T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/white-left-sleeve.png", hasBakedPrintGuide: false },
     rightSleeve: { label: "White T-Shirt Right Sleeve Mockup", url: "/customizer-preview/mockups/white-right-sleeve.png", hasBakedPrintGuide: false },
     neckTag: { label: "White T-Shirt Neck Tag Mockup", url: "/customizer-preview/mockups/white-neck-tag.png", hasBakedPrintGuide: false },
   },
   heatherGrey: {
     front: { label: "Heather Gray T-Shirt Front Mockup", url: "/customizer-preview/mockups/heather-grey-front.png", hasBakedPrintGuide: false },
     back: { label: "Heather Gray T-Shirt Back Mockup", url: "/customizer-preview/mockups/heather-grey-back.png", hasBakedPrintGuide: false },
-    leftSleeve: { label: "Heather Gray T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/heather-grey-left-sleeve.png", hasBakedPrintGuide: true },
-    rightSleeve: { label: "Heather Gray T-Shirt Right Sleeve Mockup", url: "/customizer-preview/mockups/heather-grey-right-sleeve.png", hasBakedPrintGuide: true },
+    leftSleeve: { label: "Heather Gray T-Shirt Left Sleeve Mockup", url: "/customizer-preview/mockups/heather-grey-left-sleeve.png", hasBakedPrintGuide: false },
+    rightSleeve: { label: "Heather Gray T-Shirt Right Sleeve Mockup", url: "/customizer-preview/mockups/heather-grey-right-sleeve.png", hasBakedPrintGuide: false },
     neckTag: { label: "Heather Gray T-Shirt Neck Tag Mockup", url: "/customizer-preview/mockups/heather-grey-neck-tag.png", hasBakedPrintGuide: false },
   },
   regularGrey: {
@@ -501,9 +507,63 @@ const STAGING_APPAREL_MOCKUPS: Record<MockupColorKey, Partial<Record<ViewId, Moc
   },
 };
 
+const STAGING_HOODIE_MOCKUPS: Record<MockupColorKey, Partial<Record<ViewId, MockupAsset>>> = {
+  black: {
+    front: { label: "Black Hoodie Front Mockup", url: "/customizer-preview/mockups/hoodie-black-front.png", hasBakedPrintGuide: false },
+    back: { label: "Black Hoodie Back Mockup", url: "/customizer-preview/mockups/hoodie-black-back.png", hasBakedPrintGuide: false },
+    leftSleeve: { label: "Black Hoodie Left Sleeve Mockup", url: "/customizer-preview/mockups/hoodie-black-left-sleeve.png", hasBakedPrintGuide: false },
+    rightSleeve: { label: "Black Hoodie Right Sleeve Mockup", url: "/customizer-preview/mockups/hoodie-black-right-sleeve.png", hasBakedPrintGuide: false },
+    neckTag: { label: "Black Hoodie Neck Tag Mockup", url: "/customizer-preview/mockups/hoodie-black-neck-tag.png", hasBakedPrintGuide: false },
+  },
+  white: {
+    front: { label: "White Hoodie Front Mockup", url: "/customizer-preview/mockups/hoodie-white-front.png", hasBakedPrintGuide: false },
+    back: { label: "White Hoodie Back Mockup", url: "/customizer-preview/mockups/hoodie-white-back.png", hasBakedPrintGuide: false },
+    leftSleeve: { label: "White Hoodie Left Sleeve Mockup", url: "/customizer-preview/mockups/hoodie-black-left-sleeve.png", hasBakedPrintGuide: false },
+    rightSleeve: { label: "White Hoodie Right Sleeve Mockup", url: "/customizer-preview/mockups/hoodie-black-right-sleeve.png", hasBakedPrintGuide: false },
+    neckTag: { label: "White Hoodie Neck Tag Mockup", url: "/customizer-preview/mockups/hoodie-black-neck-tag.png", hasBakedPrintGuide: false },
+  },
+  heatherGrey: {
+    front: { label: "Heather Gray Hoodie Front Mockup", url: "/customizer-preview/mockups/hoodie-heather-grey-front.png", hasBakedPrintGuide: false },
+    back: { label: "Heather Gray Hoodie Back Mockup", url: "/customizer-preview/mockups/hoodie-heather-grey-back.png", hasBakedPrintGuide: false },
+    leftSleeve: { label: "Heather Gray Hoodie Left Sleeve Mockup", url: "/customizer-preview/mockups/hoodie-heather-grey-left-sleeve.png", hasBakedPrintGuide: false },
+    rightSleeve: { label: "Heather Gray Hoodie Right Sleeve Mockup", url: "/customizer-preview/mockups/hoodie-heather-grey-right-sleeve.png", hasBakedPrintGuide: false },
+    neckTag: { label: "Heather Gray Hoodie Neck Tag Mockup", url: "/customizer-preview/mockups/hoodie-black-neck-tag.png", hasBakedPrintGuide: false },
+  },
+  regularGrey: {
+    front: { label: "Regular Grey Hoodie Front Mockup", url: "/customizer-preview/mockups/hoodie-regular-grey-front.png", hasBakedPrintGuide: false },
+    back: { label: "Regular Grey Hoodie Back Mockup", url: "/customizer-preview/mockups/hoodie-regular-grey-back.png", hasBakedPrintGuide: false },
+    leftSleeve: { label: "Regular Grey Hoodie Left Sleeve Mockup", url: "/customizer-preview/mockups/hoodie-regular-grey-left-sleeve.png", hasBakedPrintGuide: false },
+    rightSleeve: { label: "Regular Grey Hoodie Right Sleeve Mockup", url: "/customizer-preview/mockups/hoodie-regular-grey-right-sleeve.png", hasBakedPrintGuide: false },
+    neckTag: { label: "Regular Grey Hoodie Neck Tag Mockup", url: "/customizer-preview/mockups/hoodie-black-neck-tag.png", hasBakedPrintGuide: false },
+  },
+  royalBlue: {
+    front: { label: "Royal Blue Hoodie Front Mockup", url: "/customizer-preview/mockups/hoodie-royal-blue-front.png", hasBakedPrintGuide: false },
+    back: { label: "Royal Blue Hoodie Back Mockup", url: "/customizer-preview/mockups/hoodie-royal-blue-back.png", hasBakedPrintGuide: false },
+    leftSleeve: { label: "Royal Blue Hoodie Left Sleeve Mockup", url: "/customizer-preview/mockups/hoodie-black-left-sleeve.png", hasBakedPrintGuide: false },
+    rightSleeve: { label: "Royal Blue Hoodie Right Sleeve Mockup", url: "/customizer-preview/mockups/hoodie-black-right-sleeve.png", hasBakedPrintGuide: false },
+    neckTag: { label: "Royal Blue Hoodie Neck Tag Mockup", url: "/customizer-preview/mockups/hoodie-black-neck-tag.png", hasBakedPrintGuide: false },
+  },
+  red: {
+    front: { label: "Red Hoodie Front Mockup", url: "/customizer-preview/mockups/hoodie-red-front.png", hasBakedPrintGuide: false },
+    back: { label: "Red Hoodie Back Mockup", url: "/customizer-preview/mockups/hoodie-red-back.png", hasBakedPrintGuide: false },
+    leftSleeve: { label: "Red Hoodie Left Sleeve Mockup", url: "/customizer-preview/mockups/hoodie-black-left-sleeve.png", hasBakedPrintGuide: false },
+    rightSleeve: { label: "Red Hoodie Right Sleeve Mockup", url: "/customizer-preview/mockups/hoodie-black-right-sleeve.png", hasBakedPrintGuide: false },
+    neckTag: { label: "Red Hoodie Neck Tag Mockup", url: "/customizer-preview/mockups/hoodie-black-neck-tag.png", hasBakedPrintGuide: false },
+  },
+  offWhite: {
+    front: { label: "Off White Hoodie Front Mockup", url: "/customizer-preview/mockups/hoodie-white-front.png", hasBakedPrintGuide: false },
+    back: { label: "Off White Hoodie Back Mockup", url: "/customizer-preview/mockups/hoodie-white-back.png", hasBakedPrintGuide: false },
+    leftSleeve: { label: "Off White Hoodie Left Sleeve Mockup", url: "/customizer-preview/mockups/hoodie-black-left-sleeve.png", hasBakedPrintGuide: false },
+    rightSleeve: { label: "Off White Hoodie Right Sleeve Mockup", url: "/customizer-preview/mockups/hoodie-black-right-sleeve.png", hasBakedPrintGuide: false },
+    neckTag: { label: "Off White Hoodie Neck Tag Mockup", url: "/customizer-preview/mockups/hoodie-black-neck-tag.png", hasBakedPrintGuide: false },
+  },
+};
+
+const TRANSFER_FLAT_WHITE_CANVAS_MOCKUP_URL = "/mockups/transfer-flat-white-canvas.png";
+
 const STAGING_TRANSFER_MOCKUPS = {
-  transferSheet: { label: "Blank Flat White Transfer Canvas", url: createMockupSvg("Blank transfer canvas", "transfer") },
-  gangSheet: { label: "Gang Sheet Staging Mockup", url: createMockupSvg("Gang sheet staging mockup", "gang") },
+  transferSheet: { label: "Flat White Transfer Canvas Mockup", url: TRANSFER_FLAT_WHITE_CANVAS_MOCKUP_URL },
+  gangSheet: { label: "Flat White Gang Sheet Canvas Mockup", url: TRANSFER_FLAT_WHITE_CANVAS_MOCKUP_URL },
 };
 
 const CLOUDINARY_TEMPLATE_THUMBNAIL_BASE =
@@ -979,8 +1039,18 @@ function getViewLabel(view: ViewId) {
 
 function getApparelMockupForColor(product: ApparelProductOption, mockupKey: MockupColorKey, view: ViewId, overrides: ApparelMockupOverrides = {}) {
   const productOverrides = overrides[product.id] || overrides[product.type] || {};
+  if (product.id === "hoodies" || product.type === "hoodies") {
+    return (
+      productOverrides[mockupKey]?.[view] ||
+      productOverrides.black?.[view] ||
+      STAGING_HOODIE_MOCKUPS[mockupKey]?.[view] ||
+      STAGING_HOODIE_MOCKUPS.black?.[view] ||
+      getProductPlaceholderMockup(product, view)
+    );
+  }
+
   if (product.id !== "t-shirts") {
-    return productOverrides[mockupKey]?.[view] || productOverrides.black?.[view] || getProductPlaceholderMockup(product, view);
+    return productOverrides[mockupKey]?.[view] || productOverrides.black?.[view] || STAGING_APPAREL_MOCKUPS.black?.[view] || getProductPlaceholderMockup(product, view);
   }
 
   return (
@@ -1113,8 +1183,24 @@ function getActivePrintLocation(config: StagingCustomizerConfig | null, view: Vi
 
 const FRONT_ALIGNED_PRINT_AREA: StagingPrintArea = { x: 50, y: 50.5, width: 38, height: 61 };
 
+function printAreaFromTopLeft(area: StagingPrintArea): StagingPrintArea {
+  return {
+    x: area.x + area.width / 2,
+    y: area.y + area.height / 2,
+    width: area.width,
+    height: area.height,
+  };
+}
+
+const TRANSFER_FLAT_CANVAS_PRINT_AREA = printAreaFromTopLeft({
+  x: 12.9,
+  y: 10.3,
+  width: 74.2,
+  height: 79.3,
+});
+
 function getDefaultPrintAreaForView(state: EditorState): StagingPrintArea {
-  if (state.mode === "transfer") return { x: 50, y: 50, width: 44, height: 66 };
+  if (state.mode === "transfer") return TRANSFER_FLAT_CANVAS_PRINT_AREA;
 
   const defaults: Record<ViewId, StagingPrintArea> = {
     front: FRONT_ALIGNED_PRINT_AREA,
@@ -1402,7 +1488,6 @@ export default function CustomizerPrototype() {
     apparelProductOptions[0] ||
     APPAREL_PRODUCT_OPTIONS[0];
   const activeApparelViews = selectedApparelProduct.views.length ? selectedApparelProduct.views : APPAREL_PRODUCT_OPTIONS[0].views;
-  const printAreaGuideColor = state.mode === "apparel" ? selectedColor.hex : "#67e8f9";
   const selectedMockupColorKey = selectedColor.mockupKey;
   const configuredMaterials = stagingConfig?.materialOptions?.filter((material) => material.enabled !== false).map((material) => material.label || material.id || "Material") || MATERIAL_OPTIONS;
   const templateSettings = stagingConfig?.stagingSettings?.templateSettings;
@@ -1453,7 +1538,6 @@ export default function CustomizerPrototype() {
       : safeTransferSize === "Gang Sheet"
         ? STAGING_TRANSFER_MOCKUPS.gangSheet.label
         : STAGING_TRANSFER_MOCKUPS.transferSheet.label;
-  const hasBakedPrintGuide = state.mode === "apparel" ? colorFallbackMockup.hasBakedPrintGuide : false;
   const mockupLoadFailed = Boolean(activeMockupUrl && brokenMockupUrls.includes(activeMockupUrl));
   const activeLayers = getActiveLayers(state);
   const selectedLayer = activeLayers.find((layer) => layer.id === state.selectedLayerId) || null;
@@ -1939,16 +2023,6 @@ export default function CustomizerPrototype() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [state.selectedLayerId]);
-
-  if (!isMounted) {
-    return (
-      <main className="grid min-h-screen place-items-center overflow-hidden bg-[#071015] text-neutral-100 xl:h-[100dvh]">
-        <div className="rounded-xl border border-[#18313a] bg-[#0b1519] px-5 py-4 text-sm font-semibold text-cyan-100 shadow-[0_14px_50px_rgba(0,0,0,0.35)]">
-          Loading staging customizer preview...
-        </div>
-      </main>
-    );
-  }
 
   const setMode = (mode: PreviewMode) => {
     setState((current) => ({
@@ -2733,7 +2807,7 @@ export default function CustomizerPrototype() {
       <rect width="960" height="1200" fill="#071015"/>
       <rect x="180" y="120" width="600" height="920" rx="42" fill="#e8f0f7"/>
       <rect x="300" y="250" width="360" height="720" rx="34" fill="${state.mode === "apparel" ? "#111827" : "#ffffff"}" opacity="0.96"/>
-      <rect x="${120 + printAreaResult.area.x * 3.6 - printAreaResult.area.width * 1.8}" y="${120 + printAreaResult.area.y * 4.8 - printAreaResult.area.height * 2.4}" width="${printAreaResult.area.width * 3.6}" height="${printAreaResult.area.height * 4.8}" fill="none" stroke="#22d3ee" stroke-width="3" stroke-dasharray="8 8"/>
+      <rect x="${120 + printAreaResult.area.x * 3.6 - printAreaResult.area.width * 1.8}" y="${120 + printAreaResult.area.y * 4.8 - printAreaResult.area.height * 2.4}" width="${printAreaResult.area.width * 3.6}" height="${printAreaResult.area.height * 4.8}" fill="none" stroke="transparent" stroke-width="0"/>
       ${layerMarkup}
       <text x="480" y="1120" text-anchor="middle" font-family="Inter, Arial" font-size="24" fill="#cffafe">Staging preview image</text>
     </svg>`;
@@ -2861,12 +2935,17 @@ export default function CustomizerPrototype() {
       if (!rawConfig) {
         const nextMode = urlState.mode || "apparel";
         const nextTransferSize = nextMode === "transfer" ? getSafeTransferSize(urlState.transferSize) : SAFE_TRANSFER_SIZE;
+        const nextApparelProductType = urlState.apparelProductType || initialState.apparelProductType;
+        const nextProduct = APPAREL_PRODUCT_OPTIONS.find((product) => product.id === nextApparelProductType || product.type === nextApparelProductType) || APPAREL_PRODUCT_OPTIONS[0];
+        const nextActiveView = urlState.activeView && nextProduct.views.includes(urlState.activeView) ? urlState.activeView : initialState.activeView;
 
         setStagingConfig(null);
         setStagingConfigWarning("Using safe preview defaults.");
         setState((current) => ({
           ...current,
           mode: nextMode,
+          apparelProductType: nextProduct.id,
+          activeView: nextActiveView,
           transferSize: nextTransferSize,
           selectedTemplate: nextMode === "transfer" ? "Logo Transfer" : "Centered Logo",
           usingSafeDefaults: true,
@@ -2887,6 +2966,9 @@ export default function CustomizerPrototype() {
       const nextTransferSize = nextMode === "transfer"
         ? getSafeTransferSize(urlState.transferSize || defaultTransferSize || firstTransferSize)
         : SAFE_TRANSFER_SIZE;
+      const nextApparelProductType = urlState.apparelProductType || initialState.apparelProductType;
+      const nextProduct = APPAREL_PRODUCT_OPTIONS.find((product) => product.id === nextApparelProductType || product.type === nextApparelProductType) || APPAREL_PRODUCT_OPTIONS[0];
+      const nextActiveView = urlState.activeView && nextProduct.views.includes(urlState.activeView) ? urlState.activeView : initialState.activeView;
       const usedFallback = nextMode === "transfer" && !firstTransferSize;
       const label = typeof parsedConfig.label === "string" ? parsedConfig.label : "staging setup";
       const realismDefaults = parsedConfig.stagingSettings?.realismDefaults;
@@ -2906,6 +2988,8 @@ export default function CustomizerPrototype() {
       setState((current) => ({
         ...current,
         mode: nextMode,
+        apparelProductType: nextProduct.id,
+        activeView: nextActiveView,
         transferSize: nextTransferSize,
         selectedTemplate: nextMode === "apparel" ? "Centered Logo" : "Logo Transfer",
         usingSafeDefaults: usedFallback,
@@ -2916,12 +3000,17 @@ export default function CustomizerPrototype() {
     } catch {
       const nextMode = urlState.mode || "apparel";
       const nextTransferSize = nextMode === "transfer" ? getSafeTransferSize(urlState.transferSize) : SAFE_TRANSFER_SIZE;
+      const nextApparelProductType = urlState.apparelProductType || initialState.apparelProductType;
+      const nextProduct = APPAREL_PRODUCT_OPTIONS.find((product) => product.id === nextApparelProductType || product.type === nextApparelProductType) || APPAREL_PRODUCT_OPTIONS[0];
+      const nextActiveView = urlState.activeView && nextProduct.views.includes(urlState.activeView) ? urlState.activeView : initialState.activeView;
 
       setStagingConfig(null);
       setStagingConfigWarning("Invalid staging config, using safe defaults.");
       setState((current) => ({
         ...current,
         mode: nextMode,
+        apparelProductType: nextProduct.id,
+        activeView: nextActiveView,
         transferSize: nextTransferSize,
         selectedTemplate: nextMode === "transfer" ? "Logo Transfer" : "Centered Logo",
         usingSafeDefaults: true,
@@ -2929,6 +3018,13 @@ export default function CustomizerPrototype() {
       }));
     }
   };
+
+  useEffect(() => {
+    if (!isMounted) return;
+    loadStagingConfig();
+    // loadStagingConfig intentionally runs once after mount so Shopify iframe URL state is applied.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMounted]);
 
   const setStatusOnly = (status: string) => {
     setState((current) => ({ ...current, status }));
@@ -2956,6 +3052,16 @@ export default function CustomizerPrototype() {
       };
     });
   };
+
+  if (!isMounted) {
+    return (
+      <main className="grid min-h-screen place-items-center overflow-hidden bg-[#071015] text-neutral-100 xl:h-[100dvh]">
+        <div className="rounded-xl border border-[#18313a] bg-[#0b1519] px-5 py-4 text-sm font-semibold text-cyan-100 shadow-[0_14px_50px_rgba(0,0,0,0.35)]">
+          Loading staging customizer preview...
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="admin-doctor-customizer-root min-h-screen overflow-x-hidden bg-[#071015] pb-14 text-neutral-100 lg:pb-0 xl:fixed xl:inset-0 xl:z-50 xl:h-[100dvh] xl:overflow-hidden">
@@ -3399,7 +3505,7 @@ export default function CustomizerPrototype() {
               </div>
             ) : null}
             <div
-              className={`relative aspect-[5/6] min-h-[360px] max-w-full shrink-0 overflow-visible rounded-2xl ${
+              className={`relative ${state.mode === "apparel" ? "aspect-[5/6]" : "aspect-[4/5]"} min-h-[360px] max-w-full shrink-0 overflow-visible rounded-2xl ${
                 state.mode === "apparel"
                   ? "border border-transparent bg-transparent shadow-none"
                   : "border border-white/20 bg-[linear-gradient(145deg,#f8fbff_0%,#dce6ef_46%,#ffffff_100%)] shadow-[0_38px_100px_rgba(0,0,0,0.58),0_0_0_1px_rgba(103,232,249,0.12),inset_0_1px_0_rgba(255,255,255,0.85)]"
@@ -3439,51 +3545,17 @@ export default function CustomizerPrototype() {
               )}
 
               <div
-                className={`absolute z-20 -translate-x-1/2 -translate-y-1/2 ${
-                  hasBakedPrintGuide
-                    ? "border border-transparent bg-transparent"
-                    : "border border-dashed bg-transparent"
-                }`}
+                className="absolute z-20 -translate-x-1/2 -translate-y-1/2 bg-transparent"
                 style={{
                   ...getPrintAreaStyle(printAreaResult.area),
-                  borderColor: printAreaGuideColor,
-                  boxShadow: state.mode === "apparel" ? "none" : "0 0 0 1px rgba(8,47,73,0.35), 0 0 32px rgba(34,211,238,0.16)",
-                  opacity: state.mode === "apparel" ? 0.72 : 1,
+                  borderColor: "transparent",
+                  boxShadow: "none",
+                  opacity: 1,
                 }}
               >
-                <span className="absolute -right-1 -top-5 text-[10px] font-semibold uppercase tracking-wide text-cyan-100/80">
-                  {state.mode === "apparel"
-                    ? `${measurementReference.width}" x ${measurementReference.height}"`
-                    : `${measurementReference.width} x ${measurementReference.height}`}
-                </span>
-                {selectedLayer ? (
-                  <div
-                    aria-hidden="true"
-                    className="pointer-events-none absolute z-30"
-                    style={{
-                      left: `${selectedLayer.x}%`,
-                      top: `${selectedLayer.y}%`,
-                      width: `${selectedLayer.width}%`,
-                      height: `${selectedLayer.height}%`,
-                      transform: "translate(-50%, -50%)",
-                    }}
-                  >
-                    <div className="absolute -top-4 left-0 h-px w-full bg-cyan-200/90 shadow-[0_0_12px_rgba(103,232,249,0.45)]">
-                      <span className="absolute left-1/2 top-[-18px] -translate-x-1/2 rounded-sm border border-cyan-200/40 bg-[#071015]/90 px-1.5 py-0.5 text-[10px] font-semibold text-cyan-50">
-                        {formatInches(selectedWidthInches)}
-                      </span>
-                    </div>
-                    <div className="absolute -left-4 top-0 h-full w-px bg-cyan-200/90 shadow-[0_0_12px_rgba(103,232,249,0.45)]">
-                      <span className="absolute left-[-28px] top-1/2 -translate-y-1/2 -rotate-90 rounded-sm border border-cyan-200/40 bg-[#071015]/90 px-1.5 py-0.5 text-[10px] font-semibold text-cyan-50">
-                        {formatInches(selectedHeightInches)}
-                      </span>
-                    </div>
-                  </div>
-                ) : null}
                 <div className="absolute inset-0 overflow-hidden">
                   {activeLayers.length > 0 ? (
                     activeLayers.filter((layer) => !layer.hidden).sort((a, b) => a.zIndex - b.zIndex).map((layer) => {
-                      const isSelected = layer.id === selectedLayer?.id;
                       const commonStyle = {
                         left: `${layer.x}%`,
                         top: `${layer.y}%`,
@@ -3506,7 +3578,7 @@ export default function CustomizerPrototype() {
                             key={layer.id}
                             type="button"
                             onClick={() => setState((current) => ({ ...current, selectedLayerId: layer.id, status: `${layer.name} selected.` }))}
-                            className={`absolute cursor-pointer overflow-hidden rounded-sm border border-transparent shadow-[0_10px_18px_rgba(0,0,0,0.22)] ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
+                            className="absolute cursor-pointer overflow-hidden rounded-sm border border-transparent shadow-[0_10px_18px_rgba(0,0,0,0.22)]"
                             style={{
                               ...commonStyle,
                               mixBlendMode: state.mode === "apparel" ? effectiveBlendMode : "normal",
@@ -3536,7 +3608,7 @@ export default function CustomizerPrototype() {
                             key={layer.id}
                             type="button"
                             onClick={() => setState((current) => ({ ...current, selectedLayerId: layer.id, status: `${layer.name} selected.` }))}
-                            className={`absolute cursor-pointer rounded-lg border border-white/20 shadow-[0_8px_18px_rgba(0,0,0,0.18)] ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
+                            className="absolute cursor-pointer rounded-lg border border-white/20 shadow-[0_8px_18px_rgba(0,0,0,0.18)]"
                             style={{ ...commonStyle, backgroundColor: layer.color }}
                             aria-label={layer.name}
                           />
@@ -3549,7 +3621,7 @@ export default function CustomizerPrototype() {
                             key={layer.id}
                             type="button"
                             onClick={() => setState((current) => ({ ...current, selectedLayerId: layer.id, status: `${layer.name} selected. Upload artwork to replace it.` }))}
-                            className={`absolute grid cursor-pointer place-items-center rounded-lg border border-dashed border-cyan-200/80 bg-[#071015]/78 px-2 text-center text-[10px] font-black uppercase tracking-wide text-cyan-100 shadow-[0_8px_18px_rgba(0,0,0,0.22)] ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
+                            className="absolute grid cursor-pointer place-items-center rounded-lg border border-transparent bg-[#071015]/78 px-2 text-center text-[10px] font-black uppercase tracking-wide text-cyan-100 shadow-[0_8px_18px_rgba(0,0,0,0.22)]"
                             style={commonStyle}
                           >
                             {layer.text || "Upload Logo"}
@@ -3562,7 +3634,7 @@ export default function CustomizerPrototype() {
                           key={layer.id}
                           type="button"
                           onClick={() => setState((current) => ({ ...current, selectedLayerId: layer.id, status: `${layer.name} selected.` }))}
-                          className={`absolute grid cursor-pointer place-items-center overflow-visible px-1 text-center font-black leading-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)] ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
+                          className="absolute grid cursor-pointer place-items-center overflow-visible px-1 text-center font-black leading-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)]"
                           style={{
                             ...commonStyle,
                             color: layer.color,
@@ -3581,18 +3653,6 @@ export default function CustomizerPrototype() {
                       Upload artwork
                     </div>
                   )}
-                  {state.mode === "apparel" && textureOverlayEnabled ? (
-                    <div
-                      aria-hidden="true"
-                      className="pointer-events-none absolute inset-0"
-                      style={{
-                        background:
-                          "linear-gradient(105deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.025) 28%, rgba(0,0,0,0.18) 62%, rgba(255,255,255,0.05) 100%), repeating-linear-gradient(88deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 5px), radial-gradient(circle at 42% 18%, rgba(255,255,255,0.13), transparent 38%)",
-                        mixBlendMode: "soft-light",
-                        opacity: fabricBlendEnabled ? 0.5 : 0.22,
-                      }}
-                    />
-                  ) : null}
                 </div>
               </div>
             </div>
@@ -4043,13 +4103,9 @@ export default function CustomizerPrototype() {
                   </div>
                   <div className="mx-auto grid aspect-[5/6] max-h-full min-h-[420px] max-w-[680px] place-items-center rounded-xl border border-[#1e343c] bg-[#0b1519] p-5">
                     <div className="relative h-full w-full max-w-[520px]">
-                      <div className="absolute left-1/2 top-1/2 h-[82%] w-[72%] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-dashed border-cyan-200/45 bg-[#061015]">
-                        <span className="absolute -right-1 -top-5 text-[10px] font-semibold uppercase tracking-wide text-cyan-100/80">
-                          Draft print area
-                        </span>
+                      <div className="absolute left-1/2 top-1/2 h-[82%] w-[72%] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-transparent bg-[#061015]">
                         <div className="absolute inset-0 overflow-hidden">
                           {templateDraft.layers.filter((layer) => !layer.hidden).sort((a, b) => a.zIndex - b.zIndex).map((layer) => {
-                            const isSelected = layer.id === templateDraft.selectedLayerId;
                             const commonStyle = {
                               left: `${layer.x}%`,
                               top: `${layer.y}%`,
@@ -4066,7 +4122,7 @@ export default function CustomizerPrototype() {
                                   key={layer.id}
                                   type="button"
                                   onClick={() => setTemplateDraft((current) => current ? { ...current, selectedLayerId: layer.id, status: `${layer.name} selected in draft.` } : current)}
-                                  className={`absolute overflow-hidden rounded-sm border border-transparent ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
+                                  className="absolute overflow-hidden rounded-sm border border-transparent"
                                   style={commonStyle}
                                 >
                                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -4081,7 +4137,7 @@ export default function CustomizerPrototype() {
                                   key={layer.id}
                                   type="button"
                                   onClick={() => setTemplateDraft((current) => current ? { ...current, selectedLayerId: layer.id, status: `${layer.name} selected in draft.` } : current)}
-                                  className={`absolute rounded-lg border border-white/20 ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
+                                  className="absolute rounded-lg border border-white/20"
                                   style={{ ...commonStyle, backgroundColor: layer.color }}
                                   aria-label={layer.name}
                                 />
@@ -4094,7 +4150,7 @@ export default function CustomizerPrototype() {
                                   key={layer.id}
                                   type="button"
                                   onClick={() => setTemplateDraft((current) => current ? { ...current, selectedLayerId: layer.id, status: `${layer.name} selected. Upload artwork to replace it.` } : current)}
-                                  className={`absolute grid place-items-center rounded-lg border border-dashed border-cyan-200/80 bg-[#071015]/85 px-2 text-center text-[10px] font-black uppercase tracking-wide text-cyan-100 ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
+                                  className="absolute grid place-items-center rounded-lg border border-transparent bg-[#071015]/85 px-2 text-center text-[10px] font-black uppercase tracking-wide text-cyan-100"
                                   style={commonStyle}
                                 >
                                   {layer.text || "Upload Logo"}
@@ -4107,7 +4163,7 @@ export default function CustomizerPrototype() {
                                 key={layer.id}
                                 type="button"
                                 onClick={() => setTemplateDraft((current) => current ? { ...current, selectedLayerId: layer.id, status: `${layer.name} selected in draft.` } : current)}
-                                className={`absolute grid place-items-center px-1 text-center font-black leading-tight ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
+                                className="absolute grid place-items-center px-1 text-center font-black leading-tight"
                                 style={{
                                   ...commonStyle,
                                   color: layer.color,
