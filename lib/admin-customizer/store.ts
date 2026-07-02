@@ -3,7 +3,15 @@ import path from "path";
 
 import { createClient } from "@supabase/supabase-js";
 
-import type { AdminCustomizerStore, AdminMediaAsset, AdminMockupProduct, AdminMockupVariant, AdminTemplate } from "./types";
+import type {
+  AdminCustomizerStore,
+  AdminMediaAsset,
+  AdminMockupProduct,
+  AdminMockupVariant,
+  AdminTemplate,
+  GhostMannequinAsset,
+  GhostMannequinStatus,
+} from "./types";
 import { normalizeMockupProduct, normalizeMockupVariant, normalizeTemplate } from "./validation";
 
 const STORE_PATH = path.join(process.cwd(), "data", "admin-customizer-store.json");
@@ -40,6 +48,7 @@ function createEmptyStore(): AdminCustomizerStore {
     })),
     mockupVariants: [],
     mediaAssets: [],
+    ghostMannequinAssets: [],
     updatedAt: timestamp,
   };
 }
@@ -77,6 +86,7 @@ function normalizeStore(input: Partial<AdminCustomizerStore> | null | undefined)
     mockupProducts: mergeSeedProducts(inputProducts, fallback.mockupProducts),
     mockupVariants: Array.isArray(input?.mockupVariants) ? input.mockupVariants : fallback.mockupVariants,
     mediaAssets: Array.isArray(input?.mediaAssets) ? input.mediaAssets : fallback.mediaAssets,
+    ghostMannequinAssets: Array.isArray(input?.ghostMannequinAssets) ? input.ghostMannequinAssets : fallback.ghostMannequinAssets,
     updatedAt: typeof input?.updatedAt === "string" ? input.updatedAt : fallback.updatedAt,
   };
 }
@@ -219,4 +229,29 @@ export async function addMediaAsset(asset: AdminMediaAsset) {
   const store = await readAdminCustomizerStore();
   await writeAdminCustomizerStore({ ...store, mediaAssets: [asset, ...store.mediaAssets] });
   return asset;
+}
+
+export async function addGhostMannequinAsset(asset: GhostMannequinAsset) {
+  const store = await readAdminCustomizerStore();
+  await writeAdminCustomizerStore({ ...store, ghostMannequinAssets: [asset, ...store.ghostMannequinAssets] });
+  return asset;
+}
+
+export async function updateGhostMannequinAsset(
+  id: string,
+  updates: Partial<Omit<GhostMannequinAsset, "id" | "createdAt">> & { status?: GhostMannequinStatus }
+) {
+  const store = await readAdminCustomizerStore();
+  const existing = store.ghostMannequinAssets.find((asset) => asset.id === id);
+  if (!existing) return { errors: ["Ghost mannequin asset not found."] };
+  const updated: GhostMannequinAsset = {
+    ...existing,
+    ...updates,
+    updatedAt: now(),
+  };
+  await writeAdminCustomizerStore({
+    ...store,
+    ghostMannequinAssets: store.ghostMannequinAssets.map((asset) => (asset.id === id ? updated : asset)),
+  });
+  return { errors: [], value: updated };
 }

@@ -99,10 +99,55 @@ export type AdminMediaAsset = {
   createdAt: string;
 };
 
+export type GhostMannequinAngle =
+  | "front"
+  | "front-left"
+  | "left"
+  | "back-left"
+  | "back"
+  | "back-right"
+  | "right"
+  | "front-right";
+
+export type GhostMannequinStatus =
+  | "generated"
+  | "approved"
+  | "rejected"
+  | "added_to_product"
+  | "failed";
+
+export type GhostMannequinAsset = {
+  id: string;
+  productId?: string;
+  productHandle?: string;
+  sourceType: "upload" | "url";
+  sourceFileName?: string;
+  sourceImageUrl?: string;
+  originalAssetUrl?: string;
+  generatedImageUrl?: string;
+  generatedPublicId?: string;
+  generatedContentType?: string;
+  prompt: string;
+  mode: "single" | "angle-set" | "ai-360-beta";
+  angle?: GhostMannequinAngle;
+  frameUrls: string[];
+  status: GhostMannequinStatus;
+  reviewRequired: boolean;
+  errors: string[];
+  warnings: string[];
+  photoroomRequestId?: string;
+  processingTimeMs?: number;
+  createdAt: string;
+  updatedAt: string;
+  approvedAt?: string;
+  addedToProductAt?: string;
+};
+
 export type AdminCustomizerStore = {
   templates: AdminTemplate[];
   mockupProducts: AdminMockupProduct[];
   mockupVariants: AdminMockupVariant[];
   mediaAssets: AdminMediaAsset[];
+  ghostMannequinAssets: GhostMannequinAsset[];
   updatedAt: string;
 };
