@@ -123,3 +123,14 @@ Scope audited:
 - `npm.cmd run build`: Passed after rerunning with elevated filesystem access for Turbopack's inferred workspace-root read.
 - Initial sandboxed build failed before TypeScript because Turbopack attempted to read `C:\Users\Truea`.
 - No Shopify auth, token names, checkout route, Cloudinary upload route, or metafield schema changes were made.
+
+## Photoroom Ghost Mannequin Workflow
+
+- Implemented and sandbox/dev verified in commit `43f988e16d6fcbb6476f9db1ef706e7eda898b97`.
+- Not production-complete until real Photoroom and Shopify tests are completed.
+- Requires `PHOTOROOM_API_KEY`.
+- Requires Shopify Admin API env vars and a real product ID.
+- Requires apparel QC on real generated ghost mannequin output before publishing.
+- Do not auto-publish.
+- Do not auto-replace product images.
+- Do not merge unrelated dirty work into this checkpoint.
