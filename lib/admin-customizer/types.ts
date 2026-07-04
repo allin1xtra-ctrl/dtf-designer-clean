@@ -143,11 +143,42 @@ export type GhostMannequinAsset = {
   addedToProductAt?: string;
 };
 
+export type CustomGhost360EffectStyle = "studio" | "ghost-fade" | "floor-shadow" | "reflection";
+
+export type CustomGhost360Frame = {
+  id: string;
+  label: string;
+  imageUrl: string;
+  fileName?: string;
+  mediaAssetId?: string;
+  order: number;
+  width?: number;
+  height?: number;
+};
+
+export type CustomGhost360FrameSet = {
+  id: string;
+  name: string;
+  productId?: string;
+  productHandle?: string;
+  enabled: boolean;
+  frameCount?: number;
+  fallbackImageUrl?: string;
+  effectStyle: CustomGhost360EffectStyle;
+  frames: CustomGhost360Frame[];
+  warnings: string[];
+  createdAt: string;
+  updatedAt: string;
+  assignedAt?: string;
+  metafieldsSyncedAt?: string;
+};
+
 export type AdminCustomizerStore = {
   templates: AdminTemplate[];
   mockupProducts: AdminMockupProduct[];
   mockupVariants: AdminMockupVariant[];
   mediaAssets: AdminMediaAsset[];
   ghostMannequinAssets: GhostMannequinAsset[];
+  customGhost360FrameSets: CustomGhost360FrameSet[];
   updatedAt: string;
 };

@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import CustomGhost360Viewer from "./product/CustomGhost360Viewer";
 
 const accentColors = {
   cyan: "#00fff7",
@@ -28,14 +29,27 @@ const qualityBullets = [
   "High-resolution printing"
 ];
 
-export default function CustomProductMain() {
+export default function CustomProductMain({ product = null, customGhost360FrameSets = [] }) {
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const ghost360FrameSets =
+    customGhost360FrameSets.length > 0
+      ? customGhost360FrameSets
+      : Array.isArray(product?.customGhost360FrameSets)
+        ? product.customGhost360FrameSets
+        : [];
+  const activeGhost360FrameSet = ghost360FrameSets.find((frameSet) => frameSet?.enabled && Array.isArray(frameSet.frames) && frameSet.frames.length > 0);
   const images = [
     "/images/product1.jpg",
     "/images/product2.jpg",
     "/images/product3.jpg"
   ];
+  const ghost360FrameUrls = activeGhost360FrameSet
+    ? [...activeGhost360FrameSet.frames]
+        .sort((left, right) => Number(left.order || 0) - Number(right.order || 0))
+        .map((frame) => frame.imageUrl)
+        .filter(Boolean)
+    : [];
 
   return (
     <section className="bg-[#0a0a0a] text-white min-h-screen flex flex-col items-center w-full">
@@ -43,25 +57,37 @@ export default function CustomProductMain() {
       <div className="w-full max-w-7xl flex flex-col md:flex-row gap-8 py-8 px-4 md:px-8">
         {/* Image Gallery */}
         <div className="flex-1 flex flex-col items-center">
-          <div className="w-full aspect-square bg-[#181818] rounded-lg overflow-hidden flex items-center justify-center relative group cursor-zoom-in">
-            <img
-              src={images[selectedImage]}
-              alt="Custom apparel product mockup with DTF print placement"
-              className="object-contain w-full h-full transition-transform duration-200 group-hover:scale-105"
-              onClick={() => window.open(images[selectedImage], "_blank")}
+          {ghost360FrameUrls.length > 0 ? (
+            <CustomGhost360Viewer
+              frameUrls={ghost360FrameUrls}
+              fallbackImageUrl={activeGhost360FrameSet.fallbackImageUrl || ghost360FrameUrls[0]}
+              effectStyle={activeGhost360FrameSet.effectStyle || "studio"}
+              alt={`${product?.title || "Custom apparel"} Ghost 360 product view`}
+              className="rounded-lg border border-[#222]"
             />
-          </div>
-          <div className="flex gap-2 mt-4">
-            {images.map((img, i) => (
-              <button
-                key={img}
-                className={`w-16 h-16 rounded border-2 ${selectedImage === i ? "border-cyan-400" : "border-[#222]"}`}
-                onClick={() => setSelectedImage(i)}
-              >
-                <img src={img} alt="Custom DTF product thumbnail preview" className="object-cover w-full h-full rounded" />
-              </button>
-            ))}
-          </div>
+          ) : (
+            <>
+              <div className="w-full aspect-square bg-[#181818] rounded-lg overflow-hidden flex items-center justify-center relative group cursor-zoom-in">
+                <img
+                  src={images[selectedImage]}
+                  alt="Custom apparel product mockup with DTF print placement"
+                  className="object-contain w-full h-full transition-transform duration-200 group-hover:scale-105"
+                  onClick={() => window.open(images[selectedImage], "_blank")}
+                />
+              </div>
+              <div className="flex gap-2 mt-4">
+                {images.map((img, i) => (
+                  <button
+                    key={img}
+                    className={`w-16 h-16 rounded border-2 ${selectedImage === i ? "border-cyan-400" : "border-[#222]"}`}
+                    onClick={() => setSelectedImage(i)}
+                  >
+                    <img src={img} alt="Custom DTF product thumbnail preview" className="object-cover w-full h-full rounded" />
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
         {/* Product Info */}
         <div className="flex-1 flex flex-col gap-4 justify-center">

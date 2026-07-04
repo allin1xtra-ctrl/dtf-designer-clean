@@ -9,6 +9,7 @@ const ADMIN_LINKS = [
   ["Mockups / Product Types", "/admin/product-types"],
   ["Media Library", "/admin/media"],
   ["Product Images", "/admin/product-images"],
+  ["Ghost 360", "/admin/product-images/ghost-360"],
   ["Customizer Setup", "/admin/customizer-setup"],
   ["AI Doctor", "/admin/ai-doctor"],
 ] as const;

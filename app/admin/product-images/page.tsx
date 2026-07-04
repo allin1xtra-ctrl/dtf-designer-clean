@@ -172,6 +172,9 @@ export default function AdminProductImagesPage() {
         <a href="/admin/product-images/viewer-test" className="mt-3 inline-block text-sm font-bold text-cyan-200 underline-offset-4 hover:underline">
           Open 360 viewer test
         </a>
+        <a href="/admin/product-images/ghost-360" className="ml-4 mt-3 inline-block text-sm font-bold text-cyan-200 underline-offset-4 hover:underline">
+          Open Custom Ghost 360 effect
+        </a>
 
         <section className="mt-6 border border-[#243b43] bg-[#0b1519] p-5">
           <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">

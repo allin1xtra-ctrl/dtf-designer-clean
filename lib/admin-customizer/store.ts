@@ -9,6 +9,7 @@ import type {
   AdminMockupProduct,
   AdminMockupVariant,
   AdminTemplate,
+  CustomGhost360FrameSet,
   GhostMannequinAsset,
   GhostMannequinStatus,
 } from "./types";
@@ -28,8 +29,110 @@ const PRODUCT_TYPE_SEEDS = [
   { name: "Sweaters", type: "sweaters", views: ["front", "back", "leftSleeve", "rightSleeve", "neckTag"] },
 ] as const;
 
+const CANONICAL_COLOR_NAMES: Record<string, string> = {
+  white: "White",
+  black: "Black",
+  "heather-grey": "Heather Grey",
+  red: "Red",
+  "off-white": "Off White",
+  "dark-grey": "Dark Grey",
+  "dark-gray": "Dark Grey",
+};
+
+const COLOR_ORDER = ["white", "black", "heather-grey", "red", "off-white", "dark-grey"];
+
+const IMAGE_URL_KEYS = [
+  "frontImageUrl",
+  "backImageUrl",
+  "leftSleeveImageUrl",
+  "rightSleeveImageUrl",
+  "neckTagImageUrl",
+] as const;
+
 function now() {
   return new Date().toISOString();
+}
+
+function canonicalColorSlug(colorSlug: string) {
+  return colorSlug === "dark-gray" ? "dark-grey" : colorSlug;
+}
+
+function canonicalColorName(colorSlug: string, fallback: string) {
+  return CANONICAL_COLOR_NAMES[colorSlug] || fallback;
+}
+
+function variantCompletenessScore(variant: AdminMockupVariant) {
+  const imageCount = IMAGE_URL_KEYS.reduce((total, key) => total + (variant[key] ? 1 : 0), 0);
+  const additionalViewCount = Object.values(variant.additionalViews || {}).filter(Boolean).length;
+  const printAreaCount = Object.keys(variant.printAreas || {}).length;
+  return imageCount * 10 + additionalViewCount * 10 + printAreaCount;
+}
+
+function mergeDefinedRecord<T>(primary: Record<string, T> | undefined, secondary: Record<string, T> | undefined) {
+  return {
+    ...(secondary || {}),
+    ...(primary || {}),
+  };
+}
+
+function mergeMockupVariant(primary: AdminMockupVariant, secondary: AdminMockupVariant): AdminMockupVariant {
+  const colorSlug = canonicalColorSlug(primary.colorSlug || secondary.colorSlug);
+  const merged: AdminMockupVariant = {
+    ...secondary,
+    ...primary,
+    colorSlug,
+    colorName: canonicalColorName(colorSlug, primary.colorName || secondary.colorName),
+    additionalViews: mergeDefinedRecord(primary.additionalViews, secondary.additionalViews),
+    printAreas: mergeDefinedRecord(primary.printAreas, secondary.printAreas),
+    hasBakedPrintGuide: mergeDefinedRecord(primary.hasBakedPrintGuide, secondary.hasBakedPrintGuide),
+    editableViews: mergeDefinedRecord(primary.editableViews, secondary.editableViews),
+    active: primary.active || secondary.active,
+    createdAt: primary.createdAt < secondary.createdAt ? primary.createdAt : secondary.createdAt,
+    updatedAt: primary.updatedAt > secondary.updatedAt ? primary.updatedAt : secondary.updatedAt,
+  };
+
+  for (const key of IMAGE_URL_KEYS) {
+    merged[key] = primary[key] || secondary[key];
+  }
+
+  return merged;
+}
+
+function sortMockupVariants(variants: AdminMockupVariant[]) {
+  return [...variants].sort((left, right) => {
+    if (left.productId !== right.productId) return left.productId.localeCompare(right.productId);
+    const leftOrder = COLOR_ORDER.indexOf(left.colorSlug);
+    const rightOrder = COLOR_ORDER.indexOf(right.colorSlug);
+    const leftRank = leftOrder === -1 ? Number.MAX_SAFE_INTEGER : leftOrder;
+    const rightRank = rightOrder === -1 ? Number.MAX_SAFE_INTEGER : rightOrder;
+    if (leftRank !== rightRank) return leftRank - rightRank;
+    return left.colorName.localeCompare(right.colorName);
+  });
+}
+
+function dedupeMockupVariants(variants: AdminMockupVariant[]) {
+  const byColor = new Map<string, AdminMockupVariant>();
+
+  for (const variant of variants) {
+    const colorSlug = canonicalColorSlug(variant.colorSlug);
+    const normalizedVariant = {
+      ...variant,
+      colorSlug,
+      colorName: canonicalColorName(colorSlug, variant.colorName),
+    };
+    const key = `${normalizedVariant.productId}:${colorSlug}`;
+    const existing = byColor.get(key);
+    if (!existing) {
+      byColor.set(key, normalizedVariant);
+      continue;
+    }
+
+    const primary = variantCompletenessScore(normalizedVariant) > variantCompletenessScore(existing) ? normalizedVariant : existing;
+    const secondary = primary.id === normalizedVariant.id ? existing : normalizedVariant;
+    byColor.set(key, mergeMockupVariant(primary, secondary));
+  }
+
+  return sortMockupVariants([...byColor.values()]);
 }
 
 function createEmptyStore(): AdminCustomizerStore {
@@ -49,6 +152,7 @@ function createEmptyStore(): AdminCustomizerStore {
     mockupVariants: [],
     mediaAssets: [],
     ghostMannequinAssets: [],
+    customGhost360FrameSets: [],
     updatedAt: timestamp,
   };
 }
@@ -84,9 +188,10 @@ function normalizeStore(input: Partial<AdminCustomizerStore> | null | undefined)
   return {
     templates: Array.isArray(input?.templates) ? input.templates : fallback.templates,
     mockupProducts: mergeSeedProducts(inputProducts, fallback.mockupProducts),
-    mockupVariants: Array.isArray(input?.mockupVariants) ? input.mockupVariants : fallback.mockupVariants,
+    mockupVariants: dedupeMockupVariants(Array.isArray(input?.mockupVariants) ? input.mockupVariants : fallback.mockupVariants),
     mediaAssets: Array.isArray(input?.mediaAssets) ? input.mediaAssets : fallback.mediaAssets,
     ghostMannequinAssets: Array.isArray(input?.ghostMannequinAssets) ? input.ghostMannequinAssets : fallback.ghostMannequinAssets,
+    customGhost360FrameSets: Array.isArray(input?.customGhost360FrameSets) ? input.customGhost360FrameSets : fallback.customGhost360FrameSets,
     updatedAt: typeof input?.updatedAt === "string" ? input.updatedAt : fallback.updatedAt,
   };
 }
@@ -218,11 +323,18 @@ export async function upsertMockupVariant(input: unknown) {
   const existing = id ? store.mockupVariants.find((variant) => variant.id === id) : undefined;
   const normalized = normalizeMockupVariant(input, existing);
   if (!normalized.value) return normalized;
+  const normalizedVariant = normalized.value as AdminMockupVariant;
+  const existingColor = store.mockupVariants.find((variant) => (
+    variant.id !== normalizedVariant.id &&
+    variant.productId === normalizedVariant.productId &&
+    canonicalColorSlug(variant.colorSlug) === canonicalColorSlug(normalizedVariant.colorSlug)
+  ));
+  const mergedVariant = existingColor ? mergeMockupVariant(normalizedVariant, existingColor) : normalizedVariant;
   const nextVariants = existing
-    ? store.mockupVariants.map((variant) => (variant.id === existing.id ? normalized.value as AdminMockupVariant : variant))
-    : [normalized.value, ...store.mockupVariants];
-  await writeAdminCustomizerStore({ ...store, mockupVariants: nextVariants });
-  return { errors: [], value: normalized.value };
+    ? store.mockupVariants.map((variant) => (variant.id === existing.id ? mergedVariant : variant))
+    : [mergedVariant, ...store.mockupVariants];
+  await writeAdminCustomizerStore({ ...store, mockupVariants: dedupeMockupVariants(nextVariants) });
+  return { errors: [], value: mergedVariant };
 }
 
 export async function addMediaAsset(asset: AdminMediaAsset) {
@@ -254,4 +366,40 @@ export async function updateGhostMannequinAsset(
     ghostMannequinAssets: store.ghostMannequinAssets.map((asset) => (asset.id === id ? updated : asset)),
   });
   return { errors: [], value: updated };
+}
+
+export async function addCustomGhost360FrameSet(frameSet: CustomGhost360FrameSet) {
+  const store = await readAdminCustomizerStore();
+  await writeAdminCustomizerStore({ ...store, customGhost360FrameSets: [frameSet, ...store.customGhost360FrameSets] });
+  return frameSet;
+}
+
+export async function updateCustomGhost360FrameSet(
+  id: string,
+  updates: Partial<Omit<CustomGhost360FrameSet, "id" | "createdAt">>
+) {
+  const store = await readAdminCustomizerStore();
+  const existing = store.customGhost360FrameSets.find((frameSet) => frameSet.id === id);
+  if (!existing) return { errors: ["Custom Ghost 360 frame set not found."] };
+  const updated: CustomGhost360FrameSet = {
+    ...existing,
+    ...updates,
+    updatedAt: now(),
+  };
+  await writeAdminCustomizerStore({
+    ...store,
+    customGhost360FrameSets: store.customGhost360FrameSets.map((frameSet) => (frameSet.id === id ? updated : frameSet)),
+  });
+  return { errors: [], value: updated };
+}
+
+export async function repairAdminMockupVariants() {
+  const store = await readAdminCustomizerStore();
+  const nextVariants = dedupeMockupVariants(store.mockupVariants);
+  await writeAdminCustomizerStore({ ...store, mockupVariants: nextVariants });
+  return {
+    variantsBefore: store.mockupVariants.length,
+    variantsAfter: nextVariants.length,
+    variants: nextVariants,
+  };
 }

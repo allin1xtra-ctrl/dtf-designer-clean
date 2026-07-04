@@ -1,0 +1,121 @@
+{
+  "templates": [],
+  "mockupProducts": [
+    {
+      "id": "t-shirts",
+      "name": "T-Shirts",
+      "slug": "t-shirts",
+      "type": "t-shirts",
+      "views": [
+        "front",
+        "back",
+        "leftSleeve",
+        "rightSleeve",
+        "neckTag"
+      ],
+      "active": true,
+      "createdAt": "2026-07-02T04:46:03.193Z",
+      "updatedAt": "2026-07-02T04:46:03.193Z"
+    },
+    {
+      "id": "hoodies",
+      "name": "Hoodies",
+      "slug": "hoodies",
+      "type": "hoodies",
+      "views": [
+        "front",
+        "back",
+        "leftSleeve",
+        "rightSleeve",
+        "neckTag"
+      ],
+      "active": true,
+      "createdAt": "2026-07-02T04:46:03.193Z",
+      "updatedAt": "2026-07-02T04:46:03.193Z"
+    },
+    {
+      "id": "jerseys",
+      "name": "Jerseys",
+      "slug": "jerseys",
+      "type": "jerseys",
+      "views": [
+        "front",
+        "back",
+        "leftSleeve",
+        "rightSleeve",
+        "neckTag"
+      ],
+      "active": true,
+      "createdAt": "2026-07-02T04:46:03.193Z",
+      "updatedAt": "2026-07-02T04:46:03.193Z"
+    },
+    {
+      "id": "shorts",
+      "name": "Shorts",
+      "slug": "shorts",
+      "type": "shorts",
+      "views": [
+        "front",
+        "back",
+        "leftLeg",
+        "rightLeg"
+      ],
+      "active": true,
+      "createdAt": "2026-07-02T04:46:03.193Z",
+      "updatedAt": "2026-07-02T04:46:03.193Z"
+    },
+    {
+      "id": "pants",
+      "name": "Pants",
+      "slug": "pants",
+      "type": "pants",
+      "views": [
+        "front",
+        "back",
+        "leftLeg",
+        "rightLeg"
+      ],
+      "active": true,
+      "createdAt": "2026-07-02T04:46:03.193Z",
+      "updatedAt": "2026-07-02T04:46:03.193Z"
+    },
+    {
+      "id": "jackets",
+      "name": "Jackets",
+      "slug": "jackets",
+      "type": "jackets",
+      "views": [
+        "front",
+        "back",
+        "leftSleeve",
+        "rightSleeve",
+        "chest",
+        "neckTag"
+      ],
+      "active": true,
+      "createdAt": "2026-07-02T04:46:03.193Z",
+      "updatedAt": "2026-07-02T04:46:03.193Z"
+    },
+    {
+      "id": "sweaters",
+      "name": "Sweaters",
+      "slug": "sweaters",
+      "type": "sweaters",
+      "views": [
+        "front",
+        "back",
+        "leftSleeve",
+        "rightSleeve",
+        "neckTag"
+      ],
+      "active": true,
+      "createdAt": "2026-07-02T04:46:03.193Z",
+      "updatedAt": "2026-07-02T04:46:03.193Z"
+    }
+  ],
+  "mockupVariants": [],
+  "mediaAssets": [],
+  "ghostMannequinAssets": [],
+  "customGhost360FrameSets": [],
+  "updatedAt": "2026-07-04T20:37:44.236Z"
+}

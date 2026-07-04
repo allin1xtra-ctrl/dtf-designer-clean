@@ -1,4 +1,5 @@
 import { cleanEnv, getProductByHandle } from "../../../lib/shopify.js";
+import { readAdminCustomizerStore } from "../../../../lib/admin-customizer/store";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +10,58 @@ const NO_STORE_HEADERS = {
   Pragma: "no-cache",
   Expires: "0",
 };
+
+function normalizeProductId(productId) {
+  const trimmed = String(productId || "").trim();
+  if (!trimmed) return "";
+  if (trimmed.startsWith("gid://shopify/Product/")) return trimmed;
+  if (/^\d+$/.test(trimmed)) return `gid://shopify/Product/${trimmed}`;
+  return trimmed;
+}
+
+function productIdAliases(productId) {
+  const normalized = normalizeProductId(productId);
+  const numeric = normalized.startsWith("gid://shopify/Product/") ? normalized.split("/").pop() : "";
+  return new Set([String(productId || ""), normalized, numeric].filter(Boolean));
+}
+
+async function getCustomGhost360FrameSets(product) {
+  const store = await readAdminCustomizerStore();
+  const aliases = productIdAliases(product?.id);
+  return (store.customGhost360FrameSets || [])
+    .filter((frameSet) => {
+      const frameSetProductId = normalizeProductId(frameSet.productId || "");
+      return (
+        frameSet.enabled &&
+        frameSet.frames?.length > 0 &&
+        (
+          aliases.has(frameSetProductId) ||
+          aliases.has(String(frameSet.productId || "")) ||
+          (frameSet.productHandle && frameSet.productHandle === product.handle)
+        )
+      );
+    })
+    .map((frameSet) => ({
+      id: frameSet.id,
+      name: frameSet.name,
+      productId: frameSet.productId,
+      productHandle: frameSet.productHandle,
+      enabled: frameSet.enabled,
+      frameCount: frameSet.frameCount || frameSet.frames.length,
+      fallbackImageUrl: frameSet.fallbackImageUrl,
+      effectStyle: frameSet.effectStyle,
+      frames: [...frameSet.frames]
+        .sort((left, right) => left.order - right.order)
+        .map((frame) => ({
+          id: frame.id,
+          label: frame.label,
+          imageUrl: frame.imageUrl,
+          order: frame.order,
+          width: frame.width,
+          height: frame.height,
+        })),
+    }));
+}
 
 export async function GET(req, context) {
   const params = await context.params;
@@ -67,6 +120,7 @@ export async function GET(req, context) {
 
     const normalizedProduct = {
       ...product,
+      customGhost360FrameSets: await getCustomGhost360FrameSets(product),
       variants: Array.isArray(product.variants)
         ? product.variants.map((variant) => ({
             ...variant,
