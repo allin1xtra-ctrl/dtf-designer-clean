@@ -10,6 +10,7 @@ const ADMIN_LINKS = [
   ["Media Library", "/admin/media"],
   ["Customizer Setup", "/admin/customizer-setup"],
   ["AI Doctor", "/admin/ai-doctor"],
+  ["Settings", "/admin/settings"],
 ] as const;
 
 export default function AdminNav() {
