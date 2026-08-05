@@ -123,6 +123,7 @@ export default function AdminProductTypesPage() {
 
   useEffect(() => {
     let isActive = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadMockups().catch(() => {
       if (isActive) setStatus("Unable to load mockup products.");
     });
@@ -132,6 +133,7 @@ export default function AdminProductTypesPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPrintAreas((current) => {
       const next = { ...current };
       selectedViews.forEach((viewId) => {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 
+function CartIntegration({ product, loading }) {
   const [status, setStatus] = useState("");
   const [artworkUrl, setArtworkUrl] = useState("");
   const [variantId, setVariantId] = useState("");
@@ -13,6 +14,7 @@ import { useState, useEffect, useRef } from "react";
     const params = new URLSearchParams(window.location.search);
     const urlVariant = params.get("variant");
     if (urlVariant) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setVariantId(urlVariant);
       setVariantIdManuallyEditable(false);
       return;
@@ -148,7 +150,5 @@ import { useState, useEffect, useRef } from "react";
     </div>
   );
 }
-
-export default CartIntegration;
 
 export default CartIntegration;

@@ -9,7 +9,7 @@ const SHOPIFY_ADMIN_ACCESS_TOKEN = cleanEnv(process.env.SHOPIFY_ADMIN_ACCESS_TOK
 const SHOPIFY_ADMIN_API_VERSION = cleanEnv(process.env.SHOPIFY_ADMIN_API_VERSION) || "2024-10";
 const ADMIN_PANEL_TOKEN = cleanEnv(process.env.ADMIN_PANEL_TOKEN);
 
-const shopifyFetch = async (endpoint: string, options: any = {}) => {
+const shopifyFetch = async (endpoint: string, options: RequestInit & { headers?: Record<string, string> } = {}) => {
   const url = `https://${SHOPIFY_STORE_DOMAIN}/admin/api/${SHOPIFY_ADMIN_API_VERSION}${endpoint}`;
   const headers = {
     "Content-Type": "application/json",
