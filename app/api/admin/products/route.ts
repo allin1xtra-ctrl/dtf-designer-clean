@@ -1,290 +1,101 @@
-import { NextRequest, NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+  "Poppins",
+  "League Spartan",
+  "Playfair Display",
+  "Pacifico",
+  "Lobster",
+  "Great Vibes",
+  "Dancing Script",
+  "Bangers",
+  "Permanent Marker",
+  "Black Ops One",
+  "Racing Sans One",
+  "Graduate",
+  "Cinzel",
+  "Russo One",
+  "Archivo Black",
+  "Inter",
+  "Roboto",
+  "Open Sans",
+  "Lato",
+  "Raleway",
+  "Nunito",
+  "Work Sans",
+]);
 
-const NO_STORE_HEADERS = {
-  "Cache-Control": "no-store, no-cache, must-revalidate",
-  Pragma: "no-cache",
-  Expires: "0",
+const fontLoadCache = new Map<string, Promise<void>>();
+const SNAP_TO_CENTER_THRESHOLD = 8;
+const SNAP_TO_CENTER_THRESHOLD = 4;
+const LOW_RESOLUTION_UPLOAD_EDGE = 900;
+const MAX_HISTORY_STATES = 60;
+
+const VIEW_LABELS: Record<ViewName, string> = {
+  front: "Front",
+  back: "Back",
+  leftSleeve: "Left Sleeve",
+  rightSleeve: "Right Sleeve",
+  neck: "Neck Label",
 };
 
-function cleanDomain(domain: string) {
-  return String(domain || "")
-    .trim()
-    .replace(/^https?:\/\//, "")
-    .replace(/\/$/, "");
+function isViewName(value: unknown): value is ViewName {
+  return typeof value === "string" && VIEW_NAMES.includes(value as ViewName);
 }
 
-function cleanEnv(value: unknown) {
-  return String(value || "").trim();
-}
+type CanvasSnapshot = ReturnType<Canvas["toJSON"]>;
+type DraftPayload = {
+  version: number;
+  productHandle: string;
+  variantId: string;
+  selectedColor: string;
+  selectedSize: string;
+  transferSize: string;
+  quantity: number;
+  currentView: ViewName;
+  });
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+  const [aiStatus, setAiStatus] = useState("");
+  const [activeAiAction, setActiveAiAction] = useState("");
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [designIdeaPrompt, setDesignIdeaPrompt] = useState("");
+  const [draftStatus, setDraftStatus] = useState("");
+  const [previewScale, setPreviewScale] = useState(1);
+  const [mockupNaturalSize, setMockupNaturalSize] = useState({ width: 0, height: 0 });
+  const [mockupLoadFailed, setMockupLoadFailed] = useState(false);
+  const [textControls, setTextControls] = useState<TextControlsState>(DEFAULT_TEXT_CONTROLS);
+  const printableAreaRef = useRef({ left: 0, top: 0, width: 0, height: 0 });
+  const shouldDebugAiLogRef = useRef(false);
+  const lastSentIframeHeightRef = useRef(0);
+  const draftAutosaveTimerRef = useRef<number | null>(null);
+  const lastSavedDraftRef = useRef("");
+  const restoredDraftKeyRef = useRef("");
+  const isRestoringDraftRef = useRef(false);
+  const isClearingDraftRef = useRef(false);
+  const suspendAutosaveRef = useRef(true);
+  const historyPastRef = useRef<CanvasSnapshot[]>([]);
+  const historyFutureRef = useRef<CanvasSnapshot[]>([]);
+  const isApplyingHistoryRef = useRef(false);
+  const historyTimerRef = useRef<number | null>(null);
+  const isCanvasObjectInteractingRef = useRef(false);
+  const pendingPreviewScaleUpdateRef = useRef(false);
+  const updatePreviewScaleRef = useRef<(() => void) | null>(null);
 
-function getAdminConfig() {
-  const storeDomain = cleanDomain(process.env.SHOPIFY_STORE_DOMAIN || "");
+  const viewsRef = useRef<Record<ViewName, CanvasSnapshot | null>>(createEmptyViews());
+  const uploadedArtworkByViewRef = useRef<Record<ViewName, string>>(createEmptyUploadedArtworkByView());
 
-  const apiVersion =
-    cleanEnv(process.env.SHOPIFY_ADMIN_API_VERSION) || "2024-10";
+  const getCanvas = () => fabricCanvasRef.current;
+  const normalizedProductHandle = productHandle.trim();
+  const normalizedVariantId = normalizeVariantId(variantId) || variantId;
+  const draftStorageKey = `${DRAFT_STORAGE_KEY_PREFIX}:${normalizedProductHandle || "standalone"}:${
+    normalizedVariantId || "default"
+  }`;
 
-  const adminAccessToken = cleanEnv(process.env.SHOPIFY_ADMIN_ACCESS_TOKEN);
-  const panelToken = cleanEnv(process.env.ADMIN_PANEL_TOKEN);
-
-  return {
-    storeDomain,
-    apiVersion,
-    adminAccessToken,
-    panelToken,
+  const cancelDraftAutosave = () => {
+    if (draftAutosaveTimerRef.current === null) return;
+    window.clearTimeout(draftAutosaveTimerRef.current);
+    draftAutosaveTimerRef.current = null;
   };
-}
 
-function getSafeDiagnostics({
-  storeDomain,
-  adminAccessToken,
-  shopifyStatus,
-  shopifyStatusText,
-  errorType,
-}: {
-  storeDomain: string;
-  adminAccessToken: string;
-  shopifyStatus?: number;
-  shopifyStatusText?: string;
-  errorType: string;
-}) {
-  return {
-    shopifyAdminAccessTokenExists: Boolean(adminAccessToken),
-    shopDomain: storeDomain || null,
-    shopifyStatus: shopifyStatus ?? null,
-    shopifyStatusText: shopifyStatusText || null,
-    errorType,
-  };
-}
-
-type ShopifyProductNode = {
-  id: string;
-  title: string;
-  handle: string;
-  featuredImage: {
-    url: string;
-    altText?: string | null;
-  } | null;
-  variants: {
-    nodes: Array<{
-      id: string;
-      title: string;
-    }>;
-  };
-  metafield: {
-    value: string;
-    type: string;
-  } | null;
-};
-
-type ShopifyAdminProductsResponse = {
-  data?: {
-    products?: {
-      nodes?: ShopifyProductNode[];
-    };
-  };
-  errors?: Array<{ message?: string }>;
-};
-
-export async function GET(req: NextRequest) {
-  const { storeDomain, apiVersion, adminAccessToken, panelToken } = getAdminConfig();
-
-  const token = String(
-    req.headers.get("x-admin-token")
-      || req.headers.get("authorization")?.replace("Bearer ", "")
-      || req.nextUrl.searchParams.get("token")
-      || ""
-  ).trim();
-
-  if (!panelToken) {
-    return NextResponse.json(
-      {
-        error: "Missing ADMIN_PANEL_TOKEN configuration.",
-      },
-      {
-        status: 500,
-        headers: NO_STORE_HEADERS,
-      }
-    );
-  }
-
-  if (!token || token !== panelToken) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      {
-        status: 401,
-        headers: NO_STORE_HEADERS,
-      }
-    );
-  }
-
-  if (!storeDomain) {
-    return NextResponse.json(
-      {
-        error: "Missing SHOPIFY_STORE_DOMAIN configuration.",
-        diagnostics: getSafeDiagnostics({
-          storeDomain,
-          adminAccessToken,
-          errorType: "missing_shop_domain",
-        }),
-      },
-      {
-        status: 500,
-        headers: NO_STORE_HEADERS,
-      }
-    );
-  }
-
-  if (!adminAccessToken) {
-    return NextResponse.json(
-      {
-        error: "SHOPIFY_ADMIN_ACCESS_TOKEN is not configured",
-        diagnostics: getSafeDiagnostics({
-          storeDomain,
-          adminAccessToken,
-          errorType: "missing_shopify_admin_access_token",
-        }),
-      },
-      {
-        status: 500,
-        headers: NO_STORE_HEADERS,
-      }
-    );
-  }
-
-  const query = `
-    query AdminMockupProducts($first: Int!) {
-      products(first: $first) {
-        nodes {
-          id
-          title
-          handle
-          featuredImage {
-            url
-            altText
-          }
-          variants(first: 50) {
-            nodes {
-              id
-              title
-            }
-          }
-          metafield(namespace: "dtf", key: "print_locations") {
-            value
-            type
-          }
-        }
-      }
-    }
-  `;
-
-  try {
-    const response = await fetch(
-      `https://${storeDomain}/admin/api/${apiVersion}/graphql.json`,
-      {
-        method: "POST",
-        cache: "no-store",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Shopify-Access-Token": adminAccessToken,
-        },
-        body: JSON.stringify({
-          query,
-          variables: {
-            first: 100,
-          },
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      return NextResponse.json(
-        {
-          error: "Shopify Admin API request failed.",
-          shopifyStatus: response.status,
-          shopifyStatusText: response.statusText,
-          diagnostics: getSafeDiagnostics({
-            storeDomain,
-            adminAccessToken,
-            shopifyStatus: response.status,
-            shopifyStatusText: response.statusText,
-            errorType: "shopify_admin_api_http_error",
-          }),
-        },
-        {
-          status: 502,
-          headers: NO_STORE_HEADERS,
-        }
-      );
-    }
-
-    const json = (await response.json().catch(() => ({}))) as ShopifyAdminProductsResponse;
-
-    if (json.errors?.length) {
-      return NextResponse.json(
-        {
-          error: "Shopify Admin GraphQL returned errors.",
-          details: json.errors,
-          diagnostics: getSafeDiagnostics({
-            storeDomain,
-            adminAccessToken,
-            shopifyStatus: response.status,
-            shopifyStatusText: response.statusText,
-            errorType: "shopify_admin_graphql_error",
-          }),
-        },
-        {
-          status: 502,
-          headers: NO_STORE_HEADERS,
-        }
-      );
-    }
-
-    const products = (json.data?.products?.nodes || []).map((product) => ({
-      id: product.id,
-      title: product.title,
-      handle: product.handle,
-      featuredImage: product.featuredImage
-        ? {
-            url: product.featuredImage.url,
-            altText: product.featuredImage.altText || null,
-          }
-        : null,
-      variants: (product.variants?.nodes || []).map((variant) => ({
-        id: variant.id,
-        title: variant.title,
-      })),
-      metafield: product.metafield
-        ? {
-            value: product.metafield.value,
-            type: product.metafield.type,
-          }
-        : null,
-    }));
-
-    return NextResponse.json(
-      { products },
-      { headers: NO_STORE_HEADERS }
-    );
-  } catch (error) {
-    return NextResponse.json(
-      {
-        error: "Failed to fetch products from Shopify Admin API.",
-        diagnostics: getSafeDiagnostics({
-          storeDomain,
-          adminAccessToken,
-          errorType:
-            error instanceof Error
-              ? error.name || "Error"
-              : typeof error,
-        }),
-      },
-      {
-        status: 500,
-        headers: NO_STORE_HEADERS,
-      }
-    );
-  }
-}
+  const captureViewSnapshot = (
+    canvasOverride?: Canvas | null,
+    viewOverride?: ViewName
