@@ -114,6 +114,7 @@
   width: 100%;
   min-height: var(--desktop-min-height);
   height: var(--desktop-min-height);
+  transition: height 0.3s ease;
   border: none;
   border-radius: 14px;
   display: block;
@@ -185,6 +186,7 @@
   }
 
   applyHeight(minHeight());
+  var resizeDebounceTimer;
 
   window.addEventListener('resize', function () {
     applyHeight(Math.max(minHeight(), parseInt(iframe.style.height || '0', 10) || 0));
@@ -203,7 +205,10 @@
     }
 
     if (Number.isFinite(requestedHeight) && requestedHeight > 0) {
-      applyHeight(Math.max(requestedHeight, minHeight()));
+      clearTimeout(resizeDebounceTimer);
+      resizeDebounceTimer = setTimeout(function () {
+        applyHeight(Math.max(requestedHeight, minHeight()));
+      }, 150);
     }
   });
 })();
