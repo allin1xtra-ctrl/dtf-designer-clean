@@ -1,7 +1,7 @@
 "use client";
 
-import CustomizerPrototype from "@/components/customizer-preview/CustomizerPrototype";
+import CustomizerProductionShell from "@/components/customizer-preview/CustomizerProductionShell";
 
 export default function CustomizerPage() {
-  return <CustomizerPrototype />;
+  return <CustomizerProductionShell />;
 }
