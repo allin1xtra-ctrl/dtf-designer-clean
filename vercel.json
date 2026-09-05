@@ -5,12 +5,8 @@
       "source": "/(.*)",
       "headers": [
         {
-          "key": "X-Frame-Options",
-          "value": "ALLOWALL"
-        },
-        {
           "key": "Content-Security-Policy",
-          "value": "frame-ancestors *"
+          "value": "frame-ancestors 'self' https://ta-apparel.com https://www.ta-apparel.com https://yourdtfplug.com https://www.yourdtfplug.com https://*.myshopify.com https://admin.shopify.com"
         }
       ]
     }
