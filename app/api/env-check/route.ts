@@ -9,6 +9,7 @@ export async function GET() {
   const nextPublicShopifyStorefrontAccessTokenExists = Boolean(
     process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN
   );
+  const openAiApiKeyExists = Boolean(process.env.OPENAI_API_KEY);
 
   return Response.json({
     SHOPIFY_STORE_DOMAIN_EXISTS: shopifyStoreDomainExists,
@@ -21,6 +22,8 @@ export async function GET() {
       (shopifyStoreDomainExists || nextPublicShopifyStoreDomainExists) &&
       (shopifyStorefrontAccessTokenExists ||
         nextPublicShopifyStorefrontAccessTokenExists),
+    OPENAI_API_KEY_EXISTS: openAiApiKeyExists,
+    AI_PROVIDER_CONFIGURED: openAiApiKeyExists,
     NODE_ENV: process.env.NODE_ENV,
     VERCEL_ENV: process.env.VERCEL_ENV,
   });
