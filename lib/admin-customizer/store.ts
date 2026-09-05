@@ -102,14 +102,20 @@ function createSupabaseStoreClient() {
 async function readSupabaseStore(): Promise<AdminCustomizerStore | null> {
   const supabase = createSupabaseStoreClient();
   if (!supabase) return null;
-  const { data, error } = await supabase
-    .from(SUPABASE_STORE_TABLE)
-    .select("data")
-    .eq("store_key", SUPABASE_STORE_KEY)
-    .maybeSingle();
 
-  if (error) throw new Error(`Admin customizer store read failed: ${error.message}`);
-  return normalizeStore(data?.data as Partial<AdminCustomizerStore> | undefined);
+  try {
+    const { data, error } = await supabase
+      .from(SUPABASE_STORE_TABLE)
+      .select("data")
+      .eq("store_key", SUPABASE_STORE_KEY)
+      .maybeSingle();
+
+    if (error) throw new Error(`Admin customizer store read failed: ${error.message}`);
+    return normalizeStore(data?.data as Partial<AdminCustomizerStore> | undefined);
+  } catch (error) {
+    console.warn("[admin-customizer] Supabase store read failed; using fallback store.", error);
+    return null;
+  }
 }
 
 async function writeSupabaseStore(store: AdminCustomizerStore) {
