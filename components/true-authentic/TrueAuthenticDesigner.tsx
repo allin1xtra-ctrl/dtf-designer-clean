@@ -156,7 +156,16 @@ export default function TrueAuthenticDesigner() {
         <h2><span>1</span> Set up your design</h2>
         <label>Print size (inches)<select aria-label="Print size" disabled={busy} value={`${design.width}x${design.height}`} onChange={event => {
           const [width,height] = event.target.value.split("x").map(Number);
-          commit({ ...design, width, height, layers: design.layers.map(layer => ({ ...layer, height: clamp(layer.height * (height ? design.height/height : 1) * width/design.width,1,100) })) });
+          const layers = design.layers.map(layer => {
+            const nextHeight = layer.height * design.height / height * width / design.width;
+            const scale = Math.min(1, 100 / nextHeight);
+            return { ...layer, width: layer.width * scale, height: nextHeight * scale };
+          });
+          if (layers.some(layer => layer.width < 1 || layer.height < 1)) {
+            setStatus("A very thin layer cannot fit this print shape. Resize or remove it before changing print size.");
+            return;
+          }
+          commit({ ...design, width, height, layers });
         }}>
           {!SIZES.some(([w,h]) => w===design.width && h===design.height) && <option>{design.width}x{design.height}</option>}
           {SIZES.map(([w,h]) => <option key={`${w}x${h}`} value={`${w}x${h}`}>{w} × {h}</option>)}
