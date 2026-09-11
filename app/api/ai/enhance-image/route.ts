@@ -1,3 +1,4 @@
+import { aiUnavailable } from "../_availability";
 import sharp from "sharp";
 import {
   errorJson,
@@ -14,6 +15,7 @@ type EnhanceImageBody = {
 };
 
 export async function POST(request: Request) {
+  if (process.env.CUSTOMIZER_AI_ENABLED !== "true") return aiUnavailable();
   const body = await readJsonBody<EnhanceImageBody>(request);
   const parsed = parseImageDataUrl(body.imageDataUrl);
 

@@ -1,4 +1,4 @@
-import CustomizerPrototype from "@/components/customizer-preview/CustomizerPrototype";
+import CustomizerProductionShell from "@/components/customizer-preview/CustomizerProductionShell";
 
 export const metadata = {
   title: "Custom Design Studio Preview",
@@ -9,5 +9,5 @@ export const metadata = {
 };
 
 export default function CustomizerPreviewPage() {
-  return <CustomizerPrototype />;
+  return <CustomizerProductionShell />;
 }

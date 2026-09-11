@@ -1,3 +1,4 @@
+import { aiUnavailable } from "../_availability";
 import sharp from "sharp";
 import {
   errorJson,
@@ -16,6 +17,7 @@ type UpscaleSharpenBody = {
 };
 
 export async function POST(request: Request) {
+  if (process.env.CUSTOMIZER_AI_ENABLED !== "true") return aiUnavailable();
   const body = await readJsonBody<UpscaleSharpenBody>(request);
   const parsed = parseImageDataUrl(body.imageDataUrl);
 

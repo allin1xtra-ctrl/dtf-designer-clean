@@ -30,7 +30,7 @@ const nextConfig = {
           {
             key: "Content-Security-Policy",
             value:
-              "frame-ancestors 'self' https://ta-apparel.com https://www.ta-apparel.com https://yourdtfplug.com https://www.yourdtfplug.com https://*.myshopify.com https://admin.shopify.com;",
+              "frame-ancestors 'self' https://ta-apparel.com https://www.ta-apparel.com https://*.myshopify.com https://admin.shopify.com;",
           },
         ],
       },

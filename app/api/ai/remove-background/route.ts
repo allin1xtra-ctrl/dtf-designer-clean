@@ -1,3 +1,4 @@
+import { aiUnavailable } from "../_availability";
 import OpenAI, { toFile } from "openai";
 import type { ImageEditParamsNonStreaming } from "openai/resources/images";
 import { NextResponse } from "next/server";
@@ -170,6 +171,7 @@ function buildRemoveBackgroundParams(
 }
 
 export async function POST(request: Request) {
+  if (process.env.CUSTOMIZER_AI_ENABLED !== "true") return aiUnavailable();
   const requestId = createAiRequestId();
   const openaiKeyExists = Boolean(process.env.OPENAI_API_KEY);
   let diagnostics = createDiagnostics(requestId, { openaiKeyExists });

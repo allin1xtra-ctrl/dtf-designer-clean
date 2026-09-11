@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Custom Design Studio | Your Favorite T-Shirt",
+  title: { absolute: "DTF Design Studio | True Authentic" },
   description:
-    "Upload artwork, use editable templates, preview mockups, and prepare DTF transfers, gang sheets, and apparel designs.",
+    "Create your custom print layout with True Authentic. Upload artwork, add text, preview placement and download your design.",
+  alternates: { canonical: "https://www.ta-apparel.com/pages/customizer" },
 };
 
 export default function CustomizerLayout({

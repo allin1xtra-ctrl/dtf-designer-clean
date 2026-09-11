@@ -1,3 +1,4 @@
+import { aiUnavailable } from "../_availability";
 import OpenAI from "openai";
 import type { ImageGenerateParamsNonStreaming } from "openai/resources/images";
 import { NextResponse } from "next/server";
@@ -213,6 +214,7 @@ async function generateImage(openai: OpenAI, model: string, prompt: string) {
 }
 
 export async function POST(request: Request) {
+  if (process.env.CUSTOMIZER_AI_ENABLED !== "true") return aiUnavailable();
   const requestId = createAiRequestId();
   const body = await readJsonBody<GenerateDesignBody>(request);
   const prompt = typeof body?.prompt === "string" ? body.prompt.trim() : "";
