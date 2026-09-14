@@ -196,42 +196,55 @@ export default function AdminProductTypesPage() {
     }, {}));
   }
 
+  async function postMockup(payload: unknown) {
+    try {
+      const response = await fetch("/api/admin/customizer-mockups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      return { ok: response.ok, result: await response.json().catch(() => ({})) };
+    } catch {
+      return { ok: false, result: { errors: ["The save could not reach the server. Your existing mockups are unchanged."] } };
+    }
+  }
+
   async function uploadMockupImage(viewId: string, event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
     setUploadingViewId(viewId);
     setStatus(`Uploading ${getViewLabel(viewId)} mockup image...`);
-    const formData = new FormData();
-    formData.append("file", file);
-    const response = await fetch("/api/admin/customizer-media", { method: "POST", body: formData });
-    const result = await response.json().catch(() => ({}));
-    setUploadingViewId("");
-    if (!response.ok || !result.mediaAsset?.url) {
-      const message = Array.isArray(result.errors)
-        ? result.errors.join(" ")
-        : Array.isArray(result.warnings)
-          ? result.warnings.join(" ")
-          : "Upload did not return a hosted mockup URL.";
-      setStatus(message);
-      return;
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch("/api/admin/customizer-media", { method: "POST", body: formData });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.mediaAsset?.url) {
+        const message = Array.isArray(result.errors)
+          ? result.errors.join(" ")
+          : Array.isArray(result.warnings)
+            ? result.warnings.join(" ")
+            : "Upload did not return a hosted mockup URL.";
+        setStatus(message);
+        return;
+      }
+      setViewImageUrls((current) => ({ ...current, [viewId]: result.mediaAsset.url }));
+      const warnings = Array.isArray(result.warnings) ? ` ${result.warnings.join(" ")}` : "";
+      setStatus(`${getViewLabel(viewId)} mockup uploaded and ready to save.${warnings}`);
+    } catch {
+      setStatus("Mockup upload failed. Check your connection and try again; your existing images are unchanged.");
+    } finally {
+      setUploadingViewId("");
     }
-    setViewImageUrls((current) => ({ ...current, [viewId]: result.mediaAsset.url }));
-    const warnings = Array.isArray(result.warnings) ? ` ${result.warnings.join(" ")}` : "";
-    setStatus(`${getViewLabel(viewId)} mockup uploaded and ready to save.${warnings}`);
   }
 
   async function saveProduct(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const name = productName.trim();
     const type = slugify(productHandle || productName);
-    const response = await fetch("/api/admin/customizer-mockups", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ kind: "product", product: { id: type, name, slug: type, type, views: productViews, active: productActive } }),
-    });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) {
+    const { ok, result } = await postMockup({ kind: "product", product: { id: type, name, slug: type, type, views: productViews, active: productActive } });
+    if (!ok) {
       setStatus(Array.isArray(result.errors) ? result.errors.join(" ") : "Product type save failed.");
       return;
     }
@@ -255,10 +268,7 @@ export default function AdminProductTypesPage() {
       else additionalViews[viewId] = value;
     });
 
-    const response = await fetch("/api/admin/customizer-mockups", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const { ok, result } = await postMockup({
         kind: "variant",
         variant: {
           productId: variantProductId,
@@ -276,11 +286,9 @@ export default function AdminProductTypesPage() {
             return views;
           }, {}),
           active: activeVariant,
-        },
-      }),
+        }
     });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) {
+    if (!ok) {
       setStatus(Array.isArray(result.errors) ? result.errors.join(" ") : "Mockup variant save failed.");
       return;
     }

@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { NextResponse } from "next/server";
 
 import { AI_IMAGE_MODEL } from "../_utils";
+import { aiUnavailable } from "../_availability";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,6 +10,7 @@ export const revalidate = 0;
 export const maxDuration = 15;
 
 export async function GET() {
+  if (process.env.CUSTOMIZER_AI_ENABLED !== "true") return aiUnavailable();
   const configured = Boolean(process.env.OPENAI_API_KEY);
   if (!configured) {
     return NextResponse.json(

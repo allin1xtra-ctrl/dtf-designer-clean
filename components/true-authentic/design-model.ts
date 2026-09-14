@@ -20,7 +20,7 @@ export function parseDesign(raw: string): Design {
   const ids = new Set<string>();
   for (const layer of design.layers) {
     if (!layer || typeof layer.id !== "string" || ids.has(layer.id) || typeof layer.name !== "string" || layer.name.length > 200 ||
-        !finite(layer.x, 0, 100) || !finite(layer.y, 0, 100) || !finite(layer.width, 1, 100) || !finite(layer.height, 1, 100) ||
+        !finite(layer.x, 0, 100) || !finite(layer.y, 0, 100) || !finite(layer.width, 0.01, 100) || !finite(layer.height, 0.01, 100) ||
         !finite(layer.rotation, -180, 180)) throw new Error("The project contains an invalid layer.");
     ids.add(layer.id);
     if (layer.type === "image") {

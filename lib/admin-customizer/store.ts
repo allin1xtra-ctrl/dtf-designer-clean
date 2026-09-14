@@ -113,8 +113,9 @@ async function readSupabaseStore(): Promise<AdminCustomizerStore | null> {
     if (error) throw new Error(`Admin customizer store read failed: ${error.message}`);
     return normalizeStore(data?.data as Partial<AdminCustomizerStore> | undefined);
   } catch (error) {
-    console.warn("[admin-customizer] Supabase store read failed; using fallback store.", error);
-    return null;
+    console.warn("[admin-customizer] Supabase store read failed.", error);
+    // Never let a later save replace the configured database with fallback data.
+    throw new Error("Mockup storage is temporarily unavailable. Please retry before saving.");
   }
 }
 

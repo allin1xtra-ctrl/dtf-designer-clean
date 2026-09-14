@@ -1,0 +1,22 @@
+<section class="ta-studio" aria-labelledby="ta-studio-title">
+  <div class="ta-studio__hero">
+    <p class="ta-studio__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+    <h1 id="ta-studio-title">{{ section.settings.heading | escape }}</h1>
+    <p>{{ section.settings.text | escape }}</p>
+    <ul aria-label="Available print areas">
+      <li>Front</li><li>Back</li><li>Left sleeve</li><li>Right sleeve</li><li>Neck</li>
+    </ul>
+  </div>
+  <div class="ta-studio__frame-wrap">
+    {%- assign app_url = section.settings.app_url | default: 'https://dtf-designer-clean.vercel.app/customizer' -%}
+    <iframe class="ta-studio__frame" src="{{ app_url | escape }}" title="True Authentic custom apparel designer" loading="eager" allow="clipboard-write" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+  </div>
+</section>
+
+{% stylesheet %}
+  .ta-studio{background:#101916;color:#f7f3eb}.ta-studio__hero{max-width:1100px;margin:auto;padding:56px 24px 34px;text-align:center}.ta-studio__eyebrow{color:#f3ac7c;text-transform:uppercase;letter-spacing:.16em;font-size:12px;font-weight:700}.ta-studio h1{font-size:clamp(38px,7vw,82px);line-height:.95;margin:12px 0 18px}.ta-studio__hero>p:last-of-type{max-width:680px;margin:0 auto 20px;font-size:18px;line-height:1.6}.ta-studio ul{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;list-style:none;padding:0;margin:0}.ta-studio li{border:1px solid #546158;border-radius:999px;padding:8px 13px;font-size:13px}.ta-studio__frame-wrap{height:max(680px,100dvh);background:#101916}.ta-studio__frame{display:block;width:100%;height:100%;border:0;background:#101916}@media(max-width:600px){.ta-studio__hero{padding:34px 16px 24px}.ta-studio__hero>p:last-of-type{font-size:15px}.ta-studio__frame-wrap{height:max(620px,100dvh)}}
+{% endstylesheet %}
+
+{% schema %}
+{"name":"TA apparel studio","settings":[{"type":"text","id":"eyebrow","label":"Eyebrow","default":"Custom apparel by True Authentic"},{"type":"text","id":"heading","label":"Heading","default":"Your vision. Your garment."},{"type":"textarea","id":"text","label":"Text","default":"Upload your artwork, personalize every side, and preview your custom apparel before our team confirms the order."},{"type":"url","id":"app_url","label":"App URL"}],"presets":[{"name":"TA apparel studio"}]}
+{% endschema %}

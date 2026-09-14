@@ -1,0 +1,12 @@
+{
+  "sections": {
+    "ta_premium_home": {
+      "type": "ta-premium-home",
+      "settings": {
+        "featured_product": "", "collection": "proof-of-identity", "eyebrow": "Proof of Identity Drop", "heading": "Proof of Identity", "subheading": "Premium 300GSM streetwear built on truth, originality, and proof. Limited release. Style Verified. Street Certified.", "cta_label": "Shop the Drop", "edition_label": "Designed for life / Worn with purpose", "drop_eyebrow": "The current release", "drop_heading": "Secure the drop", "view_all_label": "View all pieces", "manifesto_index": "01 / Standard", "manifesto_heading": "This is more than apparel. This is proof.", "manifesto_text": "TRUE AUTHENTIC was built for those who stand on originality, move with purpose, and refuse to blend in.", "editorial_eyebrow": "Lifestyle detail", "editorial_heading": "Built to be seen", "proof_eyebrow": "Limited drop", "proof_heading": "Once pieces sell out, restock is not guaranteed.", "proof_one": "Premium 300GSM feel", "proof_two": "Style Verified", "proof_three": "Street Certified", "ink": "#111111", "paper": "#f4f1ec", "accent": "#741f35", "secondary_cta_label": "Build Your Fit", "final_cta_label": "Secure Yours", "enable_hero_video": true, "show_detail_video": true, "motion_eyebrow": "Featured detail", "motion_heading": "Every detail carries the mark.", "motion_text": "A focused True Authentic detail video gives shoppers another reason to trust the drop before they reach checkout.", "motion_cta_label": "Shop the Drop"
+      }
+    },
+    "ta_custom_apparel": { "type": "ta-custom-apparel-hero", "settings": {} }
+  },
+  "order": ["ta_premium_home", "ta_custom_apparel"]
+}
