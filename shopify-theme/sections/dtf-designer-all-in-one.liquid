@@ -528,9 +528,11 @@
       iframe.src = url.toString();
       iframe.style.width = '100%';
       iframe.style.height = viewportHeightUnit;
+      iframe.style.transition = 'height 0.3s ease';
       iframe.style.border = 'none';
       iframe.style.borderRadius = '12px';
       iframe.loading = 'lazy';
+      var resizeDebounceTimer;
 
       function postContext() {
         iframe.contentWindow?.postMessage({
@@ -550,8 +552,18 @@
 
         var message = event.data || {};
 
-        if (message.type === 'dtf:resize' && message.payload && message.payload.height) {
-          iframe.style.height = Math.max(420, Number(message.payload.height)) + 'px';
+        var requestedHeight =
+          message.type === 'dtf:resize' && message.payload
+            ? Number(message.payload.height)
+            : message.type === 'DTF_IFRAME_HEIGHT'
+              ? Number(message.height)
+              : NaN;
+
+        if (Number.isFinite(requestedHeight) && requestedHeight > 0) {
+          clearTimeout(resizeDebounceTimer);
+          resizeDebounceTimer = setTimeout(function () {
+            iframe.style.height = Math.max(420, requestedHeight) + 'px';
+          }, 150);
           return;
         }
 
