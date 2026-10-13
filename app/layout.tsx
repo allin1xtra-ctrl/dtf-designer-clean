@@ -52,6 +52,7 @@ export default function RootLayout({
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
             <span>Your Favorite DTF Plug</span>
             <nav className="flex flex-wrap gap-4">
+              <a href="/quote" className="hover:text-white">Get a Quote</a>
               <a href="/terms" className="hover:text-white">Terms</a>
               <a href="/privacy" className="hover:text-white">Privacy</a>
               <a href="/refund-policy" className="hover:text-white">Refunds</a>
