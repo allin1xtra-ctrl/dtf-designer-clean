@@ -13,7 +13,7 @@ export default function QuotePage() {
   const [artwork, setArtwork] = useState("");
   const [details, setDetails] = useState("");
   const [copied, setCopied] = useState(false);
-  const destination = process.env.NEXT_PUBLIC_DTF_ORDER_EMAIL || "";
+  const destination = process.env.NEXT_PUBLIC_DTF_ORDER_EMAIL || "info@yourdtfplug.com";
   const summary = `Your Favorite DTF Plug — Quote Request\nCustomer: ${name}\nEmail: ${email}\nProduct: ${product}\nQuantity: ${quantity}\nDimensions: ${size || "Not supplied"}\nArtwork link: ${artwork || "Not supplied"}\nInstructions: ${details || "None"}`;
   const mailto = `mailto:${encodeURIComponent(destination)}?subject=${encodeURIComponent("DTF Quote Request - " + product)}&body=${encodeURIComponent(summary)}`;
 
