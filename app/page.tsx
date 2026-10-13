@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Custom DTF Transfers, Gang Sheets & Custom Apparel",
   description:
-    "Order premium custom DTF transfers, gang sheets, custom t-shirts, and hoodies with no minimums, vibrant color, fast turnaround, and easy online artwork upload.",
+    "Request quotes for DTF transfers, gang sheets, custom t-shirts, and hoodies from Your Favorite DTF Plug.",
 };
 
 export default function Home() {
@@ -19,9 +19,9 @@ export default function Home() {
         </h1>
 
         <p className="mt-6 max-w-2xl text-lg text-gray-300">
-          Upload your artwork online and order custom DTF transfers, gang
-          sheets, custom t-shirts, and custom hoodies with no minimums, vibrant
-          color, and fast turnaround.
+          Request a quote for DTF transfers, gang sheets, custom t-shirts,
+          or hoodies. Share your artwork link, quantity, and print size so we
+          can confirm production details and pricing.
         </p>
 
         <div className="mt-10 flex flex-col gap-4 sm:flex-row">
@@ -44,10 +44,10 @@ export default function Home() {
             Request Custom Apparel Quote
           </a>
           <a
-            href="/campaign-studio"
+            href="/quote"
             className="rounded-full border border-cyan-400/40 bg-cyan-400/10 px-8 py-4 font-bold text-cyan-200 transition hover:bg-cyan-400/20"
           >
-            Campaign Concept Studio
+            Request Bulk Order Quote
           </a>
         </div>
 
@@ -69,8 +69,8 @@ export default function Home() {
           <article className="rounded-2xl border border-white/10 bg-white/5 p-5">
             <h2 className="text-xl font-bold">Custom T-Shirts & Hoodies</h2>
             <p className="mt-2 text-sm text-gray-300">
-              Upload your design, place artwork fast, and send custom apparel
-              orders directly to checkout.
+              Tell us what you need, share an artwork link, and request
+              custom apparel pricing before placing an order.
             </p>
           </article>
         </div>
