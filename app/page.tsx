@@ -26,10 +26,10 @@ export default function Home() {
 
         <div className="mt-10 flex flex-col gap-4 sm:flex-row">
           <a
-            href="https://yourdtfplug.com/collections/dtf-transfers-by-size"
+            href="/quote"
             className="rounded-full bg-white px-8 py-4 font-bold text-black transition hover:scale-105 hover:bg-gray-200"
           >
-            Order DTF Transfers
+            Request DTF Transfers Quote
           </a>
           <a
             href="/customizer?dtf_mode=transfer&mode=transfer&transferSize=13x60"
@@ -38,10 +38,10 @@ export default function Home() {
             Build a Gang Sheet
           </a>
           <a
-            href="https://yourdtfplug.com/products/custom-t-shirt-upload-customize"
+            href="/quote"
             className="rounded-full border border-white/20 px-8 py-4 font-bold text-white transition hover:bg-white/10"
           >
-            Customize Apparel
+            Request Custom Apparel Quote
           </a>
           <a
             href="/campaign-studio"
