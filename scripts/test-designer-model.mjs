@@ -34,3 +34,14 @@ test("only the approved 13x60 sheet bypasses the legacy 20-inch dimension limit"
   for (const [width, height] of [[12.5,60], [13,61], [20,60], [60,13]])
     assert.throws(() => parseDesign(JSON.stringify({ ...EMPTY_DESIGN, width, height })));
 });
+
+test("garment projects keep separate artwork for every side", async () => {
+  const { parseProject } = await import("../components/true-authentic/design-model.ts");
+  const value = { version: 2, garment: "hoodies", color: "red", views: { front: [text], neckTag: [{ ...text, id: "two" }] } };
+  assert.deepEqual(parseProject(JSON.stringify(value)), value);
+  assert.deepEqual(parseProject(JSON.stringify({ ...EMPTY_DESIGN, layers: [text] })).views, { front: [text] });
+  assert.throws(() => parseProject(JSON.stringify({ ...EMPTY_DESIGN, width: 13, height: 60 })), /gang-sheet/);
+  assert.throws(() => parseProject(JSON.stringify({ ...value, views: { waistband: [text] } })));
+  assert.throws(() => parseProject(JSON.stringify({ ...value, garment: "gang-sheet" })));
+  assert.throws(() => parseProject(JSON.stringify({ ...value, views: { front: [text], back: [text] } })));
+});
