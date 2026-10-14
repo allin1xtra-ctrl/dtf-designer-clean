@@ -3,9 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 import NextImage from "next/image";
 import premiumShirt from "@/public/premium-mockups/v1/t-shirts/black-front.webp";
+import premiumHoodie from "@/public/premium-mockups/v1/hoodies/black-front.webp";
+import premiumPants from "@/public/premium-mockups/v1/pants/black-front.webp";
+import premiumShorts from "@/public/premium-mockups/v1/shorts/black-front.webp";
 import { clamp, Design, EMPTY_DESIGN, FONTS, Layer, layerWarnings, MAX_FILE_BYTES, MAX_PROJECT_BYTES, parseDesign } from "./design-model";
 import styles from "./designer.module.css";
 
+const GARMENT_PREVIEWS = {
+  "t-shirts": { label: "T-shirt", image: premiumShirt, area: { top: "22.4%", left: "27%", width: "46%", maxHeight: "63.6%" } },
+  hoodies: { label: "Hoodie", image: premiumHoodie, area: { top: "32%", left: "33%", width: "34%", maxHeight: "36%" } },
+  pants: { label: "Sweatpants", image: premiumPants, area: { top: "36%", left: "31%", width: "16%", maxHeight: "42%" } },
+  shorts: { label: "Shorts", image: premiumShorts, area: { top: "46%", left: "29%", width: "18%", maxHeight: "24%" } },
+};
 const STORAGE_KEY = "true-authentic-design-v1";
 const SIZES = [[3,3], [5,5], [8,10], [12,12], [12,16], [13,60]];
 function download(blob: Blob, name: string) {
@@ -33,6 +42,8 @@ export default function TrueAuthenticDesigner({ gangSheet = false }: { gangSheet
   const [busy, setBusy] = useState(false);
   const [savedAvailable, setSavedAvailable] = useState(false);
   const [preview, setPreview] = useState<"print" | "shirt">("print");
+  const [garment, setGarment] = useState<keyof typeof GARMENT_PREVIEWS>("t-shirts");
+  const garmentPreview = GARMENT_PREVIEWS[garment];
   const [history, setHistory] = useState<Design[]>([]);
   const [future, setFuture] = useState<Design[]>([]);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -198,11 +209,12 @@ export default function TrueAuthenticDesigner({ gangSheet = false }: { gangSheet
       </aside>
       <section className={styles.canvasPanel}>
         <div className={styles.canvasHeader}><h2><span>2</span> Make it yours</h2><div className={styles.row}><button disabled={!history.length || busy} onClick={undo}>Undo</button><button disabled={!future.length || busy} onClick={redo}>Redo</button></div></div>
-        <div className={styles.row}><button aria-pressed={preview==="print"} onClick={()=>setPreview("print")}>Print layout</button><button aria-pressed={preview==="shirt"} onClick={()=>setPreview("shirt")}>T-shirt preview</button></div>
+        <div className={styles.row}><button aria-pressed={preview==="print"} onClick={()=>setPreview("print")}>Print layout</button><button aria-pressed={preview==="shirt"} onClick={()=>setPreview("shirt")}>Garment preview</button></div>
+        {preview === "shirt" && <label>Preview garment<select value={garment} onChange={event => setGarment(event.target.value as keyof typeof GARMENT_PREVIEWS)}>{Object.entries(GARMENT_PREVIEWS).map(([id, option]) => <option key={id} value={id}>{option.label}</option>)}</select></label>}
         <p className={styles.muted}>{preview==="shirt" ? "Illustrative placement only. Garment proportions and printed colors may differ." : "Drag a layer to position it, or use the controls. The checkerboard is transparent."}</p>
         <div className={`${styles.stage} ${preview==="shirt" ? styles.shirt : ""}`}>
-          {preview==="shirt" && <NextImage src={premiumShirt} alt="Unbranded premium oversized black T-shirt for an illustrative placement preview" fill sizes="(max-width: 800px) min(500px, calc(100vw - 58px)), (max-width: 1040px) calc(100vw - 388px), 650px" className={styles.mockup} />}
-          <svg ref={svgRef} className={styles.canvas} style={{aspectRatio:`${design.width}/${design.height}`}} viewBox={`0 0 1000 ${viewHeight}`} role="group" aria-label="Design canvas"
+          {preview==="shirt" && <NextImage src={garmentPreview.image} alt={ `Unbranded premium oversized black ${garmentPreview.label} for an illustrative placement preview` } fill sizes="(max-width: 800px) min(500px, calc(100vw - 58px)), (max-width: 1040px) calc(100vw - 388px), 650px" className={styles.mockup} />}
+          <svg ref={svgRef} className={styles.canvas} style={{aspectRatio:`${design.width}/${design.height}`, ...(preview === "shirt" ? garmentPreview.area : {})}} viewBox={`0 0 1000 ${viewHeight}`} role="group" aria-label="Design canvas"
             onPointerMove={event=>{
               if(!drag.current) return; const point=coordinates(event.clientX,event.clientY); const info=drag.current;
               setDesign(value=>({...value,layers:value.layers.map(layer=>layer.id===info.id ? {...layer,x:clamp(point.x-info.x,0,100),y:clamp(point.y-info.y,0,100)} : layer)}));
