@@ -24,14 +24,12 @@ export default function Samples() {
       <Link href="/" className="text-gray-300 underline text-sm">← Home</Link>
       <p className="mt-10 text-sm uppercase tracking-widest text-orange-400">Your Favorite DTF Plug</p>
       <h1 className="mt-2 text-4xl font-black md:text-6xl">DTF Printing Samples</h1>
-      <p className="mt-5 max-w-3xl text-gray-300">See examples of artwork styles we can review for DTF printing, from crisp typography and racing graphics to fine-detail halftones. Featured designs: TRUE AUTHENTIC Apparel. Actual production quality depends on supplied artwork, print size, garment, and settings.</p>
+      <p className="mt-5 max-w-3xl text-gray-300">Our first portfolio collection is being prepared. Browse the kinds of artwork we can review for DTF printing, from crisp typography and racing graphics to fine-detail halftones. Featured designs: TRUE AUTHENTIC Apparel. Actual production quality depends on supplied artwork, print size, garment, and settings.</p>
       <Link href="/quote" className="mt-7 inline-block rounded-full bg-orange-500 px-7 py-3 font-bold text-black">Request a Print Quote</Link>
       <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {samples.map((s) => <article key={s.file} className="overflow-hidden rounded-2xl border border-white/10 bg-neutral-900">
           <div className="flex aspect-square items-center justify-center bg-neutral-800 p-4">
-            {/* Files supplied by the studio owner in public/printing-samples/ (separate from source code). */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`/printing-samples/${s.file}`} alt={s.title + " — TRUE AUTHENTIC DTF print artwork sample"} className="h-full w-full object-contain" loading="lazy" />
+            <div className="text-center"><p className="text-lg font-bold text-gray-200">{s.title}</p><p className="mt-3 text-sm text-gray-400">Artwork preview being prepared</p></div>
           </div>
           <div className="p-5"><p className="text-xs uppercase tracking-wider text-orange-300">{s.category}</p><h2 className="mt-2 text-xl font-bold">{s.title}</h2><p className="mt-2 text-sm text-gray-400">Featured artwork: TRUE AUTHENTIC</p></div>
         </article>)}
