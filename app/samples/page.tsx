@@ -1,4 +1,5 @@
 import Link from "next/link";
+import PortfolioPreview from "./PortfolioPreview";
 
 const samples = [
   { file: "racing-23-front.webp", title: "Racing 23 — Front Logo", category: "Full-Color Logos" },
@@ -37,9 +38,7 @@ export default function Samples() {
         <h2 className="mb-5 text-2xl font-bold">{category}</h2>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {samples.filter(s => s.category === category).map((s) => <article key={s.file} className="overflow-hidden rounded-2xl border border-white/10 bg-neutral-900">
-          <div className="flex aspect-square items-center justify-center bg-neutral-800 p-4">
-            <div className="text-center"><p className="text-lg font-bold text-gray-200">{s.title}</p><p className="mt-3 text-sm text-gray-400">Artwork preview being prepared</p></div>
-          </div>
+          <PortfolioPreview file={s.file} title={s.title} />
           <div className="p-5"><p className="text-xs uppercase tracking-wider text-orange-300">{s.category}</p><h3 className="mt-2 text-xl font-bold">{s.title}</h3><p className="mt-2 text-sm text-gray-400">Featured artwork: TRUE AUTHENTIC</p></div>
         </article>)}
         </div>
