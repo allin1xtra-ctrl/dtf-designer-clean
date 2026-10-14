@@ -1077,9 +1077,6 @@ function getSafeTransferSize(value: unknown) {
   return typeof value === "string" && TRANSFER_SIZES.includes(value) ? value : SAFE_TRANSFER_SIZE;
 }
 
-function formatInches(value: number) {
-  return `${value.toFixed(value >= 10 ? 1 : 2).replace(/\.0$/, "")} in`;
-}
 
 function escapeSvgText(value: string) {
   return value
@@ -3453,34 +3450,9 @@ export default function CustomizerPrototype() {
                     ? `${measurementReference.width}" x ${measurementReference.height}"`
                     : `${measurementReference.width} x ${measurementReference.height}`}
                 </span>
-                {selectedLayer ? (
-                  <div
-                    aria-hidden="true"
-                    className="pointer-events-none absolute z-30"
-                    style={{
-                      left: `${selectedLayer.x}%`,
-                      top: `${selectedLayer.y}%`,
-                      width: `${selectedLayer.width}%`,
-                      height: `${selectedLayer.height}%`,
-                      transform: "translate(-50%, -50%)",
-                    }}
-                  >
-                    <div className="absolute -top-4 left-0 h-px w-full bg-cyan-200/90 shadow-[0_0_12px_rgba(103,232,249,0.45)]">
-                      <span className="absolute left-1/2 top-[-18px] -translate-x-1/2 rounded-sm border border-cyan-200/40 bg-[#071015]/90 px-1.5 py-0.5 text-[10px] font-semibold text-cyan-50">
-                        {formatInches(selectedWidthInches)}
-                      </span>
-                    </div>
-                    <div className="absolute -left-4 top-0 h-full w-px bg-cyan-200/90 shadow-[0_0_12px_rgba(103,232,249,0.45)]">
-                      <span className="absolute left-[-28px] top-1/2 -translate-y-1/2 -rotate-90 rounded-sm border border-cyan-200/40 bg-[#071015]/90 px-1.5 py-0.5 text-[10px] font-semibold text-cyan-50">
-                        {formatInches(selectedHeightInches)}
-                      </span>
-                    </div>
-                  </div>
-                ) : null}
                 <div className="absolute inset-0 overflow-hidden">
                   {activeLayers.length > 0 ? (
                     activeLayers.filter((layer) => !layer.hidden).sort((a, b) => a.zIndex - b.zIndex).map((layer) => {
-                      const isSelected = layer.id === selectedLayer?.id;
                       const commonStyle = {
                         left: `${layer.x}%`,
                         top: `${layer.y}%`,
@@ -3503,7 +3475,7 @@ export default function CustomizerPrototype() {
                             key={layer.id}
                             type="button"
                             onClick={() => setState((current) => ({ ...current, selectedLayerId: layer.id, status: `${layer.name} selected.` }))}
-                            className={`absolute cursor-pointer overflow-hidden rounded-sm border border-transparent shadow-[0_10px_18px_rgba(0,0,0,0.22)] ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
+                            className={`absolute cursor-pointer overflow-hidden rounded-sm border-0`}
                             style={{
                               ...commonStyle,
                               mixBlendMode: state.mode === "apparel" ? effectiveBlendMode : "normal",
@@ -3533,7 +3505,7 @@ export default function CustomizerPrototype() {
                             key={layer.id}
                             type="button"
                             onClick={() => setState((current) => ({ ...current, selectedLayerId: layer.id, status: `${layer.name} selected.` }))}
-                            className={`absolute cursor-pointer rounded-lg border border-white/20 shadow-[0_8px_18px_rgba(0,0,0,0.18)] ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
+                            className={`absolute cursor-pointer rounded-lg border border-white/20 shadow-[0_8px_18px_rgba(0,0,0,0.18)]`}
                             style={{ ...commonStyle, backgroundColor: layer.color }}
                             aria-label={layer.name}
                           />
@@ -3546,7 +3518,7 @@ export default function CustomizerPrototype() {
                             key={layer.id}
                             type="button"
                             onClick={() => setState((current) => ({ ...current, selectedLayerId: layer.id, status: `${layer.name} selected. Upload artwork to replace it.` }))}
-                            className={`absolute grid cursor-pointer place-items-center rounded-lg border border-dashed border-cyan-200/80 bg-[#071015]/78 px-2 text-center text-[10px] font-black uppercase tracking-wide text-cyan-100 shadow-[0_8px_18px_rgba(0,0,0,0.22)] ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
+                            className={`absolute grid cursor-pointer place-items-center rounded-lg border border-dashed border-cyan-200/80 bg-[#071015]/78 px-2 text-center text-[10px] font-black uppercase tracking-wide text-cyan-100 shadow-[0_8px_18px_rgba(0,0,0,0.22)]`}
                             style={commonStyle}
                           >
                             {layer.text || "Upload Logo"}
@@ -3559,7 +3531,7 @@ export default function CustomizerPrototype() {
                           key={layer.id}
                           type="button"
                           onClick={() => setState((current) => ({ ...current, selectedLayerId: layer.id, status: `${layer.name} selected.` }))}
-                          className={`absolute grid cursor-pointer place-items-center overflow-visible px-1 text-center font-black leading-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)] ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
+                          className={`absolute grid cursor-pointer place-items-center overflow-visible px-1 text-center font-black leading-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)]`}
                           style={{
                             ...commonStyle,
                             color: layer.color,
@@ -4046,7 +4018,6 @@ export default function CustomizerPrototype() {
                         </span>
                         <div className="absolute inset-0 overflow-hidden">
                           {templateDraft.layers.filter((layer) => !layer.hidden).sort((a, b) => a.zIndex - b.zIndex).map((layer) => {
-                            const isSelected = layer.id === templateDraft.selectedLayerId;
                             const commonStyle = {
                               left: `${layer.x}%`,
                               top: `${layer.y}%`,
@@ -4063,7 +4034,7 @@ export default function CustomizerPrototype() {
                                   key={layer.id}
                                   type="button"
                                   onClick={() => setTemplateDraft((current) => current ? { ...current, selectedLayerId: layer.id, status: `${layer.name} selected in draft.` } : current)}
-                                  className={`absolute overflow-hidden rounded-sm border border-transparent ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
+                                  className={`absolute overflow-hidden rounded-sm border border-transparent`}
                                   style={commonStyle}
                                 >
                                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -4078,7 +4049,7 @@ export default function CustomizerPrototype() {
                                   key={layer.id}
                                   type="button"
                                   onClick={() => setTemplateDraft((current) => current ? { ...current, selectedLayerId: layer.id, status: `${layer.name} selected in draft.` } : current)}
-                                  className={`absolute rounded-lg border border-white/20 ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
+                                  className={`absolute rounded-lg border border-white/20`}
                                   style={{ ...commonStyle, backgroundColor: layer.color }}
                                   aria-label={layer.name}
                                 />
@@ -4091,7 +4062,7 @@ export default function CustomizerPrototype() {
                                   key={layer.id}
                                   type="button"
                                   onClick={() => setTemplateDraft((current) => current ? { ...current, selectedLayerId: layer.id, status: `${layer.name} selected. Upload artwork to replace it.` } : current)}
-                                  className={`absolute grid place-items-center rounded-lg border border-dashed border-cyan-200/80 bg-[#071015]/85 px-2 text-center text-[10px] font-black uppercase tracking-wide text-cyan-100 ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
+                                  className={`absolute grid place-items-center rounded-lg border border-dashed border-cyan-200/80 bg-[#071015]/85 px-2 text-center text-[10px] font-black uppercase tracking-wide text-cyan-100`}
                                   style={commonStyle}
                                 >
                                   {layer.text || "Upload Logo"}
@@ -4104,7 +4075,7 @@ export default function CustomizerPrototype() {
                                 key={layer.id}
                                 type="button"
                                 onClick={() => setTemplateDraft((current) => current ? { ...current, selectedLayerId: layer.id, status: `${layer.name} selected in draft.` } : current)}
-                                className={`absolute grid place-items-center px-1 text-center font-black leading-tight ${isSelected ? "ring-2 ring-cyan-200" : ""}`}
+                                className={`absolute grid place-items-center px-1 text-center font-black leading-tight`}
                                 style={{
                                   ...commonStyle,
                                   color: layer.color,
