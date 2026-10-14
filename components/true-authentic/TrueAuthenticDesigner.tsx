@@ -263,8 +263,8 @@ export default function TrueAuthenticDesigner() {
 
   return <div className={styles.root} ref={rootRef}>
     <header className={styles.header}>
-      <div><span className={styles.eyebrow}>TRUE AUTHENTIC • DESIGN STUDIO</span><h1>Your artwork. Your way.</h1><p>Create your own custom T-shirts, hoodies, sweatpants, and shorts.</p></div>
-      <a href="https://www.ta-apparel.com/pages/contact" target="_top">Ask about a custom order ↗</a>
+      <div><span className={styles.eyebrow}>YOUR FAVORITE DTF PLUG • CUSTOM APPAREL STUDIO</span><h1>Your artwork. Your way.</h1><p>Create your own custom T-shirts, hoodies, sweatpants, and shorts.</p></div>
+      <a href="/quote" target="_top">Ask about a custom order ↗</a>
     </header>
     <div className={styles.workspace}>
       <aside className={styles.panel}>
@@ -338,13 +338,13 @@ export default function TrueAuthenticDesigner() {
         <p>Download a transparent PNG of the side you are viewing. Keep a project file to reopen and edit every side later.</p>
         <div className={styles.actions}>
           <button className={styles.primary} disabled={busy || !layers.length} onClick={()=>void exportPng()}>Download {VIEW_LABELS[activeView].toLowerCase()} PNG</button>
-          <button disabled={busy || !hasArtwork} onClick={()=>{download(new Blob([JSON.stringify(savedProject())],{type:"application/json"}),"true-authentic-design.json");setStatus("Project downloaded. Use Open project to restore it, including your images on every side.");}}>Download project</button>
+          <button disabled={busy || !hasArtwork} onClick={()=>{download(new Blob([JSON.stringify(savedProject())],{type:"application/json"}),"your-favorite-dtf-plug-design.json");setStatus("Project downloaded. Use Open project to restore it, including your images on every side.");}}>Download project</button>
           <button disabled={busy || !hasArtwork} onClick={save}>Save on this device</button>
           {savedAvailable && <button disabled={busy} onClick={()=>{try{void restore(localStorage.getItem(STORAGE_KEY)||localStorage.getItem(LEGACY_STORAGE_KEY)||"");}catch{setStatus("Browser storage is unavailable. Open a downloaded project instead.");}}}>Restore device save</button>}
           <button disabled={busy} onClick={()=>importRef.current?.click()}>Open project</button>
         </div>
         <input ref={importRef} type="file" accept=".json,application/json" aria-label="Open saved project file" className={styles.file} onChange={async event=>{const file=event.target.files?.[0];event.target.value="";if(!file)return;if(file.size>MAX_PROJECT_BYTES){setStatus("Projects must be under 25 MB.");return;}try{await restore(await file.text());}catch{setStatus("Could not read this project file.");}}}/>
-        <div className={styles.service}><div><h3>Ready to make it real?</h3><p>Contact True Authentic about your custom order. Keep your original artwork and downloaded project. Pricing, garment options and production details are confirmed before ordering.</p></div><a href="https://www.ta-apparel.com/pages/contact" target="_top">Contact True Authentic ↗</a></div>
+        <div className={styles.service}><div><h3>Ready to make it real?</h3><p>Contact Your Favorite DTF Plug about your custom order. Keep your original artwork and downloaded project. Pricing, garment options and production details are confirmed before ordering.</p></div><a href="https://www.ta-apparel.com/pages/contact" target="_top">Request a quote ↗</a></div>
         <p className={styles.muted}>Your artwork stays in this browser unless you choose to send it. Downloads do not place an order. Artwork quality still needs review before printing.</p>
       </section>
     </div>
