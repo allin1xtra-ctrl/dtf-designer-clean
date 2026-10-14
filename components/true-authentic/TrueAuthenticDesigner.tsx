@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import NextImage from "next/image";
 import { premiumMockupAssets } from "@/lib/premium-mockup-assets";
+import { garmentSizes, garmentMeasurementSummary } from "@/lib/garment-size-charts";
 import printZones from "@/lib/print-zones.json";
 import { clamp, EMPTY_PROJECT, FONTS, GarmentId, Layer, layerWarnings, MAX_FILE_BYTES, MAX_PROJECT_BYTES, parseProject, Project, VIEW_IDS, ViewId } from "./design-model";
 import styles from "./designer.module.css";
@@ -106,6 +107,7 @@ export default function TrueAuthenticDesigner() {
   const [savedAvailable, setSavedAvailable] = useState(false);
   const [garment, setGarment] = useState<GarmentId>("t-shirts");
   const [garmentColor, setGarmentColor] = useState("black");
+  const [garmentSize, setGarmentSize] = useState("L");
   const [garmentView, setGarmentView] = useState<ViewId>("front");
   const [zoneWarnings, setZoneWarnings] = useState<string[]>([]);
   const [history, setHistory] = useState<Project[]>([]);
@@ -295,6 +297,8 @@ export default function TrueAuthenticDesigner() {
       </aside>
       <section className={styles.canvasPanel}>
         <div className={styles.canvasHeader}><h2><span>2</span> Make it yours</h2><div className={styles.row}><button disabled={!history.length || busy} onClick={undo}>Undo</button><button disabled={!future.length || busy} onClick={redo}>Redo</button></div></div>
+        <label>Garment size<select value={garmentSize} onChange={event => setGarmentSize(event.target.value)}>{garmentSizes(garment).map(size => <option key={size} value={size}>{size}</option>)}</select></label>
+        <p className={styles.muted}>Size {garmentSize} reference: {garmentMeasurementSummary(garment, garmentSize)}. Garment fit reference only; print sizes remain provisional until measured on actual stock.</p>
         <label>Preview garment<select value={garment} onChange={event => chooseGarment(event.target.value as GarmentId)}>{Object.entries(GARMENT_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>
         <div role="group" aria-label="Garment color" className={styles.row}>{colorOptions.map(color => <button key={color} type="button" aria-pressed={garmentColor===color} aria-label={GARMENT_COLORS[color].label} title={GARMENT_COLORS[color].label} onClick={() => setGarmentColor(color)}
           style={{ width: 36, height: 36, minWidth: 36, minHeight: 36, maxHeight: 36, flex: "0 0 36px", aspectRatio: "1", padding: 0, borderRadius: "50%", background: GARMENT_COLORS[color].swatch, boxShadow: garmentColor===color ? "0 0 0 2px #fff, 0 0 0 4px #e8ba85" : "inset 0 0 0 1px rgba(0,0,0,.35)" }} />)}</div>
