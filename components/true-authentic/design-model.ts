@@ -50,3 +50,33 @@ export function layerWarnings(design: Design): string[] {
   }
   return warnings;
 }
+
+export const GARMENT_IDS = ["t-shirts", "hoodies", "pants", "shorts"] as const;
+export const VIEW_IDS = ["front", "back", "leftSleeve", "rightSleeve", "neckTag", "leftLeg", "rightLeg"] as const;
+export type GarmentId = typeof GARMENT_IDS[number];
+export type ViewId = typeof VIEW_IDS[number];
+export type ProjectViews = Partial<Record<ViewId, Layer[]>>;
+export type Project = { version: 2; garment: GarmentId; color: string; views: ProjectViews };
+export const EMPTY_PROJECT: Project = { version: 2, garment: "t-shirts", color: "black", views: {} };
+
+/** Reads a saved project. Version 1 files (one print area) open on the front of a T-shirt. */
+export function parseProject(raw: string): Project {
+  if (raw.length > MAX_PROJECT_BYTES) throw new Error("Project is too large. Maximum size is 25 MB.");
+  const value = JSON.parse(raw) as Omit<Partial<Project>, "version"> & { version?: number };
+  if (value?.version === 1) {
+    const design = parseDesign(raw);
+    if (design.width === 13 && design.height === 60) throw new Error("This is a gang-sheet project. Open an apparel project to customize a garment.");
+    return { ...EMPTY_PROJECT, views: { front: design.layers } };
+  }
+  if (!value || value.version !== 2 || !GARMENT_IDS.includes(value.garment as GarmentId) || typeof value.color !== "string" ||
+      !/^[a-z-]{1,30}$/.test(value.color) || !value.views || typeof value.views !== "object" || Array.isArray(value.views))
+    throw new Error("This is not a supported True Authentic project.");
+  const views: ProjectViews = {}, ids = new Set<string>();
+  for (const [view, layers] of Object.entries(value.views)) {
+    if (!VIEW_IDS.includes(view as ViewId)) throw new Error("The project contains an unsupported garment side.");
+    const parsed = parseDesign(JSON.stringify({ ...EMPTY_DESIGN, layers })).layers;
+    for (const layer of parsed) { if (ids.has(layer.id)) throw new Error("The project contains an invalid layer."); ids.add(layer.id); }
+    views[view as ViewId] = parsed;
+  }
+  return { version: 2, garment: value.garment as GarmentId, color: value.color, views };
+}
