@@ -623,14 +623,14 @@
       "colorHex": "#f8fafc",
       "view": "rightSleeve",
       "targetPath": "/premium-mockups/v1/hoodies/white-rightSleeve.webp",
-      "status": "rejected-visual-qa",
+      "status": "derived",
       "hasBakedPrintGuide": false,
       "printAreaAction": "retain current placement; align new garment to it",
       "width": 1254,
       "height": 1254,
       "hasAlpha": true,
-      "bytes": 118140,
-      "rejection": "Sleeve was recolored but torso remained black; excluded from active previews."
+      "bytes": 94830,
+      "derivation": "Mirrored from approved hoodies/white-leftSleeve.webp"
     },
     {
       "productId": "hoodies",
@@ -638,9 +638,14 @@
       "colorHex": "#f8fafc",
       "view": "neckTag",
       "targetPath": "/premium-mockups/v1/hoodies/white-neckTag.webp",
-      "status": "deferred-by-user",
+      "status": "derived",
       "hasBakedPrintGuide": false,
-      "printAreaAction": "retain current placement; align new garment to it"
+      "printAreaAction": "retain current placement; align new garment to it",
+      "derivation": "Recolored from approved hoodies/black-neckTag.webp using the hoodies/black-front -> hoodies/white-front tone mapping",
+      "width": 1254,
+      "height": 1254,
+      "hasAlpha": true,
+      "bytes": 326590
     },
     {
       "productId": "hoodies",
@@ -690,14 +695,14 @@
       "colorHex": "#9ca3af",
       "view": "rightSleeve",
       "targetPath": "/premium-mockups/v1/hoodies/heather-grey-rightSleeve.webp",
-      "status": "rejected-visual-qa",
+      "status": "derived",
       "hasBakedPrintGuide": false,
       "printAreaAction": "retain current placement; align new garment to it",
       "width": 1254,
       "height": 1254,
       "hasAlpha": true,
-      "bytes": 194698,
-      "rejection": "Sleeve was recolored but torso remained black; excluded from active previews."
+      "bytes": 206688,
+      "derivation": "Mirrored from approved hoodies/heather-grey-leftSleeve.webp"
     },
     {
       "productId": "hoodies",
@@ -705,9 +710,14 @@
       "colorHex": "#9ca3af",
       "view": "neckTag",
       "targetPath": "/premium-mockups/v1/hoodies/heather-grey-neckTag.webp",
-      "status": "deferred-by-user",
+      "status": "derived",
       "hasBakedPrintGuide": false,
-      "printAreaAction": "retain current placement; align new garment to it"
+      "printAreaAction": "retain current placement; align new garment to it",
+      "derivation": "Recolored from approved hoodies/black-neckTag.webp using the hoodies/black-front -> hoodies/heather-grey-front tone mapping",
+      "width": 1254,
+      "height": 1254,
+      "hasAlpha": true,
+      "bytes": 419506
     },
     {
       "productId": "hoodies",
@@ -757,14 +767,14 @@
       "colorHex": "#64748b",
       "view": "rightSleeve",
       "targetPath": "/premium-mockups/v1/hoodies/regular-grey-rightSleeve.webp",
-      "status": "rejected-visual-qa",
+      "status": "derived",
       "hasBakedPrintGuide": false,
       "printAreaAction": "retain current placement; align new garment to it",
       "width": 1254,
       "height": 1254,
       "hasAlpha": true,
-      "bytes": 162742,
-      "rejection": "Sleeve was recolored but torso remained black; excluded from active previews."
+      "bytes": 173128,
+      "derivation": "Mirrored from approved hoodies/regular-grey-leftSleeve.webp"
     },
     {
       "productId": "hoodies",
@@ -772,9 +782,14 @@
       "colorHex": "#64748b",
       "view": "neckTag",
       "targetPath": "/premium-mockups/v1/hoodies/regular-grey-neckTag.webp",
-      "status": "deferred-by-user",
+      "status": "derived",
       "hasBakedPrintGuide": false,
-      "printAreaAction": "retain current placement; align new garment to it"
+      "printAreaAction": "retain current placement; align new garment to it",
+      "derivation": "Recolored from approved hoodies/black-neckTag.webp using the hoodies/black-front -> hoodies/regular-grey-front tone mapping",
+      "width": 1254,
+      "height": 1254,
+      "hasAlpha": true,
+      "bytes": 400920
     },
     {
       "productId": "hoodies",
@@ -838,9 +853,14 @@
       "colorHex": "#075985",
       "view": "neckTag",
       "targetPath": "/premium-mockups/v1/hoodies/royal-blue-neckTag.webp",
-      "status": "deferred-by-user",
+      "status": "derived",
       "hasBakedPrintGuide": false,
-      "printAreaAction": "retain current placement; align new garment to it"
+      "printAreaAction": "retain current placement; align new garment to it",
+      "derivation": "Recolored from approved hoodies/black-neckTag.webp using the hoodies/black-front -> hoodies/royal-blue-front tone mapping",
+      "width": 1254,
+      "height": 1254,
+      "hasAlpha": true,
+      "bytes": 409798
     },
     {
       "productId": "hoodies",
@@ -890,14 +910,14 @@
       "colorHex": "#991b1b",
       "view": "rightSleeve",
       "targetPath": "/premium-mockups/v1/hoodies/red-rightSleeve.webp",
-      "status": "rejected-visual-qa",
+      "status": "derived",
       "hasBakedPrintGuide": false,
       "printAreaAction": "retain current placement; align new garment to it",
       "width": 1254,
       "height": 1254,
       "hasAlpha": true,
-      "bytes": 132520,
-      "rejection": "Sleeve was recolored but torso remained black; excluded from active previews."
+      "bytes": 103858,
+      "derivation": "Mirrored from approved hoodies/red-leftSleeve.webp"
     },
     {
       "productId": "hoodies",
@@ -905,9 +925,14 @@
       "colorHex": "#991b1b",
       "view": "neckTag",
       "targetPath": "/premium-mockups/v1/hoodies/red-neckTag.webp",
-      "status": "deferred-by-user",
+      "status": "derived",
       "hasBakedPrintGuide": false,
-      "printAreaAction": "retain current placement; align new garment to it"
+      "printAreaAction": "retain current placement; align new garment to it",
+      "derivation": "Recolored from approved hoodies/black-neckTag.webp using the hoodies/black-front -> hoodies/red-front tone mapping",
+      "width": 1254,
+      "height": 1254,
+      "hasAlpha": true,
+      "bytes": 415398
     },
     {
       "productId": "hoodies",
@@ -957,14 +982,14 @@
       "colorHex": "#f5f1e8",
       "view": "rightSleeve",
       "targetPath": "/premium-mockups/v1/hoodies/off-white-rightSleeve.webp",
-      "status": "rejected-visual-qa",
+      "status": "derived",
       "hasBakedPrintGuide": false,
       "printAreaAction": "retain current placement; align new garment to it",
       "width": 1254,
       "height": 1254,
       "hasAlpha": true,
-      "bytes": 125016,
-      "rejection": "Sleeve was recolored but torso remained black; excluded from active previews."
+      "bytes": 102300,
+      "derivation": "Mirrored from approved hoodies/off-white-leftSleeve.webp"
     },
     {
       "productId": "hoodies",
@@ -972,9 +997,14 @@
       "colorHex": "#f5f1e8",
       "view": "neckTag",
       "targetPath": "/premium-mockups/v1/hoodies/off-white-neckTag.webp",
-      "status": "deferred-by-user",
+      "status": "derived",
       "hasBakedPrintGuide": false,
-      "printAreaAction": "retain current placement; align new garment to it"
+      "printAreaAction": "retain current placement; align new garment to it",
+      "derivation": "Recolored from approved hoodies/black-neckTag.webp using the hoodies/black-front -> hoodies/off-white-front tone mapping",
+      "width": 1254,
+      "height": 1254,
+      "hasAlpha": true,
+      "bytes": 333138
     },
     {
       "productId": "pants",
@@ -1066,9 +1096,14 @@
       "colorHex": "#f8fafc",
       "view": "leftLeg",
       "targetPath": "/premium-mockups/v1/pants/white-leftLeg.webp",
-      "status": "deferred-by-user",
+      "status": "derived",
       "hasBakedPrintGuide": false,
-      "printAreaAction": "retain current placement; align new garment to it"
+      "printAreaAction": "retain current placement; align new garment to it",
+      "derivation": "Recolored from approved pants/black-leftLeg.webp using the pants/black-front -> pants/white-front tone mapping",
+      "width": 1254,
+      "height": 1254,
+      "hasAlpha": true,
+      "bytes": 203172
     },
     {
       "productId": "pants",
@@ -1076,9 +1111,14 @@
       "colorHex": "#f8fafc",
       "view": "rightLeg",
       "targetPath": "/premium-mockups/v1/pants/white-rightLeg.webp",
-      "status": "deferred-by-user",
+      "status": "derived",
       "hasBakedPrintGuide": false,
-      "printAreaAction": "retain current placement; align new garment to it"
+      "printAreaAction": "retain current placement; align new garment to it",
+      "derivation": "Recolored from approved pants/black-rightLeg.webp using the pants/black-front -> pants/white-front tone mapping",
+      "width": 1254,
+      "height": 1254,
+      "hasAlpha": true,
+      "bytes": 202436
     },
     {
       "productId": "pants",
@@ -1114,9 +1154,14 @@
       "colorHex": "#9ca3af",
       "view": "leftLeg",
       "targetPath": "/premium-mockups/v1/pants/heather-grey-leftLeg.webp",
-      "status": "deferred-by-user",
+      "status": "derived",
       "hasBakedPrintGuide": false,
-      "printAreaAction": "retain current placement; align new garment to it"
+      "printAreaAction": "retain current placement; align new garment to it",
+      "derivation": "Recolored from approved pants/black-leftLeg.webp using the pants/black-front -> pants/heather-grey-front tone mapping",
+      "width": 1254,
+      "height": 1254,
+      "hasAlpha": true,
+      "bytes": 297370
     },
     {
       "productId": "pants",
@@ -1124,9 +1169,14 @@
       "colorHex": "#9ca3af",
       "view": "rightLeg",
       "targetPath": "/premium-mockups/v1/pants/heather-grey-rightLeg.webp",
-      "status": "deferred-by-user",
+      "status": "derived",
       "hasBakedPrintGuide": false,
-      "printAreaAction": "retain current placement; align new garment to it"
+      "printAreaAction": "retain current placement; align new garment to it",
+      "derivation": "Recolored from approved pants/black-rightLeg.webp using the pants/black-front -> pants/heather-grey-front tone mapping",
+      "width": 1254,
+      "height": 1254,
+      "hasAlpha": true,
+      "bytes": 297010
     },
     {
       "productId": "pants",
@@ -1162,9 +1212,14 @@
       "colorHex": "#64748b",
       "view": "leftLeg",
       "targetPath": "/premium-mockups/v1/pants/regular-grey-leftLeg.webp",
-      "status": "deferred-by-user",
+      "status": "derived",
       "hasBakedPrintGuide": false,
-      "printAreaAction": "retain current placement; align new garment to it"
+      "printAreaAction": "retain current placement; align new garment to it",
+      "derivation": "Recolored from approved pants/black-leftLeg.webp using the pants/black-front -> pants/regular-grey-front tone mapping",
+      "width": 1254,
+      "height": 1254,
+      "hasAlpha": true,
+      "bytes": 279048
     },
     {
       "productId": "pants",
@@ -1172,9 +1227,14 @@
       "colorHex": "#64748b",
       "view": "rightLeg",
       "targetPath": "/premium-mockups/v1/pants/regular-grey-rightLeg.webp",
-      "status": "deferred-by-user",
+      "status": "derived",
       "hasBakedPrintGuide": false,
-      "printAreaAction": "retain current placement; align new garment to it"
+      "printAreaAction": "retain current placement; align new garment to it",
+      "derivation": "Recolored from approved pants/black-rightLeg.webp using the pants/black-front -> pants/regular-grey-front tone mapping",
+      "width": 1254,
+      "height": 1254,
+      "hasAlpha": true,
+      "bytes": 283330
     },
     {
       "productId": "pants",
@@ -1236,9 +1296,14 @@
       "colorHex": "#991b1b",
       "view": "back",
       "targetPath": "/premium-mockups/v1/pants/red-back.webp",
-      "status": "deferred-by-user",
+      "status": "derived",
       "hasBakedPrintGuide": false,
-      "printAreaAction": "retain current placement; align new garment to it"
+      "printAreaAction": "retain current placement; align new garment to it",
+      "derivation": "Recolored from approved pants/white-back.webp using the pants/white-front -> pants/red-front tone mapping",
+      "width": 1254,
+      "height": 1254,
+      "hasAlpha": true,
+      "bytes": 135760
     },
     {
       "productId": "pants",
@@ -1246,9 +1311,14 @@
       "colorHex": "#991b1b",
       "view": "leftLeg",
       "targetPath": "/premium-mockups/v1/pants/red-leftLeg.webp",
-      "status": "deferred-by-user",
+      "status": "derived",
       "hasBakedPrintGuide": false,
-      "printAreaAction": "retain current placement; align new garment to it"
+      "printAreaAction": "retain current placement; align new garment to it",
+      "derivation": "Recolored from approved pants/black-leftLeg.webp using the pants/black-front -> pants/red-front tone mapping",
+      "width": 1254,
+      "height": 1254,
+      "hasAlpha": true,
+      "bytes": 279042
     },
     {
       "productId": "pants",
@@ -1256,9 +1326,14 @@
       "colorHex": "#991b1b",
       "view": "rightLeg",
       "targetPath": "/premium-mockups/v1/pants/red-rightLeg.webp",
-      "status": "deferred-by-user",
+      "status": "derived",
       "hasBakedPrintGuide": false,
-      "printAreaAction": "retain current placement; align new garment to it"
+      "printAreaAction": "retain current placement; align new garment to it",
+      "derivation": "Recolored from approved pants/black-rightLeg.webp using the pants/black-front -> pants/red-front tone mapping",
+      "width": 1254,
+      "height": 1254,
+      "hasAlpha": true,
+      "bytes": 277760
     },
     {
       "productId": "pants",
@@ -1280,9 +1355,14 @@
       "colorHex": "#f5f1e8",
       "view": "back",
       "targetPath": "/premium-mockups/v1/pants/off-white-back.webp",
-      "status": "deferred-by-user",
+      "status": "derived",
       "hasBakedPrintGuide": false,
-      "printAreaAction": "retain current placement; align new garment to it"
+      "printAreaAction": "retain current placement; align new garment to it",
+      "derivation": "Recolored from approved pants/white-back.webp using the pants/white-front -> pants/off-white-front tone mapping",
+      "width": 1254,
+      "height": 1254,
+      "hasAlpha": true,
+      "bytes": 124094
     },
     {
       "productId": "pants",
@@ -1290,9 +1370,14 @@
       "colorHex": "#f5f1e8",
       "view": "leftLeg",
       "targetPath": "/premium-mockups/v1/pants/off-white-leftLeg.webp",
-      "status": "deferred-by-user",
+      "status": "derived",
       "hasBakedPrintGuide": false,
-      "printAreaAction": "retain current placement; align new garment to it"
+      "printAreaAction": "retain current placement; align new garment to it",
+      "derivation": "Recolored from approved pants/black-leftLeg.webp using the pants/black-front -> pants/off-white-front tone mapping",
+      "width": 1254,
+      "height": 1254,
+      "hasAlpha": true,
+      "bytes": 237350
     },
     {
       "productId": "pants",
@@ -1300,9 +1385,14 @@
       "colorHex": "#f5f1e8",
       "view": "rightLeg",
       "targetPath": "/premium-mockups/v1/pants/off-white-rightLeg.webp",
-      "status": "deferred-by-user",
+      "status": "derived",
       "hasBakedPrintGuide": false,
-      "printAreaAction": "retain current placement; align new garment to it"
+      "printAreaAction": "retain current placement; align new garment to it",
+      "derivation": "Recolored from approved pants/black-rightLeg.webp using the pants/black-front -> pants/off-white-front tone mapping",
+      "width": 1254,
+      "height": 1254,
+      "hasAlpha": true,
+      "bytes": 234190
     },
     {
       "productId": "shorts",
@@ -1750,10 +1840,10 @@
   "generatedAssets": 80,
   "plannedAssets": 126,
   "generationStoppedAt": "2026-10-14T02:24:19.066Z",
-  "deferredAssets": 46,
+  "deferredAssets": 28,
   "activationScope": "production black T-shirt illustration and isolated premium garment preview",
-  "acceptedAssets": 75,
-  "rejectedAssets": 5,
+  "acceptedAssets": 98,
+  "rejectedAssets": 0,
   "testSummary": {
     "acceptedViews": 75,
     "technicalFilesPassed": 80,
@@ -1771,5 +1861,6 @@
       18000
     ],
     "originalMockupsRetained": 36
-  }
+  },
+  "derivedAssets": 23
 }
