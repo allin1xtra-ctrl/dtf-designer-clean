@@ -99,6 +99,13 @@ async function printableWarnings(project: Project, garment: GarmentId, color: st
   return warnings;
 }
 
+// Phones and small tablets show the same side-by-side layout as desktop, scaled to fit the screen.
+const DESKTOP_LAYOUT_WIDTH = 1100;
+function desktopLayoutCss(): string {
+  const r = `.${styles.root}[data-desktop-fit]`;
+  return `@media(max-width:800px){${r}{padding:24px}${r} .${styles.header}{display:flex;padding:0}${r} .${styles.header} a{margin-top:0}${r} .${styles.workspace}{grid-template-columns:280px minmax(0,1fr);gap:20px}${r} .${styles.panel},${r} .${styles.canvasPanel},${r} .${styles.review}{padding:20px}${r} .${styles.stage}{max-width:650px}${r} .${styles.service}{display:flex}${r} .${styles.service} a{width:auto}${r} h2{font-size:17px}${r} p:not(.${styles.muted}){font-size:14px}${r} .${styles.actions} button{flex:0 1 auto}${r} .${styles.canvasHeader} .${styles.row} button{font-size:14px;padding:11px 14px}}`;
+}
+
 export default function TrueAuthenticDesigner() {
   const [project, setProject] = useState<Project>(EMPTY_PROJECT);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -160,6 +167,26 @@ export default function TrueAuthenticDesigner() {
     });
     observer.observe(root); return () => { observer.disconnect(); cancelAnimationFrame(frame); };
   }, []);
+
+  const fitRef = useRef<HTMLDivElement>(null);
+  const [fitScale, setFitScale] = useState(1);
+  const [fitHeight, setFitHeight] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    const outer = fitRef.current, root = rootRef.current;
+    if (!outer || !root) return;
+    const measure = () => {
+      const scale = Math.min(1, outer.clientWidth / DESKTOP_LAYOUT_WIDTH);
+      setFitScale(scale);
+      setFitHeight(scale < 1 ? Math.ceil(root.offsetHeight * scale) : undefined);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(outer); observer.observe(root);
+    return () => observer.disconnect();
+  }, []);
+  const fitted = fitScale < 1;
+  const [standalone, setStandalone] = useState(false);
+  useEffect(() => { setStandalone(window.parent === window); }, []);
 
   function commit(next: Project) {
     setHistory(previous => [...previous.slice(-19), project]); setFuture([]); setProject(next);
@@ -264,7 +291,10 @@ export default function TrueAuthenticDesigner() {
   }
   const mask = `url(${maskUrl(garment, garmentColor, activeView)})`;
 
-  return <div className={styles.root} ref={rootRef}>
+  return <div ref={fitRef} style={{ width: "100%", overflow: "hidden", height: fitHeight, minHeight: fitted && standalone ? "100vh" : undefined, background: "#101916" }}>
+  <style>{desktopLayoutCss()}</style>
+  <div className={styles.root} ref={rootRef} data-desktop-fit={fitted ? "" : undefined}
+    style={fitted ? { width: DESKTOP_LAYOUT_WIDTH, transform: `scale(${fitScale})`, transformOrigin: "top left" } : undefined}>
     <header className={styles.header}>
       <div><span className={styles.eyebrow}>TRUE AUTHENTIC • DESIGN STUDIO</span><h1>Your artwork. Your way.</h1><p>Create your own custom T-shirts, hoodies, sweatpants, and shorts.</p></div>
       <a href="https://www.ta-apparel.com/pages/contact" target="_top">Ask about a custom order ↗</a>
@@ -353,5 +383,6 @@ export default function TrueAuthenticDesigner() {
         <p className={styles.muted}>Your artwork stays in this browser unless you choose to send it. Downloads do not place an order. Artwork quality still needs review before printing.</p>
       </section>
     </div>
+  </div>
   </div>;
 }
