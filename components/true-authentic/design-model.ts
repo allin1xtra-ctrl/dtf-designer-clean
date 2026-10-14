@@ -15,7 +15,7 @@ const finite = (n: unknown, min: number, max: number): n is number =>
 export function parseDesign(raw: string): Design {
   if (raw.length > MAX_PROJECT_BYTES) throw new Error("Project is too large. Maximum size is 25 MB.");
   const design = JSON.parse(raw) as Design;
-  if (!design || design.version !== 1 || !finite(design.width, 2, 20) || !finite(design.height, 2, 20) ||
+  if (!design || design.version !== 1 || !((finite(design.width, 2, 20) && finite(design.height, 2, 20)) || (design.width === 13 && design.height === 60)) ||
       !Array.isArray(design.layers) || design.layers.length > 20) throw new Error("This is not a supported True Authentic project.");
   const ids = new Set<string>();
   for (const layer of design.layers) {

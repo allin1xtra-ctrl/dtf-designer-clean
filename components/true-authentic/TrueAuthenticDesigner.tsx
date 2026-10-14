@@ -5,7 +5,7 @@ import { clamp, Design, EMPTY_DESIGN, FONTS, Layer, layerWarnings, MAX_FILE_BYTE
 import styles from "./designer.module.css";
 
 const STORAGE_KEY = "true-authentic-design-v1";
-const SIZES = [[3,3], [5,5], [8,10], [12,12], [12,16], [16,20]];
+const SIZES = [[3,3], [5,5], [8,10], [12,12], [12,16], [13,60]];
 function download(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a"); link.href = url; link.download = name; link.click();
@@ -24,8 +24,8 @@ function readImage(file: File): Promise<string> {
   });
 }
 
-export default function TrueAuthenticDesigner() {
-  const [design, setDesign] = useState<Design>(EMPTY_DESIGN);
+export default function TrueAuthenticDesigner({ gangSheet = false }: { gangSheet?: boolean }) {
+  const [design, setDesign] = useState<Design>(() => gangSheet ? { ...EMPTY_DESIGN, width: 13, height: 60 } : EMPTY_DESIGN);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [status, setStatus] = useState("Choose a print size, then add your artwork or text.");
   const [busy, setBusy] = useState(false);
@@ -168,7 +168,7 @@ export default function TrueAuthenticDesigner() {
           commit({ ...design, width, height, layers });
         }}>
           {!SIZES.some(([w,h]) => w===design.width && h===design.height) && <option>{design.width}x{design.height}</option>}
-          {SIZES.map(([w,h]) => <option key={`${w}x${h}`} value={`${w}x${h}`}>{w} × {h}</option>)}
+          {SIZES.map(([w,h]) => <option key={`${w}x${h}`} value={`${w}x${h}`}>{w} × {h}{w === 13 && h === 60 ? " — Gang Sheet" : ""}</option>)}
         </select></label>
         <p className={styles.muted}>Print area only. Garment availability and pricing are confirmed with your order.</p>
         <button className={styles.primary} disabled={busy} onClick={() => uploadRef.current?.click()}>{busy ? "Working…" : "Upload artwork"}</button>
