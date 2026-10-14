@@ -217,7 +217,7 @@ export default function TrueAuthenticDesigner({ gangSheet = false }: { gangSheet
                 onPointerDown={event=>{if(busy)return;event.preventDefault();setSelectedId(layer.id);const p=coordinates(event.clientX,event.clientY);drag.current={id:layer.id,x:p.x-layer.x,y:p.y-layer.y,initial:design};svgRef.current?.setPointerCapture(event.pointerId);}}>
                 {layer.type==="image" ? <image href={layer.source} x={-w/2} y={-h/2} width={w} height={h} preserveAspectRatio="none"/> :
                   <text textAnchor="middle" dominantBaseline="central" fontFamily={layer.font} fontWeight="bold" fontSize={h*0.8} fill={layer.color} textLength={layer.text ? w : undefined} lengthAdjust="spacingAndGlyphs">{layer.text}</text>}
-                <rect x={-w/2} y={-h/2} width={w} height={h} fill="transparent" stroke={selectedId===layer.id ? "#db6b35" : "none"} strokeWidth={3} strokeDasharray="8 6"/>
+                <rect x={-w/2} y={-h/2} width={w} height={h} fill="transparent" stroke="none"/>
               </g>;
             })}
           </svg>
