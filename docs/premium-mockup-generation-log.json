@@ -1,0 +1,561 @@
+[
+  {
+    "productId": "t-shirts",
+    "colorId": "black",
+    "view": "front",
+    "originalFile": "exec-fc493110-93cf-4b71-b7a2-3dfdceca0fd3.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "back",
+    "colorId": "black",
+    "prompt": "Use case: product-mockup. Reference image is a DESIGN REFERENCE BOARD, not an edit target. Generate ONE standalone original independent unbranded charcoal black heavyweight cotton oversized boxy drop-shoulder T-shirt matching the top row. View: whole garment, straight-on BACK view. Square transparent image, realistic soft-lit product photography, no people, no visible mannequin or hanger. Keep the same approved garment identity and charcoal black cloth. For whole views, entire garment fully visible centered within 8% margins. For detail views, fill frame with the sleeve/neck/thigh fabric and center its flat usable print surface so an existing center-based print guide fits. Heavy matte fabric and fine realistic stitching. No logos, no MADE, no supplier branding, no text, no labels, no art, no graphics, no dotted guides, no watermark. No board or multi-view composition. Preserve usable blank print surface. 2000x2000 if possible.",
+    "originalFile": "exec-c56ddd15-a98e-474c-aa57-cc0bd92466c5.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "neckTag",
+    "colorId": "black",
+    "prompt": "Use case: product-mockup. Reference image is a DESIGN REFERENCE BOARD, not an edit target. Generate ONE standalone original independent unbranded charcoal black heavyweight cotton oversized boxy drop-shoulder T-shirt matching the top row. View: close-up inside BACK NECK showing the blank inner collar/neck printing surface, no sewn labels or tags. Square transparent image, realistic soft-lit product photography, no people, no visible mannequin or hanger. Keep the same approved garment identity and charcoal black cloth. For whole views, entire garment fully visible centered within 8% margins. For detail views, fill frame with the sleeve/neck/thigh fabric and center its flat usable print surface so an existing center-based print guide fits. Heavy matte fabric and fine realistic stitching. No logos, no MADE, no supplier branding, no text, no labels, no art, no graphics, no dotted guides, no watermark. No board or multi-view composition. Preserve usable blank print surface. 2000x2000 if possible.",
+    "originalFile": "exec-934148fa-02db-432d-aa45-2b31608506d0.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "leftSleeve",
+    "colorId": "black",
+    "prompt": "Use case: product-mockup. Reference image is a DESIGN REFERENCE BOARD, not an edit target. Generate ONE standalone original independent unbranded charcoal black heavyweight cotton oversized boxy drop-shoulder T-shirt matching the top row. View: close-up of the wearer LEFT sleeve outer surface, natural side view with large flat blank central sleeve surface. Square transparent image, realistic soft-lit product photography, no people, no visible mannequin or hanger. Keep the same approved garment identity and charcoal black cloth. For whole views, entire garment fully visible centered within 8% margins. For detail views, fill frame with the sleeve/neck/thigh fabric and center its flat usable print surface so an existing center-based print guide fits. Heavy matte fabric and fine realistic stitching. No logos, no MADE, no supplier branding, no text, no labels, no art, no graphics, no dotted guides, no watermark. No board or multi-view composition. Preserve usable blank print surface. 2000x2000 if possible.",
+    "originalFile": "exec-b1f99797-7c9b-487f-b8f1-ea48ba816b45.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "front",
+    "colorId": "black",
+    "prompt": "Use case: product-mockup. Reference image is a DESIGN REFERENCE BOARD, not an edit target. Generate ONE standalone original independent unbranded charcoal black heavyweight fleece oversized pullover hoodie matching the second row, plain cotton drawstrings, kangaroo pocket, no metal hardware. View: whole garment, straight-on FRONT view. Square transparent image, realistic soft-lit product photography, no people, no visible mannequin or hanger. Keep the same approved garment identity and charcoal black cloth. For whole views, entire garment fully visible centered within 8% margins. For detail views, fill frame with the sleeve/neck/thigh fabric and center its flat usable print surface so an existing center-based print guide fits. Heavy matte fabric and fine realistic stitching. No logos, no MADE, no supplier branding, no text, no labels, no art, no graphics, no dotted guides, no watermark. No board or multi-view composition. Preserve usable blank print surface. 2000x2000 if possible.",
+    "originalFile": "exec-e3e0a35b-d33a-46d2-b7fc-bfa1c4440f68.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "rightSleeve",
+    "colorId": "black",
+    "prompt": "Use case: precise-object-edit. Edit target is the supplied original unbranded black LEFT sleeve close-up. Produce the matching RIGHT sleeve by mirroring the whole composition horizontally. Keep the same fabric, seams, framing, dimensions, charcoal color and transparent alpha; do not redesign the garment, crop it, add labels, logos, MADE, any supplier marks, text, graphics or guides. The torso and sleeve must swap sides in the image to show the opposite sleeve.",
+    "originalFile": "exec-67e896bd-8a27-4045-8dbc-7e56c0245460.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "leftSleeve",
+    "colorId": "black",
+    "prompt": "Use case: product-mockup. Reference image is a DESIGN REFERENCE BOARD, not an edit target. Generate ONE standalone original independent unbranded charcoal black heavyweight fleece oversized pullover hoodie matching the second row, plain cotton drawstrings, kangaroo pocket, no metal hardware. View: close-up of the wearer LEFT sleeve outer surface, natural side view with large flat blank central sleeve surface. Square transparent image, realistic soft-lit product photography, no people, no visible mannequin or hanger. Keep the same approved garment identity and charcoal black cloth. For whole views, entire garment fully visible centered within 8% margins. For detail views, fill frame with the sleeve/neck/thigh fabric and center its flat usable print surface so an existing center-based print guide fits. Heavy matte fabric and fine realistic stitching. No logos, no MADE, no supplier branding, no text, no labels, no art, no graphics, no dotted guides, no watermark. No board or multi-view composition. Preserve usable blank print surface. 2000x2000 if possible.",
+    "originalFile": "exec-2fd16083-fad3-46f1-a621-b9e596a42ea8.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "back",
+    "colorId": "black",
+    "prompt": "Use case: product-mockup. Reference image is a DESIGN REFERENCE BOARD, not an edit target. Generate ONE standalone original independent unbranded charcoal black heavyweight fleece oversized pullover hoodie matching the second row, plain cotton drawstrings, kangaroo pocket, no metal hardware. View: whole garment, straight-on BACK view. Square transparent image, realistic soft-lit product photography, no people, no visible mannequin or hanger. Keep the same approved garment identity and charcoal black cloth. For whole views, entire garment fully visible centered within 8% margins. For detail views, fill frame with the sleeve/neck/thigh fabric and center its flat usable print surface so an existing center-based print guide fits. Heavy matte fabric and fine realistic stitching. No logos, no MADE, no supplier branding, no text, no labels, no art, no graphics, no dotted guides, no watermark. No board or multi-view composition. Preserve usable blank print surface. 2000x2000 if possible.",
+    "originalFile": "exec-7673e288-6002-4116-b017-55cc49f8922e.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "rightSleeve",
+    "colorId": "black",
+    "prompt": "Use case: precise-object-edit. Edit target is the supplied original unbranded black LEFT sleeve close-up. Produce the matching RIGHT sleeve by mirroring the whole composition horizontally. Keep the same fabric, seams, framing, dimensions, charcoal color and transparent alpha; do not redesign the garment, crop it, add labels, logos, MADE, any supplier marks, text, graphics or guides. The torso and sleeve must swap sides in the image to show the opposite sleeve.",
+    "originalFile": "exec-debc15c9-b273-4880-ba05-ddf97950b762.png"
+  },
+  {
+    "productId": "pants",
+    "view": "front",
+    "colorId": "black",
+    "prompt": "Use case: product-mockup. Reference image is a DESIGN REFERENCE BOARD, not an edit target. Generate ONE standalone original independent unbranded charcoal black heavyweight fleece relaxed oversized sweatpants with elastic waistband and ankle cuffs matching the third row. View: whole garment, straight-on FRONT view. Square transparent image, realistic soft-lit product photography, no people, no visible mannequin or hanger. Keep the same approved garment identity and charcoal black cloth. For whole views, entire garment fully visible centered within 8% margins. For detail views, fill frame with the sleeve/neck/thigh fabric and center its flat usable print surface so an existing center-based print guide fits. Heavy matte fabric and fine realistic stitching. No logos, no MADE, no supplier branding, no text, no labels, no art, no graphics, no dotted guides, no watermark. No board or multi-view composition. Preserve usable blank print surface. 2000x2000 if possible.",
+    "originalFile": "exec-5a19f6e4-105e-4b7b-a69e-f8be9b6b1be8.png"
+  },
+  {
+    "productId": "pants",
+    "view": "back",
+    "colorId": "black",
+    "prompt": "Use case: product-mockup. Reference image is a DESIGN REFERENCE BOARD, not an edit target. Generate ONE standalone original independent unbranded charcoal black heavyweight fleece relaxed oversized sweatpants with elastic waistband and ankle cuffs matching the third row. View: whole garment, straight-on BACK view. Square transparent image, realistic soft-lit product photography, no people, no visible mannequin or hanger. Keep the same approved garment identity and charcoal black cloth. For whole views, entire garment fully visible centered within 8% margins. For detail views, fill frame with the sleeve/neck/thigh fabric and center its flat usable print surface so an existing center-based print guide fits. Heavy matte fabric and fine realistic stitching. No logos, no MADE, no supplier branding, no text, no labels, no art, no graphics, no dotted guides, no watermark. No board or multi-view composition. Preserve usable blank print surface. 2000x2000 if possible.",
+    "originalFile": "exec-4c99596c-28a1-43b9-a59f-be1e6bb9c851.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "neckTag",
+    "colorId": "black",
+    "prompt": "Use case: product-mockup. Reference image is a DESIGN REFERENCE BOARD, not an edit target. Generate ONE standalone original independent unbranded charcoal black heavyweight fleece oversized pullover hoodie matching the second row, plain cotton drawstrings, kangaroo pocket, no metal hardware. View: close-up inside BACK NECK showing the blank inner collar/neck printing surface, no sewn labels or tags. Square transparent image, realistic soft-lit product photography, no people, no visible mannequin or hanger. Keep the same approved garment identity and charcoal black cloth. For whole views, entire garment fully visible centered within 8% margins. For detail views, fill frame with the sleeve/neck/thigh fabric and center its flat usable print surface so an existing center-based print guide fits. Heavy matte fabric and fine realistic stitching. No logos, no MADE, no supplier branding, no text, no labels, no art, no graphics, no dotted guides, no watermark. No board or multi-view composition. Preserve usable blank print surface. 2000x2000 if possible.",
+    "originalFile": "exec-d5b87df7-8f09-4bce-8df4-c70ee9e76608.png"
+  },
+  {
+    "productId": "pants",
+    "view": "leftLeg",
+    "colorId": "black",
+    "prompt": "Use case: product-mockup. Reference image is a DESIGN REFERENCE BOARD, not an edit target. Generate ONE standalone original independent unbranded charcoal black heavyweight fleece relaxed oversized sweatpants with elastic waistband and ankle cuffs matching the third row. View: close-up of the wearer LEFT leg outer thigh printing surface, large blank fabric surface centered. Square transparent image, realistic soft-lit product photography, no people, no visible mannequin or hanger. Keep the same approved garment identity and charcoal black cloth. For whole views, entire garment fully visible centered within 8% margins. For detail views, fill frame with the sleeve/neck/thigh fabric and center its flat usable print surface so an existing center-based print guide fits. Heavy matte fabric and fine realistic stitching. No logos, no MADE, no supplier branding, no text, no labels, no art, no graphics, no dotted guides, no watermark. No board or multi-view composition. Preserve usable blank print surface. 2000x2000 if possible.",
+    "originalFile": "exec-21dd25fb-ad2b-4a66-bf97-83c5b4512033.png"
+  },
+  {
+    "productId": "shorts",
+    "view": "front",
+    "colorId": "black",
+    "prompt": "Use case: product-mockup. Reference image is a DESIGN REFERENCE BOARD, not an edit target. Generate ONE standalone original independent unbranded charcoal black heavyweight cotton/fleece relaxed oversized above-knee shorts with elastic waistband matching the bottom row. View: whole garment, straight-on FRONT view. Square transparent image, realistic soft-lit product photography, no people, no visible mannequin or hanger. Keep the same approved garment identity and charcoal black cloth. For whole views, entire garment fully visible centered within 8% margins. For detail views, fill frame with the sleeve/neck/thigh fabric and center its flat usable print surface so an existing center-based print guide fits. Heavy matte fabric and fine realistic stitching. No logos, no MADE, no supplier branding, no text, no labels, no art, no graphics, no dotted guides, no watermark. No board or multi-view composition. Preserve usable blank print surface. 2000x2000 if possible.",
+    "originalFile": "exec-add97ddc-a7d1-408d-b439-37df72015724.png"
+  },
+  {
+    "productId": "pants",
+    "view": "rightLeg",
+    "colorId": "black",
+    "prompt": "Use case: product-mockup. Reference image is a DESIGN REFERENCE BOARD, not an edit target. Generate ONE standalone original independent unbranded charcoal black heavyweight fleece relaxed oversized sweatpants with elastic waistband and ankle cuffs matching the third row. View: close-up of the wearer RIGHT leg outer thigh printing surface, large blank fabric surface centered. Square transparent image, realistic soft-lit product photography, no people, no visible mannequin or hanger. Keep the same approved garment identity and charcoal black cloth. For whole views, entire garment fully visible centered within 8% margins. For detail views, fill frame with the sleeve/neck/thigh fabric and center its flat usable print surface so an existing center-based print guide fits. Heavy matte fabric and fine realistic stitching. No logos, no MADE, no supplier branding, no text, no labels, no art, no graphics, no dotted guides, no watermark. No board or multi-view composition. Preserve usable blank print surface. 2000x2000 if possible.",
+    "originalFile": "exec-4d62e0cc-7a33-4a11-b91f-afd006c9cba2.png"
+  },
+  {
+    "productId": "shorts",
+    "view": "back",
+    "colorId": "black",
+    "prompt": "Use case: product-mockup. Reference image is a DESIGN REFERENCE BOARD, not an edit target. Generate ONE standalone original independent unbranded charcoal black heavyweight cotton/fleece relaxed oversized above-knee shorts with elastic waistband matching the bottom row. View: whole garment, straight-on BACK view. Square transparent image, realistic soft-lit product photography, no people, no visible mannequin or hanger. Keep the same approved garment identity and charcoal black cloth. For whole views, entire garment fully visible centered within 8% margins. For detail views, fill frame with the sleeve/neck/thigh fabric and center its flat usable print surface so an existing center-based print guide fits. Heavy matte fabric and fine realistic stitching. No logos, no MADE, no supplier branding, no text, no labels, no art, no graphics, no dotted guides, no watermark. No board or multi-view composition. Preserve usable blank print surface. 2000x2000 if possible.",
+    "originalFile": "exec-e9759e69-d75a-40fa-9882-80dca73b6252.png"
+  },
+  {
+    "productId": "shorts",
+    "view": "rightLeg",
+    "colorId": "black",
+    "prompt": "Use case: product-mockup. Reference image is a DESIGN REFERENCE BOARD, not an edit target. Generate ONE standalone original independent unbranded charcoal black heavyweight cotton/fleece relaxed oversized above-knee shorts with elastic waistband matching the bottom row. View: close-up of the wearer RIGHT leg outer thigh printing surface, large blank fabric surface centered. Square transparent image, realistic soft-lit product photography, no people, no visible mannequin or hanger. Keep the same approved garment identity and charcoal black cloth. For whole views, entire garment fully visible centered within 8% margins. For detail views, fill frame with the sleeve/neck/thigh fabric and center its flat usable print surface so an existing center-based print guide fits. Heavy matte fabric and fine realistic stitching. No logos, no MADE, no supplier branding, no text, no labels, no art, no graphics, no dotted guides, no watermark. No board or multi-view composition. Preserve usable blank print surface. 2000x2000 if possible.",
+    "originalFile": "exec-74951d4f-3148-400c-9a01-0eacbe842226.png"
+  },
+  {
+    "productId": "shorts",
+    "view": "leftLeg",
+    "colorId": "black",
+    "prompt": "Use case: product-mockup. Reference image is a DESIGN REFERENCE BOARD, not an edit target. Generate ONE standalone original independent unbranded charcoal black heavyweight cotton/fleece relaxed oversized above-knee shorts with elastic waistband matching the bottom row. View: close-up of the wearer LEFT leg outer thigh printing surface, large blank fabric surface centered. Square transparent image, realistic soft-lit product photography, no people, no visible mannequin or hanger. Keep the same approved garment identity and charcoal black cloth. For whole views, entire garment fully visible centered within 8% margins. For detail views, fill frame with the sleeve/neck/thigh fabric and center its flat usable print surface so an existing center-based print guide fits. Heavy matte fabric and fine realistic stitching. No logos, no MADE, no supplier branding, no text, no labels, no art, no graphics, no dotted guides, no watermark. No board or multi-view composition. Preserve usable blank print surface. 2000x2000 if possible.",
+    "originalFile": "exec-7be09516-e663-425c-85d3-8664ace08347.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "front",
+    "colorId": "white",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded t-shirts front mockup. Change ONLY garment cloth color to warm neutral white, base color #f8fafc. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-c895397f-0ff1-45b3-ac26-444506d71cd2.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "front",
+    "colorId": "heather-grey",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded t-shirts front mockup. Change ONLY garment cloth color to light heather grey with subtle heather fibers, base color #9ca3af. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-09de0389-34f6-4620-95b7-03d7d11fd3bd.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "back",
+    "colorId": "white",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded t-shirts back mockup. Change ONLY garment cloth color to warm neutral white, base color #f8fafc. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-c9cd53f1-6380-407d-932f-ee64907a87e5.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "back",
+    "colorId": "heather-grey",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded t-shirts back mockup. Change ONLY garment cloth color to light heather grey with subtle heather fibers, base color #9ca3af. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-97860582-7508-44f3-b37f-57dc79bc13a3.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "front",
+    "colorId": "regular-grey",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded t-shirts front mockup. Change ONLY garment cloth color to medium slate grey, base color #64748b. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-c9ecca1b-ef63-4148-afa1-6ebc35fdcd4c.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "back",
+    "colorId": "regular-grey",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded t-shirts back mockup. Change ONLY garment cloth color to medium slate grey, base color #64748b. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-7d80ae4e-f10c-4871-8dad-6e19e9f4186f.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "front",
+    "colorId": "royal-blue",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded t-shirts front mockup. Change ONLY garment cloth color to deep blue matching the existing palette, base color #075985. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-e9010b68-b547-4f75-9f82-721d1980adb2.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "back",
+    "colorId": "red",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded t-shirts back mockup. Change ONLY garment cloth color to rich dark red, base color #991b1b. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-2156b023-5515-4753-a12b-883eda77b278.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "back",
+    "colorId": "royal-blue",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded t-shirts back mockup. Change ONLY garment cloth color to deep blue matching the existing palette, base color #075985. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-d829a3d3-aec6-4b28-bb4d-52d8636fa193.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "front",
+    "colorId": "red",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded t-shirts front mockup. Change ONLY garment cloth color to rich dark red, base color #991b1b. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-85e2ea21-476b-447d-9854-a2b30b6da056.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "neckTag",
+    "colorId": "heather-grey",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded t-shirts neckTag mockup. Change ONLY garment cloth color to light heather grey with subtle heather fibers, base color #9ca3af. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-a0b1f077-149c-4350-95d3-c254c1b0d940.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "back",
+    "colorId": "off-white",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded t-shirts back mockup. Change ONLY garment cloth color to warm off white, base color #f5f1e8. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-bd3ef711-3d7a-4929-8ebe-cbc0d4b4f431.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "rightSleeve",
+    "colorId": "white",
+    "prompt": "Use case: precise-object-edit. Edit target: original unbranded t-shirts right sleeve. Change ONLY cloth color to warm neutral white, base #f8fafc. Preserve exact silhouette, pose, view, dimensions, framing, seam positions, folds, lighting, texture, and transparent background. No moving, mirroring, cropping or rotating. No logos, labels, text, MADE, supplier marks, graphics, print guides or watermarks. Realistic colorway of the same garment. Preserve alpha.",
+    "originalFile": "exec-c574f104-65fd-4e39-8a43-9f31ac881caf.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "neckTag",
+    "colorId": "regular-grey",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded t-shirts neckTag mockup. Change ONLY garment cloth color to medium slate grey, base color #64748b. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-69015a3a-f0c2-4209-a661-c99887d15394.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "neckTag",
+    "colorId": "royal-blue",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded t-shirts neckTag mockup. Change ONLY garment cloth color to deep blue matching the existing palette, base color #075985. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-c1d433dc-93e9-48ab-ba93-6387e6c19f9d.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "front",
+    "colorId": "off-white",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded t-shirts front mockup. Change ONLY garment cloth color to warm off white, base color #f5f1e8. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-41d54238-9e0e-406d-9916-b7a111a4a234.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "rightSleeve",
+    "colorId": "royal-blue",
+    "prompt": "Use case: precise-object-edit. Edit target: original unbranded t-shirts right sleeve. Change ONLY cloth color to deep blue matching the existing palette, base #075985. Preserve exact silhouette, pose, view, dimensions, framing, seam positions, folds, lighting, texture, and transparent background. No moving, mirroring, cropping or rotating. No logos, labels, text, MADE, supplier marks, graphics, print guides or watermarks. Realistic colorway of the same garment. Preserve alpha.",
+    "originalFile": "exec-7afefa55-c719-40ed-9a7c-3e63ea6472dc.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "neckTag",
+    "colorId": "white",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded t-shirts neckTag mockup. Change ONLY garment cloth color to warm neutral white, base color #f8fafc. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-45d9dd48-e6e4-4610-8759-4b336f4d0d3c.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "rightSleeve",
+    "colorId": "heather-grey",
+    "prompt": "Use case: precise-object-edit. Edit target: original unbranded t-shirts right sleeve. Change ONLY cloth color to light heather grey with subtle heather fibers, base #9ca3af. Preserve exact silhouette, pose, view, dimensions, framing, seam positions, folds, lighting, texture, and transparent background. No moving, mirroring, cropping or rotating. No logos, labels, text, MADE, supplier marks, graphics, print guides or watermarks. Realistic colorway of the same garment. Preserve alpha.",
+    "originalFile": "exec-dfad579d-ea97-4e47-9957-c4aeed6255cd.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "rightSleeve",
+    "colorId": "regular-grey",
+    "prompt": "Use case: precise-object-edit. Edit target: original unbranded t-shirts right sleeve. Change ONLY cloth color to medium slate grey, base #64748b. Preserve exact silhouette, pose, view, dimensions, framing, seam positions, folds, lighting, texture, and transparent background. No moving, mirroring, cropping or rotating. No logos, labels, text, MADE, supplier marks, graphics, print guides or watermarks. Realistic colorway of the same garment. Preserve alpha.",
+    "originalFile": "exec-edb113e2-120f-4481-b03b-bdabf28cd030.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "leftSleeve",
+    "colorId": "white",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded t-shirts leftSleeve mockup. Change ONLY garment cloth color to warm neutral white, base color #f8fafc. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-38c0f528-1675-4d98-91ff-4e32c7d8eec1.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "neckTag",
+    "colorId": "red",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded t-shirts neckTag mockup. Change ONLY garment cloth color to rich dark red, base color #991b1b. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-5e7b309c-7357-440f-b353-65fa12a40c6c.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "neckTag",
+    "colorId": "off-white",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded t-shirts neckTag mockup. Change ONLY garment cloth color to warm off white, base color #f5f1e8. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-efbaca2e-e803-4cb8-9d36-55bbbc708e95.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "leftSleeve",
+    "colorId": "heather-grey",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded t-shirts leftSleeve mockup. Change ONLY garment cloth color to light heather grey with subtle heather fibers, base color #9ca3af. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-333db9ec-29ba-4836-8277-81da520ea398.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "leftSleeve",
+    "colorId": "regular-grey",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded t-shirts leftSleeve mockup. Change ONLY garment cloth color to medium slate grey, base color #64748b. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-2ec94e3d-7cd7-4c38-824d-bc60856e8d4c.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "front",
+    "colorId": "white",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded hoodies front mockup. Change ONLY garment cloth color to warm neutral white, base color #f8fafc. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-ec0deff5-aaaa-44fe-9f13-64d9afb0d54a.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "front",
+    "colorId": "heather-grey",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded hoodies front mockup. Change ONLY garment cloth color to light heather grey with subtle heather fibers, base color #9ca3af. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-2a97a7cd-2da1-4dac-958d-5b61913d3937.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "rightSleeve",
+    "colorId": "red",
+    "prompt": "Use case: precise-object-edit. Edit target: original unbranded t-shirts right sleeve. Change ONLY cloth color to rich dark red, base #991b1b. Preserve exact silhouette, pose, view, dimensions, framing, seam positions, folds, lighting, texture, and transparent background. No moving, mirroring, cropping or rotating. No logos, labels, text, MADE, supplier marks, graphics, print guides or watermarks. Realistic colorway of the same garment. Preserve alpha.",
+    "originalFile": "exec-43818c51-5471-4969-84c2-6fdae98e78d0.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "front",
+    "colorId": "royal-blue",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded hoodies front mockup. Change ONLY garment cloth color to deep blue matching the existing palette, base color #075985. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-cb92d087-a03b-47d9-8a35-af96d2c37db6.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "front",
+    "colorId": "regular-grey",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded hoodies front mockup. Change ONLY garment cloth color to medium slate grey, base color #64748b. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-4d938967-80a0-4885-910f-a57b15652cf8.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "front",
+    "colorId": "red",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded hoodies front mockup. Change ONLY garment cloth color to rich dark red, base color #991b1b. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-e68dc22c-f23a-4ce1-9557-22005f3d6ede.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "leftSleeve",
+    "colorId": "royal-blue",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded t-shirts leftSleeve mockup. Change ONLY garment cloth color to deep blue matching the existing palette, base color #075985. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-4f5b8f5a-31da-42ad-8b91-8784ea223d98.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "rightSleeve",
+    "colorId": "heather-grey",
+    "prompt": "Use case: precise-object-edit. Edit target: original unbranded hoodies right sleeve. Change ONLY cloth color to light heather grey with subtle heather fibers, base #9ca3af. Preserve exact silhouette, pose, view, dimensions, framing, seam positions, folds, lighting, texture, and transparent background. No moving, mirroring, cropping or rotating. No logos, labels, text, MADE, supplier marks, graphics, print guides or watermarks. Realistic colorway of the same garment. Preserve alpha.",
+    "originalFile": "exec-586377ab-68e7-42ca-9e28-55d96a823f21.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "rightSleeve",
+    "colorId": "off-white",
+    "prompt": "Use case: precise-object-edit. Edit target: original unbranded t-shirts right sleeve. Change ONLY cloth color to warm off white, base #f5f1e8. Preserve exact silhouette, pose, view, dimensions, framing, seam positions, folds, lighting, texture, and transparent background. No moving, mirroring, cropping or rotating. No logos, labels, text, MADE, supplier marks, graphics, print guides or watermarks. Realistic colorway of the same garment. Preserve alpha.",
+    "originalFile": "exec-8d801bb2-12ab-41e7-ae25-efafb428f911.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "leftSleeve",
+    "colorId": "regular-grey",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded hoodies leftSleeve mockup. Change ONLY garment cloth color to medium slate grey, base color #64748b. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-72d137b1-e913-4d7d-9055-3dc0466961c8.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "front",
+    "colorId": "off-white",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded hoodies front mockup. Change ONLY garment cloth color to warm off white, base color #f5f1e8. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-96f35023-a911-42ab-8d30-280f026e6c63.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "rightSleeve",
+    "colorId": "white",
+    "prompt": "Use case: precise-object-edit. Edit target: original unbranded hoodies right sleeve. Change ONLY cloth color to warm neutral white, base #f8fafc. Preserve exact silhouette, pose, view, dimensions, framing, seam positions, folds, lighting, texture, and transparent background. No moving, mirroring, cropping or rotating. No logos, labels, text, MADE, supplier marks, graphics, print guides or watermarks. Realistic colorway of the same garment. Preserve alpha.",
+    "originalFile": "exec-7d1d26d9-72ac-4245-a9cc-3eaa444ab7a5.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "rightSleeve",
+    "colorId": "regular-grey",
+    "prompt": "Use case: precise-object-edit. Edit target: original unbranded hoodies right sleeve. Change ONLY cloth color to medium slate grey, base #64748b. Preserve exact silhouette, pose, view, dimensions, framing, seam positions, folds, lighting, texture, and transparent background. No moving, mirroring, cropping or rotating. No logos, labels, text, MADE, supplier marks, graphics, print guides or watermarks. Realistic colorway of the same garment. Preserve alpha.",
+    "originalFile": "exec-8219cb5f-f2b8-4643-9d6f-3af1ebe3788c.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "leftSleeve",
+    "colorId": "red",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded hoodies leftSleeve mockup. Change ONLY garment cloth color to rich dark red, base color #991b1b. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-4b889d6a-cbac-4aa1-a3ac-ea2a0f03d767.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "leftSleeve",
+    "colorId": "white",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded hoodies leftSleeve mockup. Change ONLY garment cloth color to warm neutral white, base color #f8fafc. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-fa6263eb-0119-4c07-9f55-80760bb04c17.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "leftSleeve",
+    "colorId": "red",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded t-shirts leftSleeve mockup. Change ONLY garment cloth color to rich dark red, base color #991b1b. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-b3709194-fe7e-403f-8e0d-6c49ad822988.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "leftSleeve",
+    "colorId": "heather-grey",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded hoodies leftSleeve mockup. Change ONLY garment cloth color to light heather grey with subtle heather fibers, base color #9ca3af. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-cb68de40-1c7c-41db-82a4-7dcb7ba92a52.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "rightSleeve",
+    "colorId": "royal-blue",
+    "prompt": "Use case: precise-object-edit. Edit target: original unbranded hoodies right sleeve. Change ONLY cloth color to deep blue matching the existing palette, base #075985. Preserve exact silhouette, pose, view, dimensions, framing, seam positions, folds, lighting, texture, and transparent background. No moving, mirroring, cropping or rotating. No logos, labels, text, MADE, supplier marks, graphics, print guides or watermarks. Realistic colorway of the same garment. Preserve alpha.",
+    "originalFile": "exec-8c1286ab-2125-40b5-91c8-873a3e5078b7.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "rightSleeve",
+    "colorId": "red",
+    "prompt": "Use case: precise-object-edit. Edit target: original unbranded hoodies right sleeve. Change ONLY cloth color to rich dark red, base #991b1b. Preserve exact silhouette, pose, view, dimensions, framing, seam positions, folds, lighting, texture, and transparent background. No moving, mirroring, cropping or rotating. No logos, labels, text, MADE, supplier marks, graphics, print guides or watermarks. Realistic colorway of the same garment. Preserve alpha.",
+    "originalFile": "exec-9d943b07-b997-43b1-96d5-b754f2c9547f.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "back",
+    "colorId": "heather-grey",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded hoodies back mockup. Change ONLY garment cloth color to light heather grey with subtle heather fibers, base color #9ca3af. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-25d210d2-e235-45d9-84d0-3164cec77661.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "rightSleeve",
+    "colorId": "off-white",
+    "prompt": "Use case: precise-object-edit. Edit target: original unbranded hoodies right sleeve. Change ONLY cloth color to warm off white, base #f5f1e8. Preserve exact silhouette, pose, view, dimensions, framing, seam positions, folds, lighting, texture, and transparent background. No moving, mirroring, cropping or rotating. No logos, labels, text, MADE, supplier marks, graphics, print guides or watermarks. Realistic colorway of the same garment. Preserve alpha.",
+    "originalFile": "exec-0d136c52-f531-46fb-a2c8-196a7e47ff8b.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "leftSleeve",
+    "colorId": "royal-blue",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded hoodies leftSleeve mockup. Change ONLY garment cloth color to deep blue matching the existing palette, base color #075985. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-13f7f13b-c782-49de-93cb-348dc0db714b.png"
+  },
+  {
+    "productId": "t-shirts",
+    "view": "leftSleeve",
+    "colorId": "off-white",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded t-shirts leftSleeve mockup. Change ONLY garment cloth color to warm off white, base color #f5f1e8. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-50c89402-b5e1-4134-b671-94df6515d7d5.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "back",
+    "colorId": "royal-blue",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded hoodies back mockup. Change ONLY garment cloth color to deep blue matching the existing palette, base color #075985. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-73e5591e-7253-411d-9f40-74ee5c190163.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "back",
+    "colorId": "regular-grey",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded hoodies back mockup. Change ONLY garment cloth color to medium slate grey, base color #64748b. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-8b58260e-decd-467f-97c0-e89496dc553a.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "leftSleeve",
+    "colorId": "off-white",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded hoodies leftSleeve mockup. Change ONLY garment cloth color to warm off white, base color #f5f1e8. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-dea74c16-2c42-4c43-bb98-43b5245f72b5.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "back",
+    "colorId": "red",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded hoodies back mockup. Change ONLY garment cloth color to rich dark red, base color #991b1b. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-4b82a84a-0c2a-417a-8870-8bba367fe422.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "back",
+    "colorId": "white",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded hoodies back mockup. Change ONLY garment cloth color to warm neutral white, base color #f8fafc. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-ccf7d1bd-bea7-44e6-b3ae-1fbef249f30a.png"
+  },
+  {
+    "productId": "pants",
+    "view": "front",
+    "colorId": "red",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded pants front mockup. Change ONLY garment cloth color to rich dark red, base color #991b1b. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-39f51d61-4f66-4682-b94a-1f97fe1faaa6.png"
+  },
+  {
+    "productId": "hoodies",
+    "view": "back",
+    "colorId": "off-white",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded hoodies back mockup. Change ONLY garment cloth color to warm off white, base color #f5f1e8. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-ff10ef3b-7aea-4c0a-ba58-c5c0c52ad420.png"
+  },
+  {
+    "productId": "pants",
+    "view": "back",
+    "colorId": "white",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded pants back mockup. Change ONLY garment cloth color to warm neutral white, base color #f8fafc. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-2eabc78f-3b60-4d97-8e14-7af2db38c67f.png"
+  },
+  {
+    "productId": "pants",
+    "view": "front",
+    "colorId": "off-white",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded pants front mockup. Change ONLY garment cloth color to warm off white, base color #f5f1e8. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-9ebfee88-0ba8-4994-80e3-8a72f0282c14.png"
+  },
+  {
+    "productId": "pants",
+    "view": "front",
+    "colorId": "white",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded pants front mockup. Change ONLY garment cloth color to warm neutral white, base color #f8fafc. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-7b5da09a-9cd7-450c-b213-762046877638.png"
+  },
+  {
+    "productId": "pants",
+    "view": "back",
+    "colorId": "heather-grey",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded pants back mockup. Change ONLY garment cloth color to light heather grey with subtle heather fibers, base color #9ca3af. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-7baa343c-7be5-43df-9e78-97ec446caf1e.png"
+  },
+  {
+    "productId": "pants",
+    "view": "front",
+    "colorId": "heather-grey",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded pants front mockup. Change ONLY garment cloth color to light heather grey with subtle heather fibers, base color #9ca3af. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-f98ba935-6f02-4f71-b227-5a30fe8512ee.png"
+  },
+  {
+    "productId": "pants",
+    "view": "front",
+    "colorId": "regular-grey",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded pants front mockup. Change ONLY garment cloth color to medium slate grey, base color #64748b. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-9a1efe7f-a66f-45df-82fc-40fca55cca2e.png"
+  },
+  {
+    "productId": "pants",
+    "view": "back",
+    "colorId": "regular-grey",
+    "prompt": "Use case: precise-object-edit. Edit target is this standalone original unbranded pants back mockup. Change ONLY garment cloth color to medium slate grey, base color #64748b. Preserve the exact garment identity, silhouette, position, framing, view, aspect ratio, stitch placement, seams, folds, lighting and transparent background. Retain realistic fabric luminance and fine texture in the new cloth color; for heather grey include subtle heather fibers without changing shape. Do not move, enlarge, crop, rotate or mirror the garment. Do not add text, labels, logos, MADE, supplier branding, artwork, graphics, watermark or print guides. Output a standalone transparent image the same dimensions as the target. This is a colorway of the same garment, not a new design.",
+    "originalFile": "exec-5dc3eb2b-7cec-4aec-a892-c6ab62142cc9.png"
+  }
+]

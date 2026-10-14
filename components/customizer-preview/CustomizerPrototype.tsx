@@ -1,6 +1,7 @@
 "use client";
 
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import { getPremiumMockup } from "@/lib/premium-mockups";
 
 type PreviewMode = "apparel" | "transfer";
 type PanelTab = "tools" | "assistant" | "order";
@@ -979,12 +980,14 @@ function getViewLabel(view: ViewId) {
 
 function getApparelMockupForColor(product: ApparelProductOption, mockupKey: MockupColorKey, view: ViewId, overrides: ApparelMockupOverrides = {}) {
   const productOverrides = overrides[product.id] || overrides[product.type] || {};
+  const premium = getPremiumMockup(product.id, mockupKey, view);
   if (product.id !== "t-shirts") {
-    return productOverrides[mockupKey]?.[view] || productOverrides.black?.[view] || getProductPlaceholderMockup(product, view);
+    return productOverrides[mockupKey]?.[view] || productOverrides.black?.[view] || premium || getProductPlaceholderMockup(product, view);
   }
 
   return (
     productOverrides[mockupKey]?.[view] ||
+    premium ||
     STAGING_APPAREL_MOCKUPS[mockupKey]?.[view] ||
     STAGING_APPAREL_MOCKUPS.black?.[view] ||
     getProductPlaceholderMockup(product, view)
@@ -1402,7 +1405,7 @@ export default function CustomizerPrototype() {
     apparelProductOptions[0] ||
     APPAREL_PRODUCT_OPTIONS[0];
   const activeApparelViews = selectedApparelProduct.views.length ? selectedApparelProduct.views : APPAREL_PRODUCT_OPTIONS[0].views;
-  const printAreaGuideColor = state.mode === "apparel" ? selectedColor.hex : "#67e8f9";
+  const printAreaGuideColor = state.mode === "apparel" && !getPremiumMockup(selectedApparelProduct.id, selectedColor.mockupKey, state.activeView) ? selectedColor.hex : "#67e8f9";
   const selectedMockupColorKey = selectedColor.mockupKey;
   const configuredMaterials = stagingConfig?.materialOptions?.filter((material) => material.enabled !== false).map((material) => material.label || material.id || "Material") || MATERIAL_OPTIONS;
   const templateSettings = stagingConfig?.stagingSettings?.templateSettings;
@@ -3001,7 +3004,7 @@ export default function CustomizerPrototype() {
         </div>
       </header>
 
-      <div className="admin-doctor-customizer-shell mx-auto grid max-w-[1840px] gap-0 xl:h-[calc(100dvh-56px)] xl:overflow-hidden xl:grid-cols-[286px_minmax(0,1fr)_300px]">
+      <div className="admin-doctor-customizer-shell mx-auto grid min-w-0 grid-cols-1 max-w-[1840px] gap-0 xl:h-[calc(100dvh-56px)] xl:overflow-hidden xl:grid-cols-[286px_minmax(0,1fr)_300px]">
         <aside className={`admin-doctor-tools-panel ${mobilePanel === "tools" ? "block" : "hidden"} bg-[#0b1519] p-2.5 pt-3 xl:block xl:h-full xl:min-h-0 xl:overflow-y-auto xl:border-r xl:border-[#18313a] xl:[scrollbar-color:#27515d_#081114] xl:[scrollbar-width:thin]`}>
           <div className="space-y-2.5">
             <PanelCard title="Layers">
@@ -3268,7 +3271,7 @@ export default function CustomizerPrototype() {
           </div>
         </aside>
 
-        <section className="admin-doctor-canvas-panel flex min-h-[620px] flex-col bg-[#121a1f] p-2 xl:h-full xl:min-h-0 xl:overflow-hidden">
+        <section className="admin-doctor-canvas-panel flex min-w-0 min-h-[620px] flex-col bg-[#121a1f] p-2 xl:h-full xl:min-h-0 xl:overflow-hidden">
           <div className="mb-1 grid shrink-0 grid-cols-2 gap-2 lg:grid-cols-4">
             <label className="min-h-[58px] cursor-pointer rounded-lg border border-cyan-400/50 bg-cyan-300 p-2 text-left text-[#061015] shadow-[0_10px_24px_rgba(34,211,238,0.18)] transition hover:bg-cyan-200">
               <span className="flex items-center justify-between gap-2">
@@ -3378,6 +3381,7 @@ export default function CustomizerPrototype() {
                 : "bg-[radial-gradient(circle_at_50%_42%,rgba(86,166,188,0.3)_0%,rgba(22,36,43,0.82)_34%,#070d10_75%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_28px_90px_rgba(0,0,0,0.42)]"
             }`}
           >
+            {state.mode === "apparel" && getPremiumMockup(selectedApparelProduct.id, selectedMockupColorKey, state.activeView)?.fallbackColor ? <p className="absolute bottom-3 left-3 right-3 z-30 rounded-lg bg-neutral-900/90 p-2 text-xs text-white">This view uses the Black mockup. A preview in the selected color is not available.</p> : null}
             {state.usingSafeDefaults ? (
               <div className="absolute left-3 top-3 z-30 rounded-full border border-yellow-400/40 bg-yellow-950/80 px-3 py-1 text-xs font-semibold text-yellow-100">
                 Using safe preview defaults.
@@ -4283,107 +4287,7 @@ export default function CustomizerPrototype() {
       <div className="admin-doctor-mobile-status sticky bottom-12 z-40 border-t border-[#1e2a2f] bg-[#0c1114] px-4 py-3 text-sm text-neutral-300 lg:bottom-0 xl:hidden">
         <div className="mx-auto max-w-[1500px]">{state.status}</div>
       </div>
-      <style>{`
-        @media (max-width: 768px) {
-          html,
-          body {
-            margin: 0 !important;
-            padding: 0 !important;
-            width: 1180px !important;
-            min-width: 1180px !important;
-            height: auto !important;
-            min-height: 920px !important;
-            max-height: none !important;
-            overflow-x: visible !important;
-            overflow-y: visible !important;
-            background: #061014 !important;
-          }
 
-          body > div {
-            width: 1180px !important;
-            min-width: 1180px !important;
-            max-width: none !important;
-            height: auto !important;
-            min-height: 920px !important;
-            max-height: none !important;
-            overflow: visible !important;
-          }
-
-          .admin-doctor-customizer-root {
-            width: 1180px !important;
-            min-width: 1180px !important;
-            max-width: none !important;
-            height: auto !important;
-            min-height: 920px !important;
-            max-height: none !important;
-            overflow: visible !important;
-            padding-bottom: 0 !important;
-            position: static !important;
-          }
-
-          .admin-doctor-customizer-root > header {
-            width: 1180px !important;
-            min-width: 1180px !important;
-          }
-
-          .admin-doctor-customizer-root > header > div {
-            width: 1180px !important;
-            min-width: 1180px !important;
-            max-width: none !important;
-            height: 56px !important;
-            flex-direction: row !important;
-            align-items: center !important;
-            justify-content: space-between !important;
-            gap: 12px !important;
-          }
-
-          .admin-doctor-customizer-shell {
-            display: grid !important;
-            grid-template-columns: 286px minmax(594px, 1fr) 300px !important;
-            width: 1180px !important;
-            min-width: 1180px !important;
-            max-width: none !important;
-            height: auto !important;
-            min-height: 864px !important;
-            max-height: none !important;
-            overflow: visible !important;
-            margin: 0 !important;
-          }
-
-          .admin-doctor-tools-panel,
-          .admin-doctor-canvas-panel,
-          .admin-doctor-settings-panel {
-            display: block !important;
-            max-height: none !important;
-            overflow: visible !important;
-          }
-
-          .admin-doctor-canvas-panel {
-            display: flex !important;
-            min-height: 864px !important;
-          }
-
-          .admin-doctor-settings-panel > div > div {
-            display: block !important;
-          }
-
-          .admin-doctor-customizer-shell main,
-          .admin-doctor-customizer-shell aside,
-          .admin-doctor-customizer-shell section {
-            max-height: none !important;
-            overflow: visible !important;
-          }
-
-          .admin-doctor-customizer-shell canvas {
-            max-width: none !important;
-          }
-
-          .admin-doctor-mobile-tabs,
-          .admin-doctor-mobile-status {
-            display: none !important;
-          }
-        }
-      `}</style>
     </main>
   );
 }
