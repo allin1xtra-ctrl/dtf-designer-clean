@@ -1,0 +1,10 @@
+# Image generation provenance
+
+Mode: built-in image_gen tool, brand-new generation; no input or supplier photographs.
+
+Output: premium-garment-reference-board.png (1254x1254), retained in task outputs. WebP encoding preserves the full composition and is used by /mockup-review. The board is a concept reference; individual production assets remain pending.
+
+Prompt:
+Use case: product-mockup. Create a high-resolution photorealistic garment reference board for four original independent unbranded premium oversized streetwear blank garments. This is a website asset replacement preparation sheet, not an advertisement. Layout: exact 4 rows x 2 columns, 8 equally sized cells on a continuous neutral light-gray studio background. Rows top to bottom: heavy cotton oversized boxy drop-shoulder short-sleeve T-shirt; heavyweight oversized pullover hoodie with spacious hood, kangaroo pocket and plain no-metal drawstrings; heavyweight relaxed wide-leg sweatpants with elastic waist and ankle cuffs; heavyweight relaxed oversized above-knee shorts with elastic waist. Left column shows straight-on front, right column matching straight-on back. Each pair must be the SAME design and charcoal black color, consistent dimensions and scale. Each entire garment fully visible, flattened natural ghost-mannequin product photography, no people, no hangers. Premium realistic dense matte fabric, clean seams, subtle folds, soft even studio light with visible black fabric detail. Consistent generous padding around every item. Independently conceived garment geometry, no supplier photo references. All chest, back, neck, waist and legs entirely blank. No labels, no tags, no logos, no text at all, no MADE, no supplier branding, no prints, no graphics, no dashed printing guides, no watermark. Use landscape 2048x2048 or larger square output so all 8 views are clear. Maintain grid ordering precisely.
+
+QA note: output was 1254x1254 rather than the requested larger dimensions. It is intentionally delivered as a direction board, not a production-ready individual mockup collection. No logos or supplier branding are visible on visual review.
