@@ -7,15 +7,20 @@ import sharp from 'sharp';
 
 const manifest = JSON.parse(await readFile('docs/premium-mockup-replacement-manifest.json', 'utf8'));
 
-test('every required product/color/view has one decodable transparent optimized asset', async () => {
+test('every active product/color/view has one decodable transparent optimized asset and print mask', async () => {
   assert.equal(manifest.tasks.length, manifest.plannedAssets);
-  const ready = manifest.tasks.filter(task => task.status === "generated");
-  assert.equal(ready.length, 75);
-  assert.equal(ready.length, manifest.requiredAssets);
   assert.equal(new Set(manifest.tasks.map(t => t.targetPath)).size, 126);
-  const produced = manifest.tasks.filter(task => ["generated", "rejected-visual-qa"].includes(task.status));
-  assert.equal(produced.length, 80);
-  for (const task of produced) {
+  const generated = manifest.tasks.filter(task => task.status === "generated");
+  const derived = manifest.tasks.filter(task => task.status === "derived");
+  assert.equal(generated.length, 75);
+  assert.equal(derived.length, 23);
+  assert.equal(manifest.tasks.filter(task => task.status === "rejected-visual-qa").length, 0);
+  const active = [...generated, ...derived];
+  assert.equal(active.length, manifest.acceptedAssets);
+  const source = await readFile('lib/premium-mockup-assets.ts', 'utf8');
+  const registry = JSON.parse(source.slice(source.indexOf('['), source.lastIndexOf(']') + 1));
+  assert.deepEqual(registry.map(a => a.url).sort(), active.map(t => t.targetPath).sort());
+  for (const task of active) {
     const file = 'public' + task.targetPath;
     const metadata = await sharp(file).metadata();
     assert.equal(metadata.format, 'webp', file);
@@ -23,6 +28,16 @@ test('every required product/color/view has one decodable transparent optimized 
     assert.ok(metadata.hasAlpha, file);
     assert.equal(task.hasBakedPrintGuide, false, file);
     assert.ok((await stat(file)).size < 1000000, file);
+    if (task.status === 'derived') assert.match(task.derivation, /^(Mirrored|Recolored) from approved /, file);
+    const mask = await sharp(`public/premium-mockups/v1/print-masks/${task.productId}/${task.colorId}-${task.view}.png`).metadata();
+    assert.ok(mask.hasAlpha && mask.width === 627, file + ' mask');
+  }
+  // Every hoodie and sweatpants color now offers every location the editor shows.
+  for (const product of ['hoodies', 'pants']) {
+    const colors = new Set(registry.filter(a => a.productId === product).map(a => a.colorId));
+    const views = new Set(registry.filter(a => a.productId === product).map(a => a.view));
+    for (const color of colors) for (const view of views)
+      assert.ok(registry.some(a => a.productId === product && a.colorId === color && a.view === view), `${product} ${color} ${view}`);
   }
 });
 

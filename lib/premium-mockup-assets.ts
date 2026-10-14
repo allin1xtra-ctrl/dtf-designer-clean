@@ -388,6 +388,24 @@ export const premiumMockupAssets = [
   },
   {
     "productId": "hoodies",
+    "colorId": "white",
+    "view": "rightSleeve",
+    "url": "/premium-mockups/v1/hoodies/white-rightSleeve.webp",
+    "width": 1254,
+    "height": 1254,
+    "hasBakedPrintGuide": false
+  },
+  {
+    "productId": "hoodies",
+    "colorId": "white",
+    "view": "neckTag",
+    "url": "/premium-mockups/v1/hoodies/white-neckTag.webp",
+    "width": 1254,
+    "height": 1254,
+    "hasBakedPrintGuide": false
+  },
+  {
+    "productId": "hoodies",
     "colorId": "heather-grey",
     "view": "front",
     "url": "/premium-mockups/v1/hoodies/heather-grey-front.webp",
@@ -415,6 +433,24 @@ export const premiumMockupAssets = [
   },
   {
     "productId": "hoodies",
+    "colorId": "heather-grey",
+    "view": "rightSleeve",
+    "url": "/premium-mockups/v1/hoodies/heather-grey-rightSleeve.webp",
+    "width": 1254,
+    "height": 1254,
+    "hasBakedPrintGuide": false
+  },
+  {
+    "productId": "hoodies",
+    "colorId": "heather-grey",
+    "view": "neckTag",
+    "url": "/premium-mockups/v1/hoodies/heather-grey-neckTag.webp",
+    "width": 1254,
+    "height": 1254,
+    "hasBakedPrintGuide": false
+  },
+  {
+    "productId": "hoodies",
     "colorId": "regular-grey",
     "view": "front",
     "url": "/premium-mockups/v1/hoodies/regular-grey-front.webp",
@@ -436,6 +472,24 @@ export const premiumMockupAssets = [
     "colorId": "regular-grey",
     "view": "leftSleeve",
     "url": "/premium-mockups/v1/hoodies/regular-grey-leftSleeve.webp",
+    "width": 1254,
+    "height": 1254,
+    "hasBakedPrintGuide": false
+  },
+  {
+    "productId": "hoodies",
+    "colorId": "regular-grey",
+    "view": "rightSleeve",
+    "url": "/premium-mockups/v1/hoodies/regular-grey-rightSleeve.webp",
+    "width": 1254,
+    "height": 1254,
+    "hasBakedPrintGuide": false
+  },
+  {
+    "productId": "hoodies",
+    "colorId": "regular-grey",
+    "view": "neckTag",
+    "url": "/premium-mockups/v1/hoodies/regular-grey-neckTag.webp",
     "width": 1254,
     "height": 1254,
     "hasBakedPrintGuide": false
@@ -478,6 +532,15 @@ export const premiumMockupAssets = [
   },
   {
     "productId": "hoodies",
+    "colorId": "royal-blue",
+    "view": "neckTag",
+    "url": "/premium-mockups/v1/hoodies/royal-blue-neckTag.webp",
+    "width": 1254,
+    "height": 1254,
+    "hasBakedPrintGuide": false
+  },
+  {
+    "productId": "hoodies",
     "colorId": "red",
     "view": "front",
     "url": "/premium-mockups/v1/hoodies/red-front.webp",
@@ -505,6 +568,24 @@ export const premiumMockupAssets = [
   },
   {
     "productId": "hoodies",
+    "colorId": "red",
+    "view": "rightSleeve",
+    "url": "/premium-mockups/v1/hoodies/red-rightSleeve.webp",
+    "width": 1254,
+    "height": 1254,
+    "hasBakedPrintGuide": false
+  },
+  {
+    "productId": "hoodies",
+    "colorId": "red",
+    "view": "neckTag",
+    "url": "/premium-mockups/v1/hoodies/red-neckTag.webp",
+    "width": 1254,
+    "height": 1254,
+    "hasBakedPrintGuide": false
+  },
+  {
+    "productId": "hoodies",
     "colorId": "off-white",
     "view": "front",
     "url": "/premium-mockups/v1/hoodies/off-white-front.webp",
@@ -526,6 +607,24 @@ export const premiumMockupAssets = [
     "colorId": "off-white",
     "view": "leftSleeve",
     "url": "/premium-mockups/v1/hoodies/off-white-leftSleeve.webp",
+    "width": 1254,
+    "height": 1254,
+    "hasBakedPrintGuide": false
+  },
+  {
+    "productId": "hoodies",
+    "colorId": "off-white",
+    "view": "rightSleeve",
+    "url": "/premium-mockups/v1/hoodies/off-white-rightSleeve.webp",
+    "width": 1254,
+    "height": 1254,
+    "hasBakedPrintGuide": false
+  },
+  {
+    "productId": "hoodies",
+    "colorId": "off-white",
+    "view": "neckTag",
+    "url": "/premium-mockups/v1/hoodies/off-white-neckTag.webp",
     "width": 1254,
     "height": 1254,
     "hasBakedPrintGuide": false
@@ -586,6 +685,24 @@ export const premiumMockupAssets = [
   },
   {
     "productId": "pants",
+    "colorId": "white",
+    "view": "leftLeg",
+    "url": "/premium-mockups/v1/pants/white-leftLeg.webp",
+    "width": 1254,
+    "height": 1254,
+    "hasBakedPrintGuide": false
+  },
+  {
+    "productId": "pants",
+    "colorId": "white",
+    "view": "rightLeg",
+    "url": "/premium-mockups/v1/pants/white-rightLeg.webp",
+    "width": 1254,
+    "height": 1254,
+    "hasBakedPrintGuide": false
+  },
+  {
+    "productId": "pants",
     "colorId": "heather-grey",
     "view": "front",
     "url": "/premium-mockups/v1/pants/heather-grey-front.webp",
@@ -598,6 +715,24 @@ export const premiumMockupAssets = [
     "colorId": "heather-grey",
     "view": "back",
     "url": "/premium-mockups/v1/pants/heather-grey-back.webp",
+    "width": 1254,
+    "height": 1254,
+    "hasBakedPrintGuide": false
+  },
+  {
+    "productId": "pants",
+    "colorId": "heather-grey",
+    "view": "leftLeg",
+    "url": "/premium-mockups/v1/pants/heather-grey-leftLeg.webp",
+    "width": 1254,
+    "height": 1254,
+    "hasBakedPrintGuide": false
+  },
+  {
+    "productId": "pants",
+    "colorId": "heather-grey",
+    "view": "rightLeg",
+    "url": "/premium-mockups/v1/pants/heather-grey-rightLeg.webp",
     "width": 1254,
     "height": 1254,
     "hasBakedPrintGuide": false
@@ -622,6 +757,24 @@ export const premiumMockupAssets = [
   },
   {
     "productId": "pants",
+    "colorId": "regular-grey",
+    "view": "leftLeg",
+    "url": "/premium-mockups/v1/pants/regular-grey-leftLeg.webp",
+    "width": 1254,
+    "height": 1254,
+    "hasBakedPrintGuide": false
+  },
+  {
+    "productId": "pants",
+    "colorId": "regular-grey",
+    "view": "rightLeg",
+    "url": "/premium-mockups/v1/pants/regular-grey-rightLeg.webp",
+    "width": 1254,
+    "height": 1254,
+    "hasBakedPrintGuide": false
+  },
+  {
+    "productId": "pants",
     "colorId": "red",
     "view": "front",
     "url": "/premium-mockups/v1/pants/red-front.webp",
@@ -631,9 +784,63 @@ export const premiumMockupAssets = [
   },
   {
     "productId": "pants",
+    "colorId": "red",
+    "view": "back",
+    "url": "/premium-mockups/v1/pants/red-back.webp",
+    "width": 1254,
+    "height": 1254,
+    "hasBakedPrintGuide": false
+  },
+  {
+    "productId": "pants",
+    "colorId": "red",
+    "view": "leftLeg",
+    "url": "/premium-mockups/v1/pants/red-leftLeg.webp",
+    "width": 1254,
+    "height": 1254,
+    "hasBakedPrintGuide": false
+  },
+  {
+    "productId": "pants",
+    "colorId": "red",
+    "view": "rightLeg",
+    "url": "/premium-mockups/v1/pants/red-rightLeg.webp",
+    "width": 1254,
+    "height": 1254,
+    "hasBakedPrintGuide": false
+  },
+  {
+    "productId": "pants",
     "colorId": "off-white",
     "view": "front",
     "url": "/premium-mockups/v1/pants/off-white-front.webp",
+    "width": 1254,
+    "height": 1254,
+    "hasBakedPrintGuide": false
+  },
+  {
+    "productId": "pants",
+    "colorId": "off-white",
+    "view": "back",
+    "url": "/premium-mockups/v1/pants/off-white-back.webp",
+    "width": 1254,
+    "height": 1254,
+    "hasBakedPrintGuide": false
+  },
+  {
+    "productId": "pants",
+    "colorId": "off-white",
+    "view": "leftLeg",
+    "url": "/premium-mockups/v1/pants/off-white-leftLeg.webp",
+    "width": 1254,
+    "height": 1254,
+    "hasBakedPrintGuide": false
+  },
+  {
+    "productId": "pants",
+    "colorId": "off-white",
+    "view": "rightLeg",
+    "url": "/premium-mockups/v1/pants/off-white-rightLeg.webp",
     "width": 1254,
     "height": 1254,
     "hasBakedPrintGuide": false
