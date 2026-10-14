@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import NextImage from "next/image";
+import premiumShirt from "@/public/premium-mockups/v1/t-shirts/black-front.webp";
 import { clamp, Design, EMPTY_DESIGN, FONTS, Layer, layerWarnings, MAX_FILE_BYTES, MAX_PROJECT_BYTES, parseDesign } from "./design-model";
 import styles from "./designer.module.css";
 
@@ -199,7 +201,7 @@ export default function TrueAuthenticDesigner({ gangSheet = false }: { gangSheet
         <div className={styles.row}><button aria-pressed={preview==="print"} onClick={()=>setPreview("print")}>Print layout</button><button aria-pressed={preview==="shirt"} onClick={()=>setPreview("shirt")}>T-shirt preview</button></div>
         <p className={styles.muted}>{preview==="shirt" ? "Illustrative placement only. Garment proportions and printed colors may differ." : "Drag a layer to position it, or use the controls. The checkerboard is transparent."}</p>
         <div className={`${styles.stage} ${preview==="shirt" ? styles.shirt : ""}`}>
-          {preview==="shirt" && <img src="/customizer-preview/mockups/black-front.png" alt="Black T-shirt for an illustrative placement preview" className={styles.mockup} />}
+          {preview==="shirt" && <NextImage src={premiumShirt} alt="Unbranded premium oversized black T-shirt for an illustrative placement preview" fill sizes="(max-width: 800px) min(500px, calc(100vw - 58px)), (max-width: 1040px) calc(100vw - 388px), 650px" className={styles.mockup} />}
           <svg ref={svgRef} className={styles.canvas} style={{aspectRatio:`${design.width}/${design.height}`}} viewBox={`0 0 1000 ${viewHeight}`} role="group" aria-label="Design canvas"
             onPointerMove={event=>{
               if(!drag.current) return; const point=coordinates(event.clientX,event.clientY); const info=drag.current;
