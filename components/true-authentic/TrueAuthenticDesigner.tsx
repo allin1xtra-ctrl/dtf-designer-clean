@@ -2,19 +2,32 @@
 
 import { useEffect, useRef, useState } from "react";
 import NextImage from "next/image";
-import premiumShirt from "@/public/premium-mockups/v1/t-shirts/black-front.webp";
-import premiumHoodie from "@/public/premium-mockups/v1/hoodies/black-front.webp";
-import premiumPants from "@/public/premium-mockups/v1/pants/black-front.webp";
-import premiumShorts from "@/public/premium-mockups/v1/shorts/black-front.webp";
+import { premiumMockupAssets } from "@/lib/premium-mockup-assets";
 import { clamp, Design, EMPTY_DESIGN, FONTS, Layer, layerWarnings, MAX_FILE_BYTES, MAX_PROJECT_BYTES, parseDesign } from "./design-model";
 import styles from "./designer.module.css";
 
-const GARMENT_PREVIEWS = {
-  "t-shirts": { label: "T-shirt", image: premiumShirt, area: { top: "22.4%", left: "27%", width: "46%", maxHeight: "63.6%" } },
-  hoodies: { label: "Hoodie", image: premiumHoodie, area: { top: "32%", left: "33%", width: "34%", maxHeight: "36%" } },
-  pants: { label: "Sweatpants", image: premiumPants, area: { top: "36%", left: "31%", width: "16%", maxHeight: "42%" } },
-  shorts: { label: "Shorts", image: premiumShorts, area: { top: "46%", left: "29%", width: "18%", maxHeight: "24%" } },
+type PrintArea = { top: string; left: string; width: string; maxHeight: string };
+type GarmentId = "t-shirts" | "hoodies" | "pants" | "shorts";
+type GarmentView = "front" | "back";
+const GARMENT_PREVIEWS: Record<GarmentId, { label: string; area: Record<GarmentView, PrintArea> }> = {
+  "t-shirts": { label: "T-shirt", area: { front: { top: "22.4%", left: "27%", width: "46%", maxHeight: "63.6%" }, back: { top: "20%", left: "27%", width: "46%", maxHeight: "64%" } } },
+  hoodies: { label: "Hoodie", area: { front: { top: "32%", left: "33%", width: "34%", maxHeight: "36%" }, back: { top: "35%", left: "30%", width: "40%", maxHeight: "44%" } } },
+  pants: { label: "Sweatpants", area: { front: { top: "36%", left: "31%", width: "16%", maxHeight: "42%" }, back: { top: "34%", left: "53%", width: "16%", maxHeight: "42%" } } },
+  shorts: { label: "Shorts", area: { front: { top: "46%", left: "29%", width: "18%", maxHeight: "24%" }, back: { top: "42%", left: "55%", width: "18%", maxHeight: "26%" } } },
 };
+const GARMENT_COLORS: Record<string, { label: string; swatch: string }> = {
+  black: { label: "Black", swatch: "#111111" }, white: { label: "White", swatch: "#f7f7f5" },
+  "heather-grey": { label: "Heather grey", swatch: "#a9a9a6" }, "regular-grey": { label: "Grey", swatch: "#6f7173" },
+  "royal-blue": { label: "Royal blue", swatch: "#1f4f8f" }, red: { label: "Red", swatch: "#a3161b" },
+  "off-white": { label: "Off-white", swatch: "#ece6d8" },
+};
+const COLOR_ORDER = Object.keys(GARMENT_COLORS);
+function garmentImage(garment: GarmentId, color: string, view: GarmentView) {
+  return premiumMockupAssets.find(asset => asset.productId === garment && asset.colorId === color && asset.view === view);
+}
+function garmentColors(garment: GarmentId) {
+  return COLOR_ORDER.filter(color => garmentImage(garment, color, "front"));
+}
 const STORAGE_KEY = "true-authentic-design-v1";
 function download(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
@@ -41,8 +54,19 @@ export default function TrueAuthenticDesigner() {
   const [busy, setBusy] = useState(false);
   const [savedAvailable, setSavedAvailable] = useState(false);
   const preview = "shirt";
-  const [garment, setGarment] = useState<keyof typeof GARMENT_PREVIEWS>("t-shirts");
+  const [garment, setGarment] = useState<GarmentId>("t-shirts");
+  const [garmentColor, setGarmentColor] = useState("black");
+  const [garmentView, setGarmentView] = useState<GarmentView>("front");
   const garmentPreview = GARMENT_PREVIEWS[garment];
+  const colorOptions = garmentColors(garment);
+  const backAvailable = Boolean(garmentImage(garment, garmentColor, "back"));
+  const activeView: GarmentView = garmentView === "back" && backAvailable ? "back" : "front";
+  const garmentAsset = garmentImage(garment, garmentColor, activeView) ?? garmentImage(garment, "black", "front")!;
+  const colorLabel = GARMENT_COLORS[garmentColor]?.label ?? "Black";
+  function chooseGarment(next: GarmentId) {
+    setGarment(next);
+    if (!garmentColors(next).includes(garmentColor)) setGarmentColor("black");
+  }
   const [history, setHistory] = useState<Design[]>([]);
   const [future, setFuture] = useState<Design[]>([]);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -193,11 +217,17 @@ export default function TrueAuthenticDesigner() {
       </aside>
       <section className={styles.canvasPanel}>
         <div className={styles.canvasHeader}><h2><span>2</span> Make it yours</h2><div className={styles.row}><button disabled={!history.length || busy} onClick={undo}>Undo</button><button disabled={!future.length || busy} onClick={redo}>Redo</button></div></div>
-        {preview === "shirt" && <label>Preview garment<select value={garment} onChange={event => setGarment(event.target.value as keyof typeof GARMENT_PREVIEWS)}>{Object.entries(GARMENT_PREVIEWS).map(([id, option]) => <option key={id} value={id}>{option.label}</option>)}</select></label>}
+        {preview === "shirt" && <>
+          <label>Preview garment<select value={garment} onChange={event => chooseGarment(event.target.value as GarmentId)}>{Object.entries(GARMENT_PREVIEWS).map(([id, option]) => <option key={id} value={id}>{option.label}</option>)}</select></label>
+          <div role="group" aria-label="Garment color" className={styles.row}>{colorOptions.map(color => <button key={color} type="button" aria-pressed={garmentColor===color} aria-label={GARMENT_COLORS[color].label} title={GARMENT_COLORS[color].label} onClick={() => setGarmentColor(color)}
+            style={{ width: 36, height: 36, minWidth: 36, minHeight: 36, maxHeight: 36, flex: "0 0 36px", aspectRatio: "1", padding: 0, borderRadius: "50%", background: GARMENT_COLORS[color].swatch, boxShadow: garmentColor===color ? "0 0 0 2px #fff, 0 0 0 4px #e8ba85" : "inset 0 0 0 1px rgba(0,0,0,.35)" }} />)}</div>
+          <div role="group" aria-label="Garment side" className={styles.row}><button type="button" aria-pressed={activeView==="front"} onClick={() => setGarmentView("front")}>Front</button><button type="button" aria-pressed={activeView==="back"} disabled={!backAvailable} title={backAvailable ? undefined : "Back view coming soon for this color"} onClick={() => setGarmentView("back")}>Back</button></div>
+          <p className={styles.muted}>{colorLabel} {garmentPreview.label.toLowerCase()} · {activeView} view{!backAvailable ? " (back view not yet available in this color)" : ""}</p>
+        </>}
         <p className={styles.muted}>{preview==="shirt" ? "Illustrative placement only. Garment proportions and printed colors may differ." : "Drag a layer to position it, or use the controls. The checkerboard is transparent."}</p>
         <div className={`${styles.stage} ${preview==="shirt" ? styles.shirt : ""}`}>
-          {preview==="shirt" && <NextImage src={garmentPreview.image} alt={ `Unbranded premium oversized black ${garmentPreview.label} for an illustrative placement preview` } fill sizes="(max-width: 800px) min(500px, calc(100vw - 58px)), (max-width: 1040px) calc(100vw - 388px), 650px" className={styles.mockup} />}
-          <svg ref={svgRef} className={styles.canvas} style={{aspectRatio:`${design.width}/${design.height}`, ...(preview === "shirt" ? garmentPreview.area : {})}} viewBox={`0 0 1000 ${viewHeight}`} role="group" aria-label="Design canvas"
+          {preview==="shirt" && <NextImage key={garmentAsset.url} src={garmentAsset.url} alt={`Unbranded premium oversized ${colorLabel.toLowerCase()} ${garmentPreview.label}, ${activeView} view, for an illustrative placement preview`} fill sizes="(max-width: 800px) min(500px, calc(100vw - 58px)), (max-width: 1040px) calc(100vw - 388px), 650px" className={styles.mockup} />}
+          <svg ref={svgRef} className={styles.canvas} style={{aspectRatio:`${design.width}/${design.height}`, ...(preview === "shirt" ? garmentPreview.area[activeView] : {})}} viewBox={`0 0 1000 ${viewHeight}`} role="group" aria-label="Design canvas"
             onPointerMove={event=>{
               if(!drag.current) return; const point=coordinates(event.clientX,event.clientY); const info=drag.current;
               setDesign(value=>({...value,layers:value.layers.map(layer=>layer.id===info.id ? {...layer,x:clamp(point.x-info.x,0,100),y:clamp(point.y-info.y,0,100)} : layer)}));
