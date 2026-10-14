@@ -1405,7 +1405,6 @@ export default function CustomizerPrototype() {
     apparelProductOptions[0] ||
     APPAREL_PRODUCT_OPTIONS[0];
   const activeApparelViews = selectedApparelProduct.views.length ? selectedApparelProduct.views : APPAREL_PRODUCT_OPTIONS[0].views;
-  const printAreaGuideColor = state.mode === "apparel" && !getPremiumMockup(selectedApparelProduct.id, selectedColor.mockupKey, state.activeView) ? selectedColor.hex : "#67e8f9";
   const selectedMockupColorKey = selectedColor.mockupKey;
   const configuredMaterials = stagingConfig?.materialOptions?.filter((material) => material.enabled !== false).map((material) => material.label || material.id || "Material") || MATERIAL_OPTIONS;
   const templateSettings = stagingConfig?.stagingSettings?.templateSettings;
@@ -1419,7 +1418,7 @@ export default function CustomizerPrototype() {
         adminMockupPrintAreas[selectedApparelProduct.type]?.[selectedMockupColorKey]?.[state.activeView] ||
         adminMockupPrintAreas[selectedApparelProduct.type]?.black?.[state.activeView]
       : null;
-  const printAreaResult = selectedAdminPrintArea
+  const configuredPrintAreaResult = selectedAdminPrintArea
     ? {
         area: {
           x: selectedAdminPrintArea.x,
@@ -1430,6 +1429,10 @@ export default function CustomizerPrototype() {
         usingFallback: false,
       }
     : getSafePrintArea(stagingConfig, state);
+  // Match the approved chest-to-hem box on the premium oversized T-shirt front.
+  const printAreaResult = state.mode === "apparel" && selectedApparelProduct.id === "t-shirts" && state.activeView === "front" && !selectedAdminPrintArea && getPremiumMockup(selectedApparelProduct.id, selectedColor.mockupKey, state.activeView)
+    ? { area: { x: 50, y: 53.5, width: 46, height: 53 }, usingFallback: false }
+    : configuredPrintAreaResult;
   const activeMockupUrl =
     state.mode === "apparel"
       ? ""
@@ -1456,7 +1459,6 @@ export default function CustomizerPrototype() {
       : safeTransferSize === "Gang Sheet"
         ? STAGING_TRANSFER_MOCKUPS.gangSheet.label
         : STAGING_TRANSFER_MOCKUPS.transferSheet.label;
-  const hasBakedPrintGuide = state.mode === "apparel" ? colorFallbackMockup.hasBakedPrintGuide : false;
   const mockupLoadFailed = Boolean(activeMockupUrl && brokenMockupUrls.includes(activeMockupUrl));
   const activeLayers = getActiveLayers(state);
   const selectedLayer = activeLayers.find((layer) => layer.id === state.selectedLayerId) || null;
@@ -2736,7 +2738,6 @@ export default function CustomizerPrototype() {
       <rect width="960" height="1200" fill="#071015"/>
       <rect x="180" y="120" width="600" height="920" rx="42" fill="#e8f0f7"/>
       <rect x="300" y="250" width="360" height="720" rx="34" fill="${state.mode === "apparel" ? "#111827" : "#ffffff"}" opacity="0.96"/>
-      <rect x="${120 + printAreaResult.area.x * 3.6 - printAreaResult.area.width * 1.8}" y="${120 + printAreaResult.area.y * 4.8 - printAreaResult.area.height * 2.4}" width="${printAreaResult.area.width * 3.6}" height="${printAreaResult.area.height * 4.8}" fill="none" stroke="#22d3ee" stroke-width="3" stroke-dasharray="8 8"/>
       ${layerMarkup}
       <text x="480" y="1120" text-anchor="middle" font-family="Inter, Arial" font-size="24" fill="#cffafe">Staging preview image</text>
     </svg>`;
@@ -3443,17 +3444,9 @@ export default function CustomizerPrototype() {
               )}
 
               <div
-                className={`absolute z-20 -translate-x-1/2 -translate-y-1/2 ${
-                  hasBakedPrintGuide
-                    ? "border border-transparent bg-transparent"
-                    : "border border-dashed bg-transparent"
-                }`}
-                style={{
-                  ...getPrintAreaStyle(printAreaResult.area),
-                  borderColor: printAreaGuideColor,
-                  boxShadow: state.mode === "apparel" ? "none" : "0 0 0 1px rgba(8,47,73,0.35), 0 0 32px rgba(34,211,238,0.16)",
-                  opacity: state.mode === "apparel" ? 0.72 : 1,
-                }}
+                data-print-area="true"
+                className="absolute z-20 -translate-x-1/2 -translate-y-1/2 border-0 bg-transparent"
+                style={getPrintAreaStyle(printAreaResult.area)}
               >
                 <span className="absolute -right-1 -top-5 text-[10px] font-semibold uppercase tracking-wide text-cyan-100/80">
                   {state.mode === "apparel"
@@ -4047,7 +4040,7 @@ export default function CustomizerPrototype() {
                   </div>
                   <div className="mx-auto grid aspect-[5/6] max-h-full min-h-[420px] max-w-[680px] place-items-center rounded-xl border border-[#1e343c] bg-[#0b1519] p-5">
                     <div className="relative h-full w-full max-w-[520px]">
-                      <div className="absolute left-1/2 top-1/2 h-[82%] w-[72%] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-dashed border-cyan-200/45 bg-[#061015]">
+                      <div className="absolute left-1/2 top-1/2 h-[82%] w-[72%] -translate-x-1/2 -translate-y-1/2 rounded-lg border-0 bg-[#061015]">
                         <span className="absolute -right-1 -top-5 text-[10px] font-semibold uppercase tracking-wide text-cyan-100/80">
                           Draft print area
                         </span>
