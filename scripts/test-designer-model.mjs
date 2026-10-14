@@ -25,3 +25,12 @@ test("flags rotated clipping and low resolution at actual print size", () => {
 test("centered high resolution images do not show false warnings", () => {
   assert.deepEqual(layerWarnings({...EMPTY_DESIGN,layers:[{...text,type:"image",pixelsWide:3600}]}),[]);
 });
+
+test("13x60 gang-sheet projects preserve artwork placement and colors", () => {
+  const value = { ...EMPTY_DESIGN, width: 13, height: 60, layers: [text] };
+  assert.deepEqual(parseDesign(JSON.stringify(value)), value);
+});
+test("only the approved 13x60 sheet bypasses the legacy 20-inch dimension limit", () => {
+  for (const [width, height] of [[12.5,60], [13,61], [20,60], [60,13]])
+    assert.throws(() => parseDesign(JSON.stringify({ ...EMPTY_DESIGN, width, height })));
+});

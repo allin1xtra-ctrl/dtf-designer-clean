@@ -1,0 +1,1425 @@
+{
+  "version": 1,
+  "status": "concept-review",
+  "activeMappingsChanged": false,
+  "board": "/premium-mockups/v1/reference-board.webp",
+  "boardRole": "whole-board review only; not individual production mockups",
+  "sheetInches": [
+    13,
+    60
+  ],
+  "hostedInventory": {
+    "source": "hardcoded_fallback_expected",
+    "variants": 0,
+    "deployment": "dtf-designer-n1vt7h4zz-brandon-hodges-projects.vercel.app"
+  },
+  "requiredAssets": 126,
+  "tasks": [
+    {
+      "productId": "t-shirts",
+      "colorId": "black",
+      "colorHex": "#101316",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/t-shirts/black-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "black",
+      "colorHex": "#101316",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/t-shirts/black-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "black",
+      "colorHex": "#101316",
+      "view": "leftSleeve",
+      "targetPath": "/premium-mockups/v1/t-shirts/black-leftSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "black",
+      "colorHex": "#101316",
+      "view": "rightSleeve",
+      "targetPath": "/premium-mockups/v1/t-shirts/black-rightSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "black",
+      "colorHex": "#101316",
+      "view": "neckTag",
+      "targetPath": "/premium-mockups/v1/t-shirts/black-neckTag.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "white",
+      "colorHex": "#f8fafc",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/t-shirts/white-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "white",
+      "colorHex": "#f8fafc",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/t-shirts/white-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "white",
+      "colorHex": "#f8fafc",
+      "view": "leftSleeve",
+      "targetPath": "/premium-mockups/v1/t-shirts/white-leftSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "white",
+      "colorHex": "#f8fafc",
+      "view": "rightSleeve",
+      "targetPath": "/premium-mockups/v1/t-shirts/white-rightSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "white",
+      "colorHex": "#f8fafc",
+      "view": "neckTag",
+      "targetPath": "/premium-mockups/v1/t-shirts/white-neckTag.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "heather-grey",
+      "colorHex": "#9ca3af",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/t-shirts/heather-grey-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "heather-grey",
+      "colorHex": "#9ca3af",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/t-shirts/heather-grey-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "heather-grey",
+      "colorHex": "#9ca3af",
+      "view": "leftSleeve",
+      "targetPath": "/premium-mockups/v1/t-shirts/heather-grey-leftSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "heather-grey",
+      "colorHex": "#9ca3af",
+      "view": "rightSleeve",
+      "targetPath": "/premium-mockups/v1/t-shirts/heather-grey-rightSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "heather-grey",
+      "colorHex": "#9ca3af",
+      "view": "neckTag",
+      "targetPath": "/premium-mockups/v1/t-shirts/heather-grey-neckTag.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "regular-grey",
+      "colorHex": "#64748b",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/t-shirts/regular-grey-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "regular-grey",
+      "colorHex": "#64748b",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/t-shirts/regular-grey-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "regular-grey",
+      "colorHex": "#64748b",
+      "view": "leftSleeve",
+      "targetPath": "/premium-mockups/v1/t-shirts/regular-grey-leftSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "regular-grey",
+      "colorHex": "#64748b",
+      "view": "rightSleeve",
+      "targetPath": "/premium-mockups/v1/t-shirts/regular-grey-rightSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "regular-grey",
+      "colorHex": "#64748b",
+      "view": "neckTag",
+      "targetPath": "/premium-mockups/v1/t-shirts/regular-grey-neckTag.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "royal-blue",
+      "colorHex": "#075985",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/t-shirts/royal-blue-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "royal-blue",
+      "colorHex": "#075985",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/t-shirts/royal-blue-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "royal-blue",
+      "colorHex": "#075985",
+      "view": "leftSleeve",
+      "targetPath": "/premium-mockups/v1/t-shirts/royal-blue-leftSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "royal-blue",
+      "colorHex": "#075985",
+      "view": "rightSleeve",
+      "targetPath": "/premium-mockups/v1/t-shirts/royal-blue-rightSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "royal-blue",
+      "colorHex": "#075985",
+      "view": "neckTag",
+      "targetPath": "/premium-mockups/v1/t-shirts/royal-blue-neckTag.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "red",
+      "colorHex": "#991b1b",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/t-shirts/red-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "red",
+      "colorHex": "#991b1b",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/t-shirts/red-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "red",
+      "colorHex": "#991b1b",
+      "view": "leftSleeve",
+      "targetPath": "/premium-mockups/v1/t-shirts/red-leftSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "red",
+      "colorHex": "#991b1b",
+      "view": "rightSleeve",
+      "targetPath": "/premium-mockups/v1/t-shirts/red-rightSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "red",
+      "colorHex": "#991b1b",
+      "view": "neckTag",
+      "targetPath": "/premium-mockups/v1/t-shirts/red-neckTag.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "off-white",
+      "colorHex": "#f5f1e8",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/t-shirts/off-white-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "off-white",
+      "colorHex": "#f5f1e8",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/t-shirts/off-white-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "off-white",
+      "colorHex": "#f5f1e8",
+      "view": "leftSleeve",
+      "targetPath": "/premium-mockups/v1/t-shirts/off-white-leftSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "off-white",
+      "colorHex": "#f5f1e8",
+      "view": "rightSleeve",
+      "targetPath": "/premium-mockups/v1/t-shirts/off-white-rightSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "t-shirts",
+      "colorId": "off-white",
+      "colorHex": "#f5f1e8",
+      "view": "neckTag",
+      "targetPath": "/premium-mockups/v1/t-shirts/off-white-neckTag.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "black",
+      "colorHex": "#101316",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/hoodies/black-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "black",
+      "colorHex": "#101316",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/hoodies/black-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "black",
+      "colorHex": "#101316",
+      "view": "leftSleeve",
+      "targetPath": "/premium-mockups/v1/hoodies/black-leftSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "black",
+      "colorHex": "#101316",
+      "view": "rightSleeve",
+      "targetPath": "/premium-mockups/v1/hoodies/black-rightSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "black",
+      "colorHex": "#101316",
+      "view": "neckTag",
+      "targetPath": "/premium-mockups/v1/hoodies/black-neckTag.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "white",
+      "colorHex": "#f8fafc",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/hoodies/white-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "white",
+      "colorHex": "#f8fafc",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/hoodies/white-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "white",
+      "colorHex": "#f8fafc",
+      "view": "leftSleeve",
+      "targetPath": "/premium-mockups/v1/hoodies/white-leftSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "white",
+      "colorHex": "#f8fafc",
+      "view": "rightSleeve",
+      "targetPath": "/premium-mockups/v1/hoodies/white-rightSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "white",
+      "colorHex": "#f8fafc",
+      "view": "neckTag",
+      "targetPath": "/premium-mockups/v1/hoodies/white-neckTag.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "heather-grey",
+      "colorHex": "#9ca3af",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/hoodies/heather-grey-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "heather-grey",
+      "colorHex": "#9ca3af",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/hoodies/heather-grey-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "heather-grey",
+      "colorHex": "#9ca3af",
+      "view": "leftSleeve",
+      "targetPath": "/premium-mockups/v1/hoodies/heather-grey-leftSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "heather-grey",
+      "colorHex": "#9ca3af",
+      "view": "rightSleeve",
+      "targetPath": "/premium-mockups/v1/hoodies/heather-grey-rightSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "heather-grey",
+      "colorHex": "#9ca3af",
+      "view": "neckTag",
+      "targetPath": "/premium-mockups/v1/hoodies/heather-grey-neckTag.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "regular-grey",
+      "colorHex": "#64748b",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/hoodies/regular-grey-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "regular-grey",
+      "colorHex": "#64748b",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/hoodies/regular-grey-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "regular-grey",
+      "colorHex": "#64748b",
+      "view": "leftSleeve",
+      "targetPath": "/premium-mockups/v1/hoodies/regular-grey-leftSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "regular-grey",
+      "colorHex": "#64748b",
+      "view": "rightSleeve",
+      "targetPath": "/premium-mockups/v1/hoodies/regular-grey-rightSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "regular-grey",
+      "colorHex": "#64748b",
+      "view": "neckTag",
+      "targetPath": "/premium-mockups/v1/hoodies/regular-grey-neckTag.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "royal-blue",
+      "colorHex": "#075985",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/hoodies/royal-blue-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "royal-blue",
+      "colorHex": "#075985",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/hoodies/royal-blue-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "royal-blue",
+      "colorHex": "#075985",
+      "view": "leftSleeve",
+      "targetPath": "/premium-mockups/v1/hoodies/royal-blue-leftSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "royal-blue",
+      "colorHex": "#075985",
+      "view": "rightSleeve",
+      "targetPath": "/premium-mockups/v1/hoodies/royal-blue-rightSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "royal-blue",
+      "colorHex": "#075985",
+      "view": "neckTag",
+      "targetPath": "/premium-mockups/v1/hoodies/royal-blue-neckTag.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "red",
+      "colorHex": "#991b1b",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/hoodies/red-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "red",
+      "colorHex": "#991b1b",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/hoodies/red-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "red",
+      "colorHex": "#991b1b",
+      "view": "leftSleeve",
+      "targetPath": "/premium-mockups/v1/hoodies/red-leftSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "red",
+      "colorHex": "#991b1b",
+      "view": "rightSleeve",
+      "targetPath": "/premium-mockups/v1/hoodies/red-rightSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "red",
+      "colorHex": "#991b1b",
+      "view": "neckTag",
+      "targetPath": "/premium-mockups/v1/hoodies/red-neckTag.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "off-white",
+      "colorHex": "#f5f1e8",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/hoodies/off-white-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "off-white",
+      "colorHex": "#f5f1e8",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/hoodies/off-white-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "off-white",
+      "colorHex": "#f5f1e8",
+      "view": "leftSleeve",
+      "targetPath": "/premium-mockups/v1/hoodies/off-white-leftSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "off-white",
+      "colorHex": "#f5f1e8",
+      "view": "rightSleeve",
+      "targetPath": "/premium-mockups/v1/hoodies/off-white-rightSleeve.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "hoodies",
+      "colorId": "off-white",
+      "colorHex": "#f5f1e8",
+      "view": "neckTag",
+      "targetPath": "/premium-mockups/v1/hoodies/off-white-neckTag.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "black",
+      "colorHex": "#101316",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/pants/black-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "black",
+      "colorHex": "#101316",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/pants/black-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "black",
+      "colorHex": "#101316",
+      "view": "leftLeg",
+      "targetPath": "/premium-mockups/v1/pants/black-leftLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "black",
+      "colorHex": "#101316",
+      "view": "rightLeg",
+      "targetPath": "/premium-mockups/v1/pants/black-rightLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "white",
+      "colorHex": "#f8fafc",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/pants/white-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "white",
+      "colorHex": "#f8fafc",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/pants/white-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "white",
+      "colorHex": "#f8fafc",
+      "view": "leftLeg",
+      "targetPath": "/premium-mockups/v1/pants/white-leftLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "white",
+      "colorHex": "#f8fafc",
+      "view": "rightLeg",
+      "targetPath": "/premium-mockups/v1/pants/white-rightLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "heather-grey",
+      "colorHex": "#9ca3af",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/pants/heather-grey-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "heather-grey",
+      "colorHex": "#9ca3af",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/pants/heather-grey-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "heather-grey",
+      "colorHex": "#9ca3af",
+      "view": "leftLeg",
+      "targetPath": "/premium-mockups/v1/pants/heather-grey-leftLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "heather-grey",
+      "colorHex": "#9ca3af",
+      "view": "rightLeg",
+      "targetPath": "/premium-mockups/v1/pants/heather-grey-rightLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "regular-grey",
+      "colorHex": "#64748b",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/pants/regular-grey-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "regular-grey",
+      "colorHex": "#64748b",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/pants/regular-grey-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "regular-grey",
+      "colorHex": "#64748b",
+      "view": "leftLeg",
+      "targetPath": "/premium-mockups/v1/pants/regular-grey-leftLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "regular-grey",
+      "colorHex": "#64748b",
+      "view": "rightLeg",
+      "targetPath": "/premium-mockups/v1/pants/regular-grey-rightLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "royal-blue",
+      "colorHex": "#075985",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/pants/royal-blue-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "royal-blue",
+      "colorHex": "#075985",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/pants/royal-blue-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "royal-blue",
+      "colorHex": "#075985",
+      "view": "leftLeg",
+      "targetPath": "/premium-mockups/v1/pants/royal-blue-leftLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "royal-blue",
+      "colorHex": "#075985",
+      "view": "rightLeg",
+      "targetPath": "/premium-mockups/v1/pants/royal-blue-rightLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "red",
+      "colorHex": "#991b1b",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/pants/red-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "red",
+      "colorHex": "#991b1b",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/pants/red-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "red",
+      "colorHex": "#991b1b",
+      "view": "leftLeg",
+      "targetPath": "/premium-mockups/v1/pants/red-leftLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "red",
+      "colorHex": "#991b1b",
+      "view": "rightLeg",
+      "targetPath": "/premium-mockups/v1/pants/red-rightLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "off-white",
+      "colorHex": "#f5f1e8",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/pants/off-white-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "off-white",
+      "colorHex": "#f5f1e8",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/pants/off-white-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "off-white",
+      "colorHex": "#f5f1e8",
+      "view": "leftLeg",
+      "targetPath": "/premium-mockups/v1/pants/off-white-leftLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "pants",
+      "colorId": "off-white",
+      "colorHex": "#f5f1e8",
+      "view": "rightLeg",
+      "targetPath": "/premium-mockups/v1/pants/off-white-rightLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "black",
+      "colorHex": "#101316",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/shorts/black-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "black",
+      "colorHex": "#101316",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/shorts/black-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "black",
+      "colorHex": "#101316",
+      "view": "leftLeg",
+      "targetPath": "/premium-mockups/v1/shorts/black-leftLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "black",
+      "colorHex": "#101316",
+      "view": "rightLeg",
+      "targetPath": "/premium-mockups/v1/shorts/black-rightLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "white",
+      "colorHex": "#f8fafc",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/shorts/white-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "white",
+      "colorHex": "#f8fafc",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/shorts/white-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "white",
+      "colorHex": "#f8fafc",
+      "view": "leftLeg",
+      "targetPath": "/premium-mockups/v1/shorts/white-leftLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "white",
+      "colorHex": "#f8fafc",
+      "view": "rightLeg",
+      "targetPath": "/premium-mockups/v1/shorts/white-rightLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "heather-grey",
+      "colorHex": "#9ca3af",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/shorts/heather-grey-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "heather-grey",
+      "colorHex": "#9ca3af",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/shorts/heather-grey-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "heather-grey",
+      "colorHex": "#9ca3af",
+      "view": "leftLeg",
+      "targetPath": "/premium-mockups/v1/shorts/heather-grey-leftLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "heather-grey",
+      "colorHex": "#9ca3af",
+      "view": "rightLeg",
+      "targetPath": "/premium-mockups/v1/shorts/heather-grey-rightLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "regular-grey",
+      "colorHex": "#64748b",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/shorts/regular-grey-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "regular-grey",
+      "colorHex": "#64748b",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/shorts/regular-grey-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "regular-grey",
+      "colorHex": "#64748b",
+      "view": "leftLeg",
+      "targetPath": "/premium-mockups/v1/shorts/regular-grey-leftLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "regular-grey",
+      "colorHex": "#64748b",
+      "view": "rightLeg",
+      "targetPath": "/premium-mockups/v1/shorts/regular-grey-rightLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "royal-blue",
+      "colorHex": "#075985",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/shorts/royal-blue-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "royal-blue",
+      "colorHex": "#075985",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/shorts/royal-blue-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "royal-blue",
+      "colorHex": "#075985",
+      "view": "leftLeg",
+      "targetPath": "/premium-mockups/v1/shorts/royal-blue-leftLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "royal-blue",
+      "colorHex": "#075985",
+      "view": "rightLeg",
+      "targetPath": "/premium-mockups/v1/shorts/royal-blue-rightLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "red",
+      "colorHex": "#991b1b",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/shorts/red-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "red",
+      "colorHex": "#991b1b",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/shorts/red-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "red",
+      "colorHex": "#991b1b",
+      "view": "leftLeg",
+      "targetPath": "/premium-mockups/v1/shorts/red-leftLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "red",
+      "colorHex": "#991b1b",
+      "view": "rightLeg",
+      "targetPath": "/premium-mockups/v1/shorts/red-rightLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "off-white",
+      "colorHex": "#f5f1e8",
+      "view": "front",
+      "targetPath": "/premium-mockups/v1/shorts/off-white-front.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "off-white",
+      "colorHex": "#f5f1e8",
+      "view": "back",
+      "targetPath": "/premium-mockups/v1/shorts/off-white-back.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "off-white",
+      "colorHex": "#f5f1e8",
+      "view": "leftLeg",
+      "targetPath": "/premium-mockups/v1/shorts/off-white-leftLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    },
+    {
+      "productId": "shorts",
+      "colorId": "off-white",
+      "colorHex": "#f5f1e8",
+      "view": "rightLeg",
+      "targetPath": "/premium-mockups/v1/shorts/off-white-rightLeg.webp",
+      "status": "pending-production",
+      "hasBakedPrintGuide": false,
+      "printAreaAction": "retain current placement; align new garment to it"
+    }
+  ],
+  "originals": [
+    {
+      "file": "black-back.png",
+      "sha256": "ceb6f32c6ca5528ed5c5895a8d0339111fd174db9b0d2a1b6090de5a31c31319"
+    },
+    {
+      "file": "black-front.png",
+      "sha256": "df04f176b3c658ad7e9df7c24b973890329862becd14de591051059b7a1012e9"
+    },
+    {
+      "file": "black-left-sleeve.png",
+      "sha256": "2e3a4e37c3533efb01a20c8679200605564a4e4bc4fdb88241af5a97c1952c2c"
+    },
+    {
+      "file": "black-neck-tag.png",
+      "sha256": "cd871a69e7ea4cf060212dc9aa51bb5b4347923c0816896e117392f99322038e"
+    },
+    {
+      "file": "black-right-sleeve.png",
+      "sha256": "980d2bacbcb8c4269b6fde6ea7e157f74dd0e89775eb6c3403248004d210690b"
+    },
+    {
+      "file": "heather-grey-back.png",
+      "sha256": "010157d8eccb728c7aecc356e761ef580de3bc9dd4cb78478ab55ec7344c5fa8"
+    },
+    {
+      "file": "heather-grey-front.png",
+      "sha256": "bfc6395ec6a9d82e04faaef81a9813e52191572aa3962636826e414f4a31d2db"
+    },
+    {
+      "file": "heather-grey-left-sleeve.png",
+      "sha256": "7a417f6d9228c6ae0c1166286207cbee0add489ec9ebfb66d8cb232fa85b0aa8"
+    },
+    {
+      "file": "heather-grey-neck-tag.png",
+      "sha256": "7f9c25d1e04ee9e1c956e1d14ebfef9a4d19374ffdfa36c295e82744d565bb21"
+    },
+    {
+      "file": "heather-grey-right-sleeve.png",
+      "sha256": "7e86d4c7849041e0ed664246f3693539169607d488f3c73880e3d2f052330d32"
+    },
+    {
+      "file": "off-white-back.png",
+      "sha256": "f3991b80374f7994559914269d3cea7dc90f00c3f2a6ae60fc2ed72af6f80200"
+    },
+    {
+      "file": "off-white-front.png",
+      "sha256": "54dc23c54fc3211ebbe9748bc23dfa284b2ce0c59082230ff242db628f09c8c3"
+    },
+    {
+      "file": "off-white-left-sleeve.png",
+      "sha256": "c6d2e8aa2d691d4f8cee029b08d3c7d95fc9137369c4b3b3c95221fb4d6024d5"
+    },
+    {
+      "file": "off-white-neck-tag.png",
+      "sha256": "c70d429c5dfb7e80c8c3a9fa87de1f1c7b7e4b36f59f06fae94d930f8433111f"
+    },
+    {
+      "file": "off-white-right-sleeve.png",
+      "sha256": "eaec8c3466bddf147fd04d4659e786e56d203bf6c6768eba7b8fb0a3eb7b19ae"
+    },
+    {
+      "file": "red-back.png",
+      "sha256": "0add624227e025aafed372a04a694b1c7d13e136a3098458857cd471a6845695"
+    },
+    {
+      "file": "red-front.png",
+      "sha256": "d47552df2964ec5a125e34b69e59d02bb4943ee35fe5038dddfac075bc18c8b2"
+    },
+    {
+      "file": "red-left-sleeve.png",
+      "sha256": "0dfb2bca08773cb704a37bdfac9be94bd7fa6ac0dc8fbe0695a501fbedf4cc13"
+    },
+    {
+      "file": "red-neck-tag.png",
+      "sha256": "7c98c8b9604623e71e8a37a08b63793d7d6ff597dd3ff2d78122aec8bf2f0b4c"
+    },
+    {
+      "file": "red-right-sleeve.png",
+      "sha256": "617bab3d83130260e84fa91f6ea2222d63eaa7d80f4871b416ebdf2d3b80a2b8"
+    },
+    {
+      "file": "regular-grey-back.png",
+      "sha256": "61ea54effacbcb64d2fe7b3f6f8c4735f0d8bf719a59f453cbd8adb618f6fb8b"
+    },
+    {
+      "file": "regular-grey-front.png",
+      "sha256": "0d8867a9f30038b37a54e338bc108422909e1c21c40461a63450262142fc461d"
+    },
+    {
+      "file": "regular-grey-left-sleeve.png",
+      "sha256": "f099666dc5525082e81dc9ef45db04c36d0672ddfabde8c5166abc68410cf1cd"
+    },
+    {
+      "file": "regular-grey-neck-tag.png",
+      "sha256": "4af6b88cdba87a711c74485bffff051575adc6eb8dfd1538258cf386f2877c70"
+    },
+    {
+      "file": "regular-grey-right-sleeve.png",
+      "sha256": "e5f5a79ee51f27884e8a0141903d87dfd405c26267d206ce2532781245d5b516"
+    },
+    {
+      "file": "royal-blue-back.png",
+      "sha256": "9f0c20169863009f9e716dfbcb3fc48a7265c326384800d8684f5f0bcb8108c1"
+    },
+    {
+      "file": "royal-blue-front.png",
+      "sha256": "0a9e19a85ff20e96eb7e9043ba9cd746f8e814c92d162a2472a87e09c153dfd4"
+    },
+    {
+      "file": "royal-blue-left-sleeve.png",
+      "sha256": "1bdc98574b0cdb288882c7a438a9e420b3bada7ff094bd9a2d233de1b38bdf46"
+    },
+    {
+      "file": "royal-blue-neck-tag.png",
+      "sha256": "876ab44b9f0745ab6569114e6a980bf2cb42110ffdc3635e5d63ee7e0583aaac"
+    },
+    {
+      "file": "royal-blue-right-sleeve.png",
+      "sha256": "710de11b1d1f0a2d749ea2d600df52c8ce7dd9d390d576d55df0a0a69ab4655a"
+    },
+    {
+      "file": "white-back.png",
+      "sha256": "1a996b5bcb15272c3698afdb079284fb3bbf296d34689e5e3c5c6902d33612eb"
+    },
+    {
+      "file": "white-front-alt.png",
+      "sha256": "822b8de00bb85d6aead51d0bd06a6debeeff7d11fca469c947870e4ebbc6e6b8"
+    },
+    {
+      "file": "white-front.png",
+      "sha256": "822b8de00bb85d6aead51d0bd06a6debeeff7d11fca469c947870e4ebbc6e6b8"
+    },
+    {
+      "file": "white-left-sleeve.png",
+      "sha256": "2572c0967d8f9aef0f706df88dc3cb846e4ea178a7b8df014d48b275bdca8428"
+    },
+    {
+      "file": "white-neck-tag.png",
+      "sha256": "9053fb9c60cafae3a3c6d6b51702f3b4717957419c23ea665c72f0399a5c8ddb"
+    },
+    {
+      "file": "white-right-sleeve.png",
+      "sha256": "1f22579df69c6d9164ba2064cfc4a4c3c892b2260791216e80111e9d0cd34def"
+    }
+  ]
+}
