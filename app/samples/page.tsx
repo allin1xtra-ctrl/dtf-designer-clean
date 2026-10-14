@@ -32,7 +32,7 @@ export default function Samples() {
       <Link href="/" className="text-gray-300 underline text-sm">← Home</Link>
       <p className="mt-10 text-sm uppercase tracking-widest text-orange-400">Your Favorite DTF Plug</p>
       <h1 className="mt-2 text-4xl font-black md:text-6xl">DTF Printing Samples</h1>
-      <p className="mt-5 max-w-3xl text-gray-300">Our first portfolio collection is being prepared. Browse the kinds of artwork we can review for DTF printing, from crisp typography and racing graphics to fine-detail halftones. Featured designs: TRUE AUTHENTIC Apparel. Actual production quality depends on supplied artwork, print size, garment, and settings.</p>
+      <p className="mt-5 max-w-3xl text-gray-300">Explore 18 approved printing-sample artwork previews, from crisp typography and racing graphics to fine-detail halftones. Featured designs: TRUE AUTHENTIC Apparel. Actual production quality depends on supplied artwork, print size, garment, and settings.</p>
       <Link href="/quote" className="mt-7 inline-block rounded-full bg-orange-500 px-7 py-3 font-bold text-black">Request a Print Quote</Link>
       {categories.map(category => <section key={category} className="mt-12" aria-label={category}>
         <h2 className="mb-5 text-2xl font-bold">{category}</h2>
