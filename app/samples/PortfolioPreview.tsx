@@ -1,11 +1,18 @@
-"use client";
-import { useState } from "react";
+import Image from "next/image";
 
 export default function PortfolioPreview({ file, title }: { file: string; title: string }) {
-  const [failed, setFailed] = useState(false);
-  return <div className="flex aspect-square items-center justify-center bg-neutral-800 p-4">
-    {failed ? <div className="text-center"><p className="text-lg font-bold text-gray-200">{title}</p><p className="mt-3 text-sm text-gray-400">Artwork preview being prepared</p></div> :
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={`/printing-samples/${file}`} alt={title + " — TRUE AUTHENTIC portfolio artwork"} loading="lazy" onError={() => setFailed(true)} className="h-full w-full object-contain" />}
-  </div>;
+  return (
+    <div className="aspect-square p-4" style={{ backgroundImage: "repeating-conic-gradient(#737373 0% 25%, #a3a3a3 0% 50%)", backgroundSize: "20px 20px" }}>
+      <div className="relative h-full w-full">
+        <Image
+          src={`/printing-samples/${file}`}
+          alt={`${title} — TRUE AUTHENTIC portfolio artwork`}
+          fill
+          sizes="(max-width: 639px) calc(100vw - 82px), (max-width: 1023px) calc((100vw - 140px) / 2), (max-width: 1199px) calc((100vw - 198px) / 3), 334px"
+          loading="lazy"
+          className="object-contain"
+        />
+      </div>
+    </div>
+  );
 }
