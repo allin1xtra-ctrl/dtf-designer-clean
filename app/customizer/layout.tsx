@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: { absolute: "DTF Design Studio | True Authentic" },
+  title: { absolute: "DTF Design Studio | Your Favorite DTF Plug" },
   description:
-    "Create your custom print layout with True Authentic. Upload artwork, add text, preview placement and download your design.",
+    "Create your custom print layout with Your Favorite DTF Plug. Upload artwork, add text, preview placement and download your design.",
   alternates: { canonical: "https://www.ta-apparel.com/pages/customizer" },
 };
 
