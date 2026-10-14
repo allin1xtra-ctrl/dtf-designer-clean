@@ -1,5 +1,7 @@
 /**
- * Reference garment size charts transcribed from MADE's public product charts.
+ * Reference garment size charts transcribed from the blank supplier's public
+ * charts. Source pages are recorded in docs/garment-size-chart-sources.md and
+ * are deliberately kept out of this file because it ships to customers' browsers.
  * Use as customer-facing fit guidance only. Do not use for artwork DPI,
  * print masks or manufacturing tolerances without measuring physical stock.
  * Customer-facing product names must not identify the supplier.
@@ -8,7 +10,6 @@
  */
 export const GARMENT_SIZE_CHARTS = {
   "t-shirts": {
-    source: "https://www.madeofficialsite.com/products/ready-to-dye-homeroom-t-shirt",
     measurements: ["chest", "length", "sleeve"],
     sizes: {
       S: { chest: 17.5, length: 27, sleeve: 8 },
@@ -19,7 +20,6 @@ export const GARMENT_SIZE_CHARTS = {
     },
   },
   hoodies: {
-    source: "https://www.madeofficialsite.com/pages/size-chart",
     measurements: ["chest", "length", "sleeve"],
     sizes: {
       XS: { chest: 20, length: 27, sleeve: 25 },
@@ -31,7 +31,6 @@ export const GARMENT_SIZE_CHARTS = {
     },
   },
   pants: {
-    source: "https://www.madeofficialsite.com/products/ready-to-dye-homeroom-t-shirt",
     measurements: ["waist", "length", "inseam"],
     sizes: {
       XS: { waist: 26.5, length: 38.5, inseam: 28.25 },
@@ -43,7 +42,6 @@ export const GARMENT_SIZE_CHARTS = {
     },
   },
   shorts: {
-    source: "https://www.madeofficialsite.com/pages/practice-shorts-size-chart",
     measurements: ["waist", "length", "inseam"],
     sizes: {
       XS: { waist: 27, length: 10.5, inseam: 8 },
@@ -58,6 +56,14 @@ export const GARMENT_SIZE_CHARTS = {
 export type SizeGarment = keyof typeof GARMENT_SIZE_CHARTS;
 export function garmentSizes(garment: SizeGarment): string[] {
   return Object.keys(GARMENT_SIZE_CHARTS[garment].sizes);
+}
+/** Returns the size if the garment offers it, otherwise the closest offered size. */
+export function availableGarmentSize(garment: SizeGarment, size: string): string {
+  const sizes = garmentSizes(garment);
+  if (sizes.includes(size)) return size;
+  const order = ["XS", "S", "M", "L", "XL", "2XL"];
+  const wanted = order.indexOf(size);
+  return [...sizes].sort((a, b) => Math.abs(order.indexOf(a) - wanted) - Math.abs(order.indexOf(b) - wanted))[0];
 }
 export function garmentMeasurementSummary(garment: SizeGarment, size: string): string {
   const chart = GARMENT_SIZE_CHARTS[garment];
