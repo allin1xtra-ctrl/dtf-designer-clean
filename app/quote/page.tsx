@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
-const products = ["DTF Transfers by Size", "Gang Sheet Upload", "Custom T-Shirts", "Custom Hoodies", "Wholesale / Bulk Order"];
+const products = ["Custom T-Shirts", "Custom Hoodies", "Custom Sweatpants", "Custom Shorts", "Wholesale / Bulk Apparel Order"];
 
 export default function QuotePage() {
   const [name, setName] = useState("");
@@ -25,7 +26,7 @@ export default function QuotePage() {
   return (
     <main className="min-h-screen bg-neutral-950 px-6 py-16 text-white">
       <div className="mx-auto max-w-2xl">
-        <a href="/" className="text-sm text-gray-300 underline">← Home</a>
+        <Link href="/" className="text-sm text-gray-300 underline">← Home</Link>
         <p className="mt-8 text-sm font-bold uppercase tracking-widest text-orange-400">Your Favorite DTF Plug</p>
         <h1 className="mt-3 text-4xl font-black">Request a Custom Quote</h1>
         <p className="mt-3 text-gray-300">Tell us about your order. No payment is collected here. We will confirm pricing and production details before accepting an order.</p>

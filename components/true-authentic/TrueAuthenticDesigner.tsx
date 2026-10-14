@@ -16,7 +16,6 @@ const GARMENT_PREVIEWS = {
   shorts: { label: "Shorts", image: premiumShorts, area: { top: "46%", left: "29%", width: "18%", maxHeight: "24%" } },
 };
 const STORAGE_KEY = "true-authentic-design-v1";
-const SIZES = [[3,3], [5,5], [8,10], [12,12], [12,16], [13,60]];
 function download(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a"); link.href = url; link.download = name; link.click();
@@ -35,13 +34,13 @@ function readImage(file: File): Promise<string> {
   });
 }
 
-export default function TrueAuthenticDesigner({ gangSheet = false }: { gangSheet?: boolean }) {
-  const [design, setDesign] = useState<Design>(() => gangSheet ? { ...EMPTY_DESIGN, width: 13, height: 60 } : EMPTY_DESIGN);
+export default function TrueAuthenticDesigner() {
+  const [design, setDesign] = useState<Design>(EMPTY_DESIGN);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [status, setStatus] = useState("Choose a print size, then add your artwork or text.");
+  const [status, setStatus] = useState("Choose your garment, then add your artwork or text.");
   const [busy, setBusy] = useState(false);
   const [savedAvailable, setSavedAvailable] = useState(false);
-  const [preview, setPreview] = useState<"print" | "shirt">("print");
+  const preview = "shirt";
   const [garment, setGarment] = useState<keyof typeof GARMENT_PREVIEWS>("t-shirts");
   const garmentPreview = GARMENT_PREVIEWS[garment];
   const [history, setHistory] = useState<Design[]>([]);
@@ -120,6 +119,7 @@ export default function TrueAuthenticDesigner({ gangSheet = false }: { gangSheet
     setBusy(true);
     try {
       const next = parseDesign(raw);
+      if (next.width === 13 && next.height === 60) throw new Error("This is a gang-sheet project. Open an apparel project to customize a garment.");
       for (const layer of next.layers) if (layer.type === "image") {
         const image = await loadImage(layer.source!);
         if (image.naturalWidth > 12000 || image.naturalHeight > 12000) throw new Error("A project image exceeds 12,000 pixels.");
@@ -161,29 +161,13 @@ export default function TrueAuthenticDesigner({ gangSheet = false }: { gangSheet
 
   return <div className={styles.root} ref={rootRef}>
     <header className={styles.header}>
-      <div><span className={styles.eyebrow}>TRUE AUTHENTIC • DESIGN STUDIO</span><h1>Your artwork. Your way.</h1><p>Create a print layout for custom apparel or DTF transfers.</p></div>
+      <div><span className={styles.eyebrow}>TRUE AUTHENTIC • DESIGN STUDIO</span><h1>Your artwork. Your way.</h1><p>Create your own custom T-shirts, hoodies, sweatpants, and shorts.</p></div>
       <a href="https://www.ta-apparel.com/pages/contact" target="_top">Ask about a custom order ↗</a>
     </header>
     <div className={styles.workspace}>
       <aside className={styles.panel}>
         <h2><span>1</span> Set up your design</h2>
-        <label>Print size (inches)<select aria-label="Print size" disabled={busy} value={`${design.width}x${design.height}`} onChange={event => {
-          const [width,height] = event.target.value.split("x").map(Number);
-          const layers = design.layers.map(layer => {
-            const nextHeight = layer.height * design.height / height * width / design.width;
-            const scale = Math.min(1, 100 / nextHeight);
-            return { ...layer, width: layer.width * scale, height: nextHeight * scale };
-          });
-          if (layers.some(layer => layer.width < 1 || layer.height < 1)) {
-            setStatus("A very thin layer cannot fit this print shape. Resize or remove it before changing print size.");
-            return;
-          }
-          commit({ ...design, width, height, layers });
-        }}>
-          {!SIZES.some(([w,h]) => w===design.width && h===design.height) && <option>{design.width}x{design.height}</option>}
-          {SIZES.map(([w,h]) => <option key={`${w}x${h}`} value={`${w}x${h}`}>{w} × {h}{w === 13 && h === 60 ? " — Gang Sheet" : ""}</option>)}
-        </select></label>
-        <p className={styles.muted}>Print area only. Garment availability and pricing are confirmed with your order.</p>
+        <p className={styles.muted}>Customize your apparel. Garment availability and pricing are confirmed with your order.</p>
         <button className={styles.primary} disabled={busy} onClick={() => uploadRef.current?.click()}>{busy ? "Working…" : "Upload artwork"}</button>
         <input ref={uploadRef} className={styles.file} type="file" accept="image/png,image/jpeg,image/webp" aria-label="Upload artwork file" onChange={event => { void upload(event.target.files?.[0]); event.target.value=""; }} />
         <p className={styles.muted}>PNG, JPG or WebP · up to 10 MB. Transparent PNG works best.</p>
@@ -209,7 +193,6 @@ export default function TrueAuthenticDesigner({ gangSheet = false }: { gangSheet
       </aside>
       <section className={styles.canvasPanel}>
         <div className={styles.canvasHeader}><h2><span>2</span> Make it yours</h2><div className={styles.row}><button disabled={!history.length || busy} onClick={undo}>Undo</button><button disabled={!future.length || busy} onClick={redo}>Redo</button></div></div>
-        <div className={styles.row}><button aria-pressed={preview==="print"} onClick={()=>setPreview("print")}>Print layout</button><button aria-pressed={preview==="shirt"} onClick={()=>setPreview("shirt")}>Garment preview</button></div>
         {preview === "shirt" && <label>Preview garment<select value={garment} onChange={event => setGarment(event.target.value as keyof typeof GARMENT_PREVIEWS)}>{Object.entries(GARMENT_PREVIEWS).map(([id, option]) => <option key={id} value={id}>{option.label}</option>)}</select></label>}
         <p className={styles.muted}>{preview==="shirt" ? "Illustrative placement only. Garment proportions and printed colors may differ." : "Drag a layer to position it, or use the controls. The checkerboard is transparent."}</p>
         <div className={`${styles.stage} ${preview==="shirt" ? styles.shirt : ""}`}>
@@ -234,7 +217,6 @@ export default function TrueAuthenticDesigner({ gangSheet = false }: { gangSheet
             })}
           </svg>
         </div>
-        <p className={styles.dimensions}>{design.width} × {design.height} inches · {design.width*300} × {design.height*300} pixel download</p>
         <div className={styles.status} role="status" aria-live="polite">{status}</div>
       </section>
       <section className={styles.review}>
