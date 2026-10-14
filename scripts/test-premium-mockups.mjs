@@ -52,5 +52,9 @@ test('asset integration preserves artwork scale, boundaries and placement algori
   for (const name of ['getDefaultPrintAreaForView', 'getFrontAlignedPrintArea', 'getSafePrintArea', 'getPrintAreaStyle', 'getLayerAspectRatio', 'getProportionalFitSize', 'getProportionalScaleSize'])
     assert.equal(functionText(after, name), functionText(before, name), name);
   const css = 'components/true-authentic/designer.module.css';
-  assert.equal((await readFile(css, 'utf8')).replace(/\r\n/g, '\n'), execFileSync('git', ['show', 'bdc2c65:' + css], { encoding: 'utf8' }).replace(/\r\n/g, '\n'));
+  const currentCss = (await readFile(css, 'utf8')).replace(/\r\n/g, '\n');
+  const baselineCss = execFileSync('git', ['show', 'bdc2c65:' + css], { encoding: 'utf8' }).replace(/\r\n/g, '\n');
+  // The user approved a larger/lower shirt box and invisible canvas borders.
+  const approvedCss = baselineCss.replace('overflow:hidden;border:1px solid #70786d', 'overflow:hidden;border:0').replace('top:27%;left:34%;width:32%;max-height:53%;background:none;border:1px dashed #e8ba85', 'top:22.4%;left:27%;width:46%;max-height:63.6%;background:none;border:0');
+  assert.equal(currentCss, approvedCss);
 });
