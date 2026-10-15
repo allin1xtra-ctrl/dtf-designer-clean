@@ -6,7 +6,9 @@ import { premiumMockupAssets } from "@/lib/premium-mockup-assets";
 import { availableGarmentSize, garmentSizes, garmentMeasurementSummary } from "@/lib/garment-size-charts";
 import printZones from "@/lib/print-zones.json";
 import { clamp, EMPTY_PROJECT, FONTS, GarmentId, Layer, layerWarnings, MAX_FILE_BYTES, MAX_PROJECT_BYTES, parseProject, Project, VIEW_IDS, ViewId } from "./design-model";
+import { BackgroundColor, BackgroundDetection, detectBackground, MAX_CLEAN_PIXELS, removalLooksUseful, removeBackground } from "./background-removal";
 import styles from "./designer.module.css";
+import bgStyles from "./background-removal.module.css";
 
 type PrintZone = { frameInches: number; center: number[]; width: number; exclude?: number[][]; region?: { ellipse: number[]; minY: number } };
 const ZONES = printZones as Record<GarmentId, Partial<Record<ViewId, PrintZone>>>;
@@ -50,12 +52,41 @@ function loadImage(source: string): Promise<HTMLImageElement> {
   if (imageCache.size > 60) imageCache.clear();
   imageCache.set(source, promise); return promise;
 }
-function readImage(file: File): Promise<string> {
+function readImage(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader(); reader.onload = () => resolve(String(reader.result));
     reader.onerror = () => reject(new Error("The file could not be read.")); reader.readAsDataURL(file);
   });
 }
+/** Checks the edges of an uploaded image (on a small copy) for a solid background color. */
+async function analyzeArtwork(source: string): Promise<BackgroundDetection> {
+  const image = await loadImage(source);
+  const scale = Math.min(1, 600 / Math.max(image.naturalWidth, image.naturalHeight));
+  const width = Math.max(1, Math.round(image.naturalWidth * scale)), height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const canvas = document.createElement("canvas"); canvas.width = width; canvas.height = height;
+  const context = canvas.getContext("2d", { willReadFrequently: true }); if (!context) return { kind: "none" };
+  context.drawImage(image, 0, 0, width, height);
+  const result = detectBackground(context.getImageData(0, 0, width, height).data, width, height);
+  canvas.width = 0; canvas.height = 0; return result;
+}
+/** Removes the outer background at full resolution, in this browser. Returns a transparent PNG. */
+async function cleanArtwork(source: string, color: BackgroundColor) {
+  const image = await loadImage(source);
+  const width = image.naturalWidth, height = image.naturalHeight;
+  if (width * height > MAX_CLEAN_PIXELS) throw new Error("This image is too large to clean here (about 5,000 × 5,000 pixels maximum). Upload a transparent PNG instead.");
+  const canvas = document.createElement("canvas"); canvas.width = width; canvas.height = height;
+  const context = canvas.getContext("2d", { willReadFrequently: true }); if (!context) throw new Error("Your browser could not process this image.");
+  context.drawImage(image, 0, 0);
+  const pixels = context.getImageData(0, 0, width, height);
+  const result = removeBackground(pixels.data, width, height, color);
+  context.putImageData(pixels, 0, 0);
+  const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error("Background removal failed. Try a smaller image.")), "image/png"));
+  canvas.width = 0; canvas.height = 0;
+  return { source: await readImage(blob), result };
+}
+type BackgroundOffer = { layerId: string; view: ViewId; color: BackgroundColor };
+type BackgroundPreview = BackgroundOffer & { before: string; after: string };
+
 /** Draws one layer onto a canvas whose full size represents the whole garment frame. */
 async function drawLayer(context: CanvasRenderingContext2D, layer: Layer, frameWidth: number, frameHeight: number) {
   const width = layer.width / 100 * frameWidth, height = layer.height / 100 * frameHeight;
@@ -123,6 +154,8 @@ export default function TrueAuthenticDesigner() {
   const rootRef = useRef<HTMLDivElement>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
   const importRef = useRef<HTMLInputElement>(null);
+  const [backgroundOffer, setBackgroundOffer] = useState<BackgroundOffer | null>(null);
+  const [backgroundPreview, setBackgroundPreview] = useState<BackgroundPreview | null>(null);
   const drag = useRef<{ id: string; x: number; y: number; initial: Project } | null>(null);
 
   const colorOptions = garmentColors(garment);
@@ -140,6 +173,9 @@ export default function TrueAuthenticDesigner() {
     return layerWarnings({ version: 1, width: frame, height: frame, layers: list }).filter(w => !w.includes("outside the print area")).map(w => `${VIEW_LABELS[view]} · ${w}`);
   });
   const warnings = [...zoneWarnings, ...frameWarnings];
+  const findLayer = (view: ViewId, id: string) => project.views[view]?.find(layer => layer.id === id);
+  const offerLayer = backgroundOffer ? findLayer(backgroundOffer.view, backgroundOffer.layerId) : undefined;
+  const previewLayer = backgroundPreview ? findLayer(backgroundPreview.view, backgroundPreview.layerId) : undefined;
   const [centerX, centerY] = zone.center;
   const viewHeight = 1000;
 
@@ -228,10 +264,55 @@ export default function TrueAuthenticDesigner() {
       const height = ratio >= 1 ? zone.width / ratio : zone.width;
       if (width < 1 || height < 1) throw new Error("This image is too narrow. Crop it first.");
       const layer: Layer = { id: crypto.randomUUID(), type: "image", name: file.name.slice(0, 200), source, pixelsWide: image.naturalWidth, x: centerX, y: centerY, width, height, rotation: 0 };
-      commit(withLayers([...layers, layer])); setSelectedId(layer.id);
+      commit(withLayers([...layers, layer])); setSelectedId(layer.id); setBackgroundPreview(null); setBackgroundOffer(null);
       setStatus(`${file.name} added to the ${VIEW_LABELS[activeView].toLowerCase()}. Drag it anywhere on the garment or use the position controls.`);
+      const detection = await analyzeArtwork(source).catch(() => null);
+      if (detection?.kind === "solid") {
+        setBackgroundOffer({ layerId: layer.id, view: activeView, color: detection.color });
+        setStatus(`${file.name} added. It looks like it has a ${detection.color.white ? "white" : "solid"} background. You can remove it in step 1.`);
+      }
     } catch (error) { setStatus(error instanceof Error ? error.message : "Upload failed. Please try another image."); }
     finally { setBusy(false); }
+  }
+  async function previewBackgroundRemoval(offer: BackgroundOffer) {
+    const layer = findLayer(offer.view, offer.layerId);
+    if (!layer?.source) { setBackgroundOffer(null); return; }
+    setBusy(true); setStatus("Removing the background…");
+    await new Promise(resolve => window.setTimeout(resolve, 30));
+    try {
+      const { source: after, result } = await cleanArtwork(layer.source, offer.color);
+      setBackgroundOffer(null);
+      if (!removalLooksUseful(result)) { setStatus("We couldn't find a clear background to remove, so your image was left exactly as uploaded."); return; }
+      setBackgroundPreview({ ...offer, before: layer.source, after });
+      setStatus("Compare before and after in step 1, then choose which version to use.");
+    } catch (error) { setStatus(error instanceof Error ? error.message : "Background removal failed. Your image was left as uploaded."); }
+    finally { setBusy(false); }
+  }
+  function applyBackgroundRemoval() {
+    if (!backgroundPreview) return;
+    const { view, layerId, before, after } = backgroundPreview, list = project.views[view] ?? [];
+    if (!list.some(layer => layer.id === layerId)) { setBackgroundPreview(null); return; }
+    if (JSON.stringify(project).length + after.length > MAX_PROJECT_BYTES) { setStatus("This project is too large to keep both versions. Use smaller images (25 MB total maximum)."); return; }
+    commit({ ...project, views: { ...project.views, [view]: list.map(layer => layer.id === layerId ? { ...layer, source: after, originalSource: layer.originalSource ?? before } : layer) } });
+    setBackgroundPreview(null);
+    setStatus("Background removed. Undo brings it back, and your original upload stays saved in the project file.");
+  }
+  async function checkSelectedBackground() {
+    if (!current?.source || busy) return;
+    const detection = await analyzeArtwork(current.source).catch(() => null);
+    if (detection?.kind === "solid") { setBackgroundPreview(null); await previewBackgroundRemoval({ layerId: current.id, view: activeView, color: detection.color }); }
+    else if (detection?.kind === "transparent") setStatus("This image already has a transparent background.");
+    else setStatus("We couldn't find one solid background color around the edges of this image, so it was left as uploaded. Upload a transparent PNG for photos or busy backgrounds.");
+  }
+  function restoreOriginalBackground() {
+    if (!current?.originalSource) return;
+    updateLayer({ source: current.originalSource, originalSource: undefined });
+    setStatus("Original upload restored, including its background.");
+  }
+  async function downloadOriginal() {
+    if (!current?.originalSource) return;
+    const blob = await (await fetch(current.originalSource)).blob();
+    download(blob, `original-${current.name}`);
   }
   function addText() {
     if (layers.length >= 20) { setStatus("Remove a layer from this side before adding more (20 maximum)."); return; }
@@ -306,6 +387,22 @@ export default function TrueAuthenticDesigner() {
         <button className={styles.primary} disabled={busy} onClick={() => uploadRef.current?.click()}>{busy ? "Working…" : "Upload artwork"}</button>
         <input ref={uploadRef} className={styles.file} type="file" accept="image/png,image/jpeg,image/webp" aria-label="Upload artwork file" onChange={event => { void upload(event.target.files?.[0]); event.target.value=""; }} />
         <p className={styles.muted}>PNG, JPG or WebP · up to 10 MB. Transparent PNG works best.</p>
+        {backgroundOffer && offerLayer && <div className={bgStyles.bgCard} role="region" aria-label="Background removal">
+          <strong>Looks like this image has a {backgroundOffer.color.white ? "white" : "solid"} background. Remove it?</strong>
+          <p className={styles.muted}>Only the background touching the edges of your image is cleared. {backgroundOffer.color.white ? "White" : "Matching"} parts inside your design stay.</p>
+          <div className={styles.row}><button className={styles.primary} disabled={busy} onClick={() => void previewBackgroundRemoval(backgroundOffer)}>Remove background</button><button disabled={busy} onClick={() => { setBackgroundOffer(null); setStatus("Background kept. You can remove it later from the selected layer."); }}>Keep it</button></div>
+        </div>}
+        {backgroundPreview && previewLayer && <div className={bgStyles.bgCard} role="region" aria-label="Background removal preview">
+          <strong>Before and after</strong>
+          <div className={bgStyles.bgCompare}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <figure><img src={backgroundPreview.before} alt={`${previewLayer.name} as uploaded`} /><figcaption>Before</figcaption></figure>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <figure><img src={backgroundPreview.after} alt={`${previewLayer.name} with the background removed`} /><figcaption>After</figcaption></figure>
+          </div>
+          <p className={styles.muted}>Check that nothing in your design disappeared. Your original upload is kept either way.</p>
+          <div className={styles.row}><button className={styles.primary} disabled={busy} onClick={applyBackgroundRemoval}>Use cleaned version</button><button disabled={busy} onClick={() => { setBackgroundPreview(null); setStatus("Original kept, exactly as uploaded."); }}>Keep original</button></div>
+        </div>}
         <button disabled={busy} onClick={addText}>Add text</button>
         <h3>Layers on {VIEW_LABELS[activeView].toLowerCase()} <small>{layers.length}/20</small></h3>
         {layers.length === 0 && <p className={styles.muted}>Your artwork and text for this side will appear here.</p>}
@@ -323,6 +420,9 @@ export default function TrueAuthenticDesigner() {
           <label>Horizontal position<input type="range" min={0} max={100} value={current.x} onChange={event=>updateLayer({x:Number(event.target.value)})}/></label>
           <label>Vertical position<input type="range" min={0} max={100} value={current.y} onChange={event=>updateLayer({y:Number(event.target.value)})}/></label>
           <label>Rotation: {current.rotation}°<input type="range" min={-180} max={180} value={current.rotation} onChange={event=>updateLayer({rotation:Number(event.target.value)})}/></label>
+          {current.type === "image" && <div className={styles.row} style={{ marginBottom: 8 }}>{current.originalSource
+            ? <><button onClick={restoreOriginalBackground}>Restore original background</button><button onClick={() => void downloadOriginal()}>Download original</button></>
+            : <button onClick={() => void checkSelectedBackground()}>Remove background</button>}</div>}
           <div className={styles.row}><button onClick={()=>updateLayer({x:centerX,y:centerY})}>Center</button><button onClick={()=>{commit(withLayers(layers.filter(l=>l.id!==current.id)));setSelectedId(null);}}>Delete layer</button></div>
         </fieldset>}
       </aside>
@@ -379,7 +479,7 @@ export default function TrueAuthenticDesigner() {
           <button disabled={busy} onClick={()=>importRef.current?.click()}>Open project</button>
         </div>
         <input ref={importRef} type="file" accept=".json,application/json" aria-label="Open saved project file" className={styles.file} onChange={async event=>{const file=event.target.files?.[0];event.target.value="";if(!file)return;if(file.size>MAX_PROJECT_BYTES){setStatus("Projects must be under 25 MB.");return;}try{await restore(await file.text());}catch{setStatus("Could not read this project file.");}}}/>
-        <div className={styles.service}><div><h3>Ready to make it real?</h3><p>Contact True Authentic about your custom order. Keep your original artwork and downloaded project. Pricing, garment options and production details are confirmed before ordering.</p></div><a href="https://www.ta-apparel.com/pages/contact" target="_top">Contact True Authentic ↗</a></div>
+        <div className={styles.service}><div><h3>Ready to make it real?</h3><p>Contact True Authentic about your custom order. Keep your original artwork and downloaded project. The project file keeps both your original upload and any cleaned version. Pricing, garment options and production details are confirmed before ordering.</p></div><a href="https://www.ta-apparel.com/pages/contact" target="_top">Contact True Authentic ↗</a></div>
         <p className={styles.muted}>Your artwork stays in this browser unless you choose to send it. Downloads do not place an order. Artwork quality still needs review before printing.</p>
       </section>
     </div>

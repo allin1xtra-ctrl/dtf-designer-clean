@@ -2,6 +2,8 @@ export type Layer = {
   id: string; type: "image" | "text"; name: string; x: number; y: number;
   width: number; height: number; rotation: number; text?: string; color?: string;
   font?: string; source?: string; pixelsWide?: number;
+  /** The customer's untouched upload, kept when the background was removed from `source`. */
+  originalSource?: string;
 };
 export type Design = { version: 1; width: number; height: number; layers: Layer[] };
 export const FONTS = ["Arial", "Georgia", "Impact", "Courier New"];
@@ -11,6 +13,8 @@ export const MAX_PROJECT_BYTES = 25 * 1024 * 1024;
 export const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 const finite = (n: unknown, min: number, max: number): n is number =>
   typeof n === "number" && Number.isFinite(n) && n >= min && n <= max;
+
+const IMAGE_DATA_URL = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/;
 
 export function parseDesign(raw: string): Design {
   if (raw.length > MAX_PROJECT_BYTES) throw new Error("Project is too large. Maximum size is 25 MB.");
@@ -26,6 +30,8 @@ export function parseDesign(raw: string): Design {
     if (layer.type === "image") {
       if (typeof layer.source !== "string" || !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(layer.source) ||
           !finite(layer.pixelsWide, 1, 12000)) throw new Error("The project contains an unsupported image.");
+      if (layer.originalSource !== undefined && (typeof layer.originalSource !== "string" ||
+          !IMAGE_DATA_URL.test(layer.originalSource))) throw new Error("The project contains an unsupported original image.");
     } else if (layer.type === "text") {
       if (typeof layer.text !== "string" || layer.text.length > 80 || !/^#[0-9a-f]{6}$/i.test(layer.color || "") ||
           !FONTS.includes(layer.font || "")) throw new Error("The project contains invalid text settings.");
