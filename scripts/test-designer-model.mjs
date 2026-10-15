@@ -45,3 +45,10 @@ test("garment projects keep separate artwork for every side", async () => {
   assert.throws(() => parseProject(JSON.stringify({ ...value, garment: "gang-sheet" })));
   assert.throws(() => parseProject(JSON.stringify({ ...value, views: { front: [text], back: [text] } })));
 });
+
+test("projects keep the original upload next to a cleaned image", () => {
+  const png = "data:image/png;base64,iVBORw0KGgo=", jpg = "data:image/jpeg;base64,/9j/4AAQ";
+  const layer = { ...text, type: "image", source: png, originalSource: jpg, pixelsWide: 3600 };
+  assert.deepEqual(parseDesign(JSON.stringify({ ...EMPTY_DESIGN, layers: [layer] })).layers[0].originalSource, jpg);
+  assert.throws(() => parseDesign(JSON.stringify({ ...EMPTY_DESIGN, layers: [{ ...layer, originalSource: "https://example.com/a.png" }] })));
+});
