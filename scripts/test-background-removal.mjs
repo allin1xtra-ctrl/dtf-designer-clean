@@ -73,3 +73,12 @@ test("an image that is all background is not reported as a useful cleanup", () =
   const data = image(40, 40, WHITE);
   assert.equal(removalLooksUseful(removeBackground(data, 40, 40, { r: 255, g: 255, b: 255, white: true })), false);
 });
+test("a small logo on a large solid canvas can still be cleaned", () => {
+  const data = image(100, 100, WHITE, (x, y) => (x >= 45 && x < 55 && y >= 45 && y < 55) ? BLACK : null);
+  const result = removeBackground(data, 100, 100, detectBackground(data, 100, 100).color);
+  assert.ok(result.removedShare > 0.97); assert.ok(removalLooksUseful(result));
+  assert.equal(alphaAt(data, 100, 50, 50), 255);
+});
+test("very large images are refused instead of exhausting memory", () => {
+  assert.throws(() => removeBackground(new Uint8ClampedArray(4), 4001, 4000, { r: 255, g: 255, b: 255, white: true }), /too large/);
+});

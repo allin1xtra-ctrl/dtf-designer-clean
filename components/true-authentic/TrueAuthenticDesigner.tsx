@@ -73,7 +73,7 @@ async function analyzeArtwork(source: string): Promise<BackgroundDetection> {
 async function cleanArtwork(source: string, color: BackgroundColor) {
   const image = await loadImage(source);
   const width = image.naturalWidth, height = image.naturalHeight;
-  if (width * height > MAX_CLEAN_PIXELS) throw new Error("This image is too large to clean here (about 5,000 × 5,000 pixels maximum). Upload a transparent PNG instead.");
+  if (width * height > MAX_CLEAN_PIXELS) throw new Error("This image is too large to clean here (4,000 × 4,000 pixels maximum). Upload a transparent PNG instead.");
   const canvas = document.createElement("canvas"); canvas.width = width; canvas.height = height;
   const context = canvas.getContext("2d", { willReadFrequently: true }); if (!context) throw new Error("Your browser could not process this image.");
   context.drawImage(image, 0, 0);

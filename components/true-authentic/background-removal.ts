@@ -12,14 +12,14 @@ export type BackgroundDetection =
   | { kind: "transparent" }
   | { kind: "none" }
   | { kind: "solid"; color: BackgroundColor; edgeShare: number };
-export type RemovalResult = { removedShare: number; softenedPixels: number };
+export type RemovalResult = { removedShare: number; softenedPixels: number; keptPixels: number };
 
 /** Colors closer than this (RGB distance, 0–441) count as background. Tolerates JPEG noise. */
 export const BACKGROUND_TOLERANCE = 40;
 /** Pixels just past the tolerance on the background edge get a soft, anti-aliased edge. */
 export const EDGE_SOFTNESS = 32;
-/** Largest image cleaned in the browser (about 5000 × 5000 pixels). */
-export const MAX_CLEAN_PIXELS = 25_000_000;
+/** Largest image cleaned in the browser (4000 × 4000 pixels, over 13 in square at 300 DPI). Keeps peak memory modest. */
+export const MAX_CLEAN_PIXELS = 16_000_000;
 
 const distance = (data: ArrayLike<number>, index: number, color: BackgroundColor) => {
   const dr = data[index] - color.r, dg = data[index + 1] - color.g, db = data[index + 2] - color.b;
@@ -109,10 +109,10 @@ export function removeBackground(data: Uint8ClampedArray, width: number, height:
   }
   let cleared = 0;
   for (let pixel = 0; pixel < total; pixel++) if (removed[pixel] === 1) { data[pixel * 4 + 3] = 0; cleared++; }
-  return { removedShare: cleared / total, softenedPixels: softened };
+  return { removedShare: cleared / total, softenedPixels: softened, keptPixels: total - cleared };
 }
 
-/** True when the cleanup removed a believable background: not nothing, and not the whole image. */
+/** True when the cleanup removed a real background and left some artwork (small logos on big canvases included). */
 export function removalLooksUseful(result: RemovalResult) {
-  return result.removedShare >= 0.01 && result.removedShare <= 0.97;
+  return result.removedShare >= 0.01 && result.keptPixels >= 16;
 }
