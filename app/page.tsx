@@ -26,6 +26,12 @@ export default function Home() {
 
         <div className="mt-10 flex flex-col flex-wrap justify-center gap-4 sm:flex-row">
           <a
+            href="/samples"
+            className="rounded-full border border-orange-400/40 bg-orange-400/10 px-8 py-4 font-bold text-orange-200 transition hover:bg-orange-400/20"
+          >
+            View Printing Samples
+          </a>
+          <a
             href="/quote"
             className="rounded-full bg-white px-8 py-4 font-bold text-black transition hover:scale-105 hover:bg-gray-200"
           >
